@@ -64,7 +64,7 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
       printf("\n Vb = %e Rb = %e Rd_old = %e Vd = %e Rb_new = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->r_therm[p_idx],Vd,old_parcel_cloud->r_therm[p_idx]+dRd);
 
       CONVERGE_mpi_abort();
-      //Test 
+
       return;
    }
    if (old_parcel_cloud->radius[p_idx] < 1.0e-10)
