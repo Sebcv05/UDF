@@ -65,6 +65,7 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
 
       CONVERGE_mpi_abort();
 
+
       return;
    }
    if (old_parcel_cloud->radius[p_idx] < 1.0e-10)
