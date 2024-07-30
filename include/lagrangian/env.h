@@ -19,6 +19,8 @@ CONVERGE_id_t INT_OMEGA;
 CONVERGE_id_t ETA;				//Integral of omega - breakup criterion
 CONVERGE_id_t USER_LAG_VARi;
 CONVERGE_id_t DGRE_COUNT;
+CONVERGE_id_t PARCEL_INDEX;             // Parcel Index
+CONVERGE_id_t CLOUD_INDEX;             // Cloud Index
 CONVERGE_id_t THERMAL_BREAKUP_FLAG;		//Flag to indicate that thermal breakup has taken place
 CONVERGE_id_t TBT;
 CONVERGE_id_t PBT;
@@ -244,6 +246,8 @@ struct ParcelCloud
    CONVERGE_precision_t * eta_drop;
    CONVERGE_precision_t * r_bubble_tm1;
    CONVERGE_precision_t * m0;
+   CONVERGE_precision_t* parcel_index;
+   CONVERGE_precision_t* cloud_index;
    CONVERGE_int_t* user_lag_var_i;
    CONVERGE_int_t* thermal_breakup_flag;
    CONVERGE_int_t* dgre_cycle_count;

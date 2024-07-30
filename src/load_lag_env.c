@@ -27,6 +27,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("r_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_therm", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("omega", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+
    CONVERGE_variable_register("omega_tm1", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("int_omega", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("m0",        CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
@@ -37,6 +38,8 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    // Register a simple int data parcel field
    CONVERGE_variable_register("user_lag_var_i", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("dgre_cycle_count", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("parcel_index", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("cloud_index", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("tbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("pbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
 
@@ -82,6 +85,8 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    TBT      = CONVERGE_lagrangian_field_id("tbt");
    PBT      = CONVERGE_lagrangian_field_id("pbt");
    DGRE_COUNT = CONVERGE_lagrangian_field_id("dgre_cycle_count");
+   CLOUD_INDEX = CONVERGE_lagrangian_field_id("cloud_index");
+   PARCEL_INDEX = CONVERGE_lagrangian_field_id("parcel_index");
    USER_LAG_VARv3  = CONVERGE_lagrangian_field_id("user_lag_var_v3");
    USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    M0 = CONVERGE_lagrangian_field_id("m0");
@@ -317,6 +322,8 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->pbt              = (int *)CONVERGE_cloud_get_field_data(c,PBT);
    parcel_cloud_loc->thermal_breakup_flag = (int *)CONVERGE_cloud_get_field_data(c, THERMAL_BREAKUP_FLAG);
    parcel_cloud_loc->dgre_cycle_count = (int *)CONVERGE_cloud_get_field_data(c, DGRE_COUNT);
+   parcel_cloud_loc->parcel_index = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, PARCEL_INDEX);
+   parcel_cloud_loc->cloud_index = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, CLOUD_INDEX);
    parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
 
