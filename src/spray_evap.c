@@ -694,10 +694,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                }
                else
                {
-                  if (spray_evap_flag == 1)
+                  vapor_pres = CONVERGE_table_lookup(pvap_table[isp], temp1)
+                  CONVERGE_precision_t plcoal = global_pressure[node_index]
+                  if (spray_evap_flag == 1 && vapor_pres < plocal)      //Only use this if not flash boiliing 
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
-                  }
+                  }else
+                     parcel_cloud.drdt[i+pc * num_parcel_species + isp] = 1e-20;
 
                   if (spray_evap_flag == 2)
                   {
