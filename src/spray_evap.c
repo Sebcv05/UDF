@@ -485,7 +485,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
          //******************************************************************************************************//
-         Print  Droplet Data to File
+         // Print  Droplet Data to File
          CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
          char *filename1 = "Temp_Tracker.txt";
          FILE *fp1 = fopen("Temp_Tracker.txt", "a");
