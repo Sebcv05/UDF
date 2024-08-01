@@ -58,13 +58,13 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
    }
    else if (dRd > old_parcel_cloud->radius[p_idx]) // This if statement has no physical justification other than the assumption that doubling the droplet's radius in dt will cause breakup
    {
-      printf("\nGeometry.c\n");
-      //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
-      printf("\nAborting because Geometry.c has doubled droplet radius in dt.....");
-      printf("\n Vb = %e Rb = %e Rd_old = %e Vd = %e Rb_new = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->r_therm[p_idx],Vd,old_parcel_cloud->r_therm[p_idx]+dRd);
+      // printf("\nGeometry.c\n");
+      // //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
+      // printf("\nAborting because Geometry.c has doubled droplet radius in dt.....");
+      // printf("\n Vb = %e Rb = %e Rd_old = %e Vd = %e Rb_new = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->r_therm[p_idx],Vd,old_parcel_cloud->r_therm[p_idx]+dRd);
 
-      CONVERGE_mpi_abort();
-
+      // CONVERGE_mpi_abort();
+      old_parcel_cloud->tbt[p_idx] =1;
       return;
    }
    if (old_parcel_cloud->radius[p_idx] < 1.0e-10)
