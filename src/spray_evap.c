@@ -700,7 +700,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                   }else
-                     parcel_cloud.drdt[i+pc * num_parcel_species + isp] = 1e-20;
+                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 1e-20;
 
                   if (spray_evap_flag == 2)
                   {
