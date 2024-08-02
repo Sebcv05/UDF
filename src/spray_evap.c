@@ -234,7 +234,8 @@ CONVERGE_UDF(spray_evap,
 }
 
 void spray_evap_cell(CONVERGE_cloud_t cloud)
-{
+{  //Get mean pressure
+   CONVERGE_precision_t pmean = mean(global_pressure);
    // Setup parcel species counts and iterator
    CONVERGE_iterator_t psp_it;
    CONVERGE_species_parcel_iterator_create(sp, &psp_it);
@@ -701,14 +702,16 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   vapor_pres = CONVERGE_table_lookup(pvap_table[isp], temp1);
                   CONVERGE_precision_t plocal = global_pressure[node_index];
+                  
                   if (spray_evap_flag == 1)      //Only use this if not flash boiliing 
                   {
-                     if(vapor_pres < plocal){ //Droplet not superheated - Frossling
+                     CONVERGE_precision_t tsat_sh = T_satNH3(pglobal);
+                     dT_sh = tdrop - tsat_sh;
+                     if(dT_sh > 0.00){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
                     // printf("\nL708");
-                     CONVERGE_precision_t tsat_sh = T_satNH3(plocal);
-                     dT_sh = tdrop - tsat_sh;
+                     
                      //printf("\nL709");
                      //printf("\ndT_sh = %f",dT_sh);
                      if(dT_sh<0.00)
