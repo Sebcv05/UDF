@@ -727,7 +727,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      //    }
 
                      //    parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_sh * dT_sh / (parcel_cloud.density[i_pc] * average_hvap);
-                     // }
+                     }
 
                   }
                   if (spray_evap_flag == 2)
