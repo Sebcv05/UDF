@@ -716,7 +716,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                            //printf("\L713");
                         //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
                         printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
-                        printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil[isp],plocal);
+                        printf("\n tdrop = %e t_sat = %e p_amb = %e",tdrop,tsat_sh,plocal);
                         CONVERGE_mpi_abort();
                         }
                         else if(dT_sh<= 5.00)
