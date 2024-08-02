@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
 static void reset_parcel_temp_mfrac(const CONVERGE_index_t parcel_idx,
                                     CONVERGE_precision_t *temp_drop,
@@ -199,6 +200,8 @@ CONVERGE_UDF(spray_evap,
 
    global_region_index = region_index;
 
+   
+
    // Get Simulation Meta data
    CONVERGE_precision_t dt = CONVERGE_simulation_dt();
 
@@ -336,6 +339,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t vapor_pres;
    CONVERGE_precision_t vaporization_term;
    CONVERGE_precision_t w_0, w_0_denom;
+   CONVERGE_precision_t a_sh, dT_sh;
 
    local_max_temp = global_temperature[node_index];
    max_critical_temperature = 0.0;
@@ -701,7 +705,26 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      if(vapor_pres < plocal){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
-                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_fb * (tdrop - temp_boil) / (parcel_cloud.density[i_pc] * average_hvap);
+                     dT_sh = tdrop - temp_boil;
+                     if(dT_sh<0.00)
+                     //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
+                     printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
+                     printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil,plocal);
+                     CONVERGE_mpi_abort();
+                     else if(dT_sh<= 5.00)
+                     {
+                           a_sh = 760.00 * pow(dT_sh,0.26);
+                     }
+                     else if(dT_sh <=25.00)
+                     {
+                           a_sh = 27.00 * pow(dT_sh,2.33);
+                     }
+                     else
+                     {
+                           a_sh = 18800.00 * pow(dT_sh,0.39);
+                     }
+
+                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_sh * dT_sh / (parcel_cloud.density[i_pc] * average_hvap);
                      }
 
                   }
