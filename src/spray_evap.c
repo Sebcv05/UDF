@@ -705,9 +705,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      if(vapor_pres < plocal){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
+                     printf("\nL708");
                      dT_sh = tdrop - temp_boil[isp];
+                     printf("\nL709");
+                     printf("\ndT_sh = %f",dT_sh);
                      if(dT_sh<0.00)
                         {
+                           printf("\L713");
                         //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
                         printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
                         printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil[isp],plocal);
@@ -715,14 +719,17 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                         }
                         else if(dT_sh<= 5.00)
                         {
+                              printf("\nL722");
                               a_sh = 760.00 * pow(dT_sh,0.26);
                         }
                         else if(dT_sh <=25.00)
                         {
+                              printf("\nL727")
                               a_sh = 27.00 * pow(dT_sh,2.33);
                         }
                         else
                         {
+                           printf("\nL732");
                               a_sh = 18800.00 * pow(dT_sh,0.39);
                         }
 
