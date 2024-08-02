@@ -641,6 +641,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                // Urea model to be added
 
                hvap = CONVERGE_table_lookup(hvap_table[isp], temp1) + 1.0e-3;
+               dT_sh = tdrop - temp_boil[isp];
 
                csubp_liquid +=
                    parcel_cloud.mfrac[i_pc * num_parcel_species + isp] * CONVERGE_table_lookup(cp_table[isp], temp1);
@@ -687,7 +688,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                                   (2.0 * parcel_cloud.radius[i_pc] * parcel_cloud.density[i_pc]);
 
                CONVERGE_precision_t drdt_tm1 = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
-               dT_sh = tdrop - temp_boil[isp];
                if (parcel_boil_flag == 1 && parcel_species_boil_flag[isp] == 1) // boiling correlation
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
@@ -706,28 +706,28 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
                      
-                     if(dT_sh<0.00)
-                        {
-                        //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
-                        printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
-                        printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil,plocal);
-                        CONVERGE_mpi_abort();
-                        }
-                        else if(dT_sh<= 5.00)
-                        {
-                              a_sh = 760.00 * pow(dT_sh,0.26);
-                        }
-                        else if(dT_sh <=25.00)
-                        {
-                              a_sh = 27.00 * pow(dT_sh,2.33);
-                        }
-                        else
-                        {
-                              a_sh = 18800.00 * pow(dT_sh,0.39);
-                        }
+                     // if(dT_sh<0.00)
+                     //    {
+                     //    //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
+                     //    printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
+                     //    printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil,plocal);
+                     //    CONVERGE_mpi_abort();
+                     //    }
+                     //    else if(dT_sh<= 5.00)
+                     //    {
+                     //          a_sh = 760.00 * pow(dT_sh,0.26);
+                     //    }
+                     //    else if(dT_sh <=25.00)
+                     //    {
+                     //          a_sh = 27.00 * pow(dT_sh,2.33);
+                     //    }
+                     //    else
+                     //    {
+                     //          a_sh = 18800.00 * pow(dT_sh,0.39);
+                     //    }
 
-                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_sh * dT_sh / (parcel_cloud.density[i_pc] * average_hvap);
-                     }
+                     //    parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_sh * dT_sh / (parcel_cloud.density[i_pc] * average_hvap);
+                     // }
 
                   }
                   if (spray_evap_flag == 2)
