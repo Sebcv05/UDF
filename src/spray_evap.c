@@ -687,7 +687,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                                   (2.0 * parcel_cloud.radius[i_pc] * parcel_cloud.density[i_pc]);
 
                CONVERGE_precision_t drdt_tm1 = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
-
+               dT_sh = tdrop - temp_boil[isp];
                if (parcel_boil_flag == 1 && parcel_species_boil_flag[isp] == 1) // boiling correlation
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
@@ -705,7 +705,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      if(vapor_pres < plocal){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
-                     dT_sh = tdrop - temp_boil;
+                     
                      if(dT_sh<0.00)
                         {
                         //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
