@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <TsatNH3.h>
 
 
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
@@ -706,7 +707,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
                      printf("\nL708");
-                     dT_sh = tdrop - temp_boil[isp];
+                     tsat_sh = T_satNH3(plocal);
+                     dT_sh = tdrop - tsat_sh;
                      printf("\nL709");
                      printf("\ndT_sh = %f",dT_sh);
                      if(dT_sh<0.00)
