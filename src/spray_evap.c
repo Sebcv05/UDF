@@ -235,7 +235,7 @@ CONVERGE_UDF(spray_evap,
 
 void spray_evap_cell(CONVERGE_cloud_t cloud)
 {  //Get mean pressure
-   CONVERGE_precision_t pmean = mean(global_pressure);
+   // CONVERGE_precision_t pmean = mean(global_pressure);
    // Setup parcel species counts and iterator
    CONVERGE_iterator_t psp_it;
    CONVERGE_species_parcel_iterator_create(sp, &psp_it);
@@ -705,7 +705,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   
                   if (spray_evap_flag == 1)      //Only use this if not flash boiliing 
                   {
-                     CONVERGE_precision_t tsat_sh = T_satNH3(pglobal);
+                     CONVERGE_precision_t tsat_sh = T_satNH3(plocal);
                      dT_sh = tdrop - tsat_sh;
                      if(dT_sh > 0.00){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
