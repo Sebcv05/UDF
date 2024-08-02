@@ -696,12 +696,15 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   vapor_pres = CONVERGE_table_lookup(pvap_table[isp], temp1);
                   CONVERGE_precision_t plocal = global_pressure[node_index];
-                  if (spray_evap_flag == 1 && vapor_pres < plocal)      //Only use this if not flash boiliing 
+                  if (spray_evap_flag == 1)      //Only use this if not flash boiliing 
                   {
+                     if(vapor_pres < plocal){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
-                  }else
-                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 1e-20;
+                     }else{      //Droplet superheated - Price's Flash Boiling Model
+                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -a_fb * (tdrop - temp_boil) / (parcel_cloud.density[i_pc] * average_hvap);
+                     }
 
+                  }
                   if (spray_evap_flag == 2)
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
