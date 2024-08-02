@@ -707,7 +707,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   {
                      CONVERGE_precision_t tsat_sh = T_satNH3(plocal);
                      dT_sh = tdrop - tsat_sh;
-                     if(dT_sh > 0.00){ //Droplet not superheated - Frossling
+                     if(dT_sh < 0.00){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
                     // printf("\nL708");
