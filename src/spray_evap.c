@@ -706,14 +706,14 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      if(vapor_pres < plocal){ //Droplet not superheated - Frossling
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -mass_trans_coeff * log_bsub_d;
                      }else{      //Droplet superheated - Price's Flash Boiling Model
-                     printf("\nL708");
+                    // printf("\nL708");
                      CONVERGE_precision_t tsat_sh = T_satNH3(plocal);
                      dT_sh = tdrop - tsat_sh;
-                     printf("\nL709");
-                     printf("\ndT_sh = %f",dT_sh);
+                     //printf("\nL709");
+                     //printf("\ndT_sh = %f",dT_sh);
                      if(dT_sh<0.00)
                         {
-                           printf("\L713");
+                           //printf("\L713");
                         //printf("\ntriggering breakup because geometry leads to doubling of droplet radius");
                         printf("\nAborting because spray_evap.c has tried to use Price for subcooled droplet ");
                         printf("\n tdrop = %e temp_boil = %e p_amb = %e",tdrop,temp_boil[isp],plocal);
@@ -721,21 +721,21 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                         }
                         else if(dT_sh<= 5.00)
                         {
-                              printf("\nL722");
+                              //printf("\nL722");
                               a_sh = 760.00 * pow(dT_sh,0.26);
                         }
                         else if(dT_sh <=25.00)
                         {
-                              printf("\nL727");
+                            //  printf("\nL727");
                               a_sh = 27.00 * pow(dT_sh,2.33);
                         }
                         else
                         {
-                           printf("\nL732");
+                          // printf("\nL732");
                               a_sh = 18800.00 * pow(dT_sh,0.39);
                         }
 
-                        // parcel_cloud.drdt[i_pc * num_parcel_species + isp] = - ((a_sh * dT_sh )/ (parcel_cloud.density[i_pc] * average_hvap));
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] = - ((a_sh * dT_sh )/ (parcel_cloud.density[i_pc] * average_hvap));
                      }
 
                   }
