@@ -826,6 +826,25 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      }
                   }
                }
+               //The 
+                if( evap_flag_flash_boiling==1 )
+               {
+                  double super_heat_degree = tdrop - temp_boil[isp];
+                  if( super_heat_degree > 0.2 )
+                  {
+                        //Diffusion Coefficient
+                        CONVERGE_precision_t user_D =  1e-7 * ((pow(temp_gas,1.75) * CONVERGE_sqrt(1/17 + 1/28) )/((global_pressure[node_index]/1e5) * CONVERGE_square(pow(17.9,0.33) + pow(14.9,0.33)));
+                        //Pvap 
+                        CONVERGE_precision_t user_Pv = y1 * global_pressure[node_index];
+                        //Psat
+                        CONVERGE_precision_t user_Ps =  CONVERGE_table_lookup(pvap_table[isp], temp1);
+                        CONVERGE_precision_t user_denom = 2 * parcel_cloud.radius[i_pc] * gas_constant;
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] -=  parcel_cloud.v_sh[i_pc] * user_D * 17 * ((user_Ps/temp1)-(user_Pv/temp_gas)) /user_denom;
+                  }
+               }
+
+
+
 
                if((parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt + parcel_cloud.radius[i_pc]) <
                   evap_min_radius[isp])
