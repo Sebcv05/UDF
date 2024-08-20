@@ -351,8 +351,8 @@ struct ParcelCloud
    CONVERGE_precision_t * eta_drop;
    CONVERGE_precision_t * r_bubble_tm1;
    CONVERGE_precision_t * m0;
-   CONVERGE_precision_t* parcel_index;
-   CONVERGE_precision_t* cloud_index;
+   CONVERGE_int_t* parcel_index;
+   CONVERGE_int_t* cloud_index;
    CONVERGE_int_t* thermal_breakup_flag;
    CONVERGE_int_t* dgre_cycle_count;
    CONVERGE_int_t* tbt;

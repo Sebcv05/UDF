@@ -99,8 +99,11 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.m0[passed_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parcel_idx]) * parcel_cloud.num_drop[passed_parcel_idx]);
    // Set breakup flag to 0
    parcel_cloud.thermal_breakup_flag[passed_parcel_idx] = -1;
-   parcel_cloud.parcel_index[passed_parcel_idx] = CONVERGE_random_precision();
-   parcel_cloud.cloud_index[passed_parcel_idx] = CONVERGE_random_precision();
+   parcel_cloud.parcel_index[passed_parcel_idx] = user_parcel_counter;
+   parcel_cloud.cloud_index[passed_parcel_idx] = -1;
+   user_parcel_counter ++;
+   
+
    char *filename = "DGRE.txt";
    char *filename1 = "Temp_Tracker.txt";
    CONVERGE_index_t ncyc = CONVERGE_ncyc();

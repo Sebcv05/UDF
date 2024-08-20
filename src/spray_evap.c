@@ -159,7 +159,7 @@ CONVERGE_UDF(spray_evap,
             }
             rel_vel_mag[i_p] = CONVERGE_vec3_magnitude(rel_vel[i_p]);
          }
-
+       
          CONVERGE_cloud_iterator_destroy(&pc_it);
       }
    }
@@ -215,9 +215,12 @@ CONVERGE_UDF(spray_evap,
       {
          CONVERGE_logger_verbose("BEFORE spray_evap_cell DELMAS = %17.6e at ncyc= %ld", delmas, CONVERGE_ncyc());
       }
-
+      update_cloud_counter_flag = 0;      //Set this to 0 so cloud counter only updated if index setter triggered
       spray_evap_cell(cloud);
-
+      if(update_cloud_counter_flag)
+      {
+         user_cloud_counter++;
+      }
       delmas = global_src_ex_density[node_index] * dt / global_density[node_index];
       if(delmas > 0.2)
       {
@@ -242,6 +245,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // Setup parcel cloud iterator for this cloud
    CONVERGE_iterator_t pc_it;
    CONVERGE_cloud_iterator_create(cloud, &pc_it);
+
 
    // Get relevent flags
    CONVERGE_flag_t parcel_boil_correlation_flag = CONVERGE_get_int("simulation.parcel_boil_correlation");
@@ -498,6 +502,15 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
+      //   //USER ADDED      //Add a cloud index if one doesn't exist already
+         if(parcel_cloud.cloud_index[pidx]==-1)    //If cloud index = -1 then it hasn't been set
+         {
+            parcel_cloud.cloud_index[i_pc] = user_cloud_counter;     //want the same index for all parcels in the cloud so will update after the end of cloud loop
+            update_cloud_counter_flag = 1;
+         } 
+   ////////////////
+
+
       // see Borman and Ragland 1998 edition, p. 596
       tg       = (2.0 * parcel_cloud.temp[i_pc] + temp_gas) / 3.0;
       mol_visc = 0.0;
@@ -1424,7 +1437,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
        free(mult_sc_num);
        free(mult_sh_num);
    }
-}
+} //end of spray_evap_cell
+
 
 /**
  * @brief reset_parcel_temp_mfrac: Reset the parcel temperature and mass fractions to tm1 values
