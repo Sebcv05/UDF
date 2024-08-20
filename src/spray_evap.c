@@ -975,6 +975,11 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   cond_term1 =
                      (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
+                  double super_heat_degree = tdrop - temp_boil[isp];
+                  if( super_heat_degree > 0.002 )
+                  {
+                     cond_term1 =     dt * drop_area * heat_trans_coeff; //If Flash boiiling don't include Spalding number correlation
+                  }
                }
                else if(spray_evap_flag == 2)
                {
