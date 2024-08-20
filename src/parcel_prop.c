@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <counter.h>
 
 #include <user_header.h>
 

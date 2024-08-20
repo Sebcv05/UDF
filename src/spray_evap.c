@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <counter.h>
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
 static void reset_parcel_temp_mfrac(const CONVERGE_index_t parcel_idx,
                                     CONVERGE_precision_t *temp_drop,

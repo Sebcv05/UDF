@@ -9,12 +9,12 @@
 * Convergent Science.                                                          *
 *******************************************************************************/
 #include "lagrangian/env.h"
-
+#include <counter.h>
 #include <CONVERGE/udf.h>
 //Global variables to index parcels and clouds - need to initialize here
-CONVERGE_int_t user_parcel_counter = 0; //First index
-CONVERGE_int_t user_cloud_counter = 0; //First index
-CONVERGE_int_t update_cloud_counter_flag = 0;   //Flag to tell program to tick cloud_counter
+ user_parcel_counter = 0; //First index
+ user_cloud_counter = 0; //First index
+ update_cloud_counter_flag = 0;   //Flag to tell program to tick cloud_counter
 /** Load the spray environment
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
