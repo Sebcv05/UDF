@@ -503,7 +503,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
       //   //USER ADDED      //Add a cloud index if one doesn't exist already
-         if(parcel_cloud.cloud_index[pidx]==-1)    //If cloud index = -1 then it hasn't been set
+         if(parcel_cloud.cloud_index[i_pc]==-1)    //If cloud index = -1 then it hasn't been set
          {
             parcel_cloud.cloud_index[i_pc] = user_cloud_counter;     //want the same index for all parcels in the cloud so will update after the end of cloud loop
             update_cloud_counter_flag = 1;
@@ -555,7 +555,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          {
             printf("Error opening the file %s", filename1);
          }
-         fprintf(fp1, "%08f    %08f    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag);
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag);
          fclose(fp1);
          // ******************************************************************************************************//
 
