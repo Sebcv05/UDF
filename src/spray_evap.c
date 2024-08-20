@@ -43,6 +43,7 @@ static CONVERGE_index_t compute_parcel_mole_fractions(CONVERGE_precision_t *mass
 
 // Local UDF Field Variable Arrays
 // Declared here to simplify function signature for spray_evap_cell
+double user_dT_sh;
 static const CONVERGE_precision_t *global_density;
 static const CONVERGE_precision_t *global_mol_cond;
 static const CONVERGE_precision_t *global_csubp;
@@ -811,6 +812,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                if( evap_flag_flash_boiling==1 )
                {
                   double super_heat_degree = tdrop - temp_boil[isp];
+                  user_dT_sh = super_heat_degree;
                   if( super_heat_degree > 0.2 )
                   {
                      double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
@@ -975,8 +977,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   cond_term1 =
                      (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
-                  double super_heat_degree = tdrop - temp_boil[isp];
-                  if( super_heat_degree > 0.002 )
+                  
+                  if( user_dT_sh > 0.002 )
                   {
                      cond_term1 =     dt * drop_area * heat_trans_coeff; //If Flash boiiling don't include Spalding number correlation
                   }
