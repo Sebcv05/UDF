@@ -102,6 +102,7 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.thermal_breakup_flag[passed_parcel_idx] = -1;
    parcel_cloud.parcel_index[passed_parcel_idx] = user_parcel_counter;
    parcel_cloud.cloud_index[passed_parcel_idx] = -1;
+   parcel_cloud.user_lifetime[passed_parcel_idx] = 0; 
    user_parcel_counter ++;
    
 
@@ -220,7 +221,7 @@ CONVERGE_UDF(parcel_child,
 
    parcel_cloud.m0[passed_child_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parent_parcel_idx]) * parcel_cloud.num_drop[passed_parent_parcel_idx]);
    //Don't reset breakup flag
-
+   parcel_cloud.user_lifetime[passed_child_parcel_idx] = parcel_cloud.lifetime[passed_parent_parcel_idx]; //store old lifetime 
 }
 // set values for the custom parcel properties when film parcels separate
 // from a surface and are converted to spray parcels
@@ -257,8 +258,9 @@ CONVERGE_UDF(parcel_splash,
    spray_parcel_cloud.num_drop[passed_spray_parcel_idx] =
        spray_parcel_cloud.num_drop[passed_spray_parcel_idx] * parcel_semi_mass_old / parcel_semi_mass_new;
 
-         parcel_cloud.parcel_index[passed_child_parcel_idx] = parcel_cloud.parcel_index[passed_parent_parcel_idx];
-       parcel_cloud.cloud_index[passed_child_parcel_idx] = parcel_cloud.cloud_index[passed_parent_parcel_idx];
+      spray_parcel_cloud.parcel_index[passed_spray_parcel_idx] = spray_parcel_cloud.parcel_index[passed_film_parcel_idx];
+       spray_parcel_cloud.cloud_index[passed_spray_parcel_idx] = spray_parcel_cloud.cloud_index[passed_film_parcel_idx];
+       spray_parcel_cloud.user_lifetime[passed_spray_parcel_idx] = spray_parcel_cloud.user_lifetime[passed_film_parcel_idx];
 }
 // initialize values for the custom parcel properties when new parcels are created
 // from film stripping
@@ -294,6 +296,7 @@ CONVERGE_UDF(parcel_strip,
    spray_parcel_cloud.num_drop[passed_spray_parcel_idx] =
        spray_parcel_cloud.num_drop[passed_spray_parcel_idx] * parcel_semi_mass_old / parcel_semi_mass_new;
 
-         parcel_cloud.parcel_index[passed_child_parcel_idx] = parcel_cloud.parcel_index[passed_parent_parcel_idx];
-       parcel_cloud.cloud_index[passed_child_parcel_idx] = parcel_cloud.cloud_index[passed_parent_parcel_idx];
+         spray_parcel_cloud.parcel_index[passed_spray_parcel_idx] = spray_parcel_cloud.parcel_index[passed_film_parcel_idx];
+       spray_parcel_cloud.cloud_index[passed_spray_parcel_idx] = spray_parcel_cloud.cloud_index[passed_film_parcel_idx];
+         spray_parcel_cloud.user_lifetime[passed_spray_parcel_idx] = spray_parcel_cloud.user_lifetime[passed_film_parcel_idx];
 }
