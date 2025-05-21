@@ -93,7 +93,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     k_x_k_x_v = cross_product(k, k_x_v);
 
     // Rotate first parcel's velocity by a random angle
-    CONVERGE_precision_t rand =0;// CONVERGE_random_precision(); // Generates a random number between 0 and 1
+    CONVERGE_precision_t rand = CONVERGE_random_precision(); // Generates a random number between 0 and 1
     CONVERGE_precision_t psi = rand * 2 * PI;                // Random angle between 0 and 2 PI
     // printf("psi = %f deg\n",psi*360/(2*PI));
     //  Each of the remaining child parcels will be evenly distributed around the plane perpendicular to the normal

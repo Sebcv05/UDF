@@ -267,8 +267,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
        pre_TAB = CONVERGE_mpi_wtime();
       //TABDistort(&old_parcel_cloud, p_idx, dt, g_den, mu_v, rho_b);
        //After TAB breakup reset bubble radius (assumes bubble condenses during TAB breakup)
-      if( old_parcel_cloud.distort[p_idx] >0.99)     
-      {
+      // if( old_parcel_cloud.distort[p_idx] >0.99)     
+      // {
          CONVERGE_precision_t P_sat_new;
          Saturation_PressureNH3(old_parcel_cloud.temp[p_idx],&P_sat_new);
          old_parcel_cloud.r_bubble[p_idx]= 2.0 * old_parcel_cloud.surf_ten[p_idx] / (P_sat_new - global_pressure[node_index]);
@@ -289,7 +289,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
          old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
          old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
-      }
+      // }
 
        post_TAB = CONVERGE_mpi_wtime();
       theskyisblue = 1;    //it is 
