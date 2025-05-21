@@ -489,7 +489,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
              
             eopl = CONVERGE_mpi_wtime();
 
-          CONVERGE_precision_t post_pl = CONVERGE_mpi_wtime();
+         CONVERGE_precision_t post_pl = CONVERGE_mpi_wtime();
          CONVERGE_precision_t pl_diff = eopl - sopl;
          CONVERGE_precision_t tab_diff = post_TAB - pre_TAB;
          CONVERGE_precision_t tab_frac = 100.00* tab_diff / pl_diff;
