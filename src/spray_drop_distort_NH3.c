@@ -396,7 +396,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                CONVERGE_mpi_abort();
             }
             // commenting this out to see what happnes if we let bubble ad droplet radii grow nnnnn
-            /*if (Rb > old_parcel_cloud.radius[p_idx])
+            if (Rb > old_parcel_cloud.radius[p_idx])
              {
                // printf("\nrb_big");
                   FILE *fp1 = fopen("rb.txt", "a");
@@ -426,7 +426,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                 // continue;
              }
              else
-             {*/
+             {
 
             old_parcel_cloud.v_bubble_tm1[p_idx] = Vb_tm1;
             // Update droplet radius
@@ -466,7 +466,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             // Store eta
             old_parcel_cloud.eta_drop[p_idx] += eta; // Update eta
 
-            //} // Delimiter for if(r_bubble>r_drop)
+            } // Delimiter for if(r_bubble>r_drop)
 
          } // Delimiter for if thermal_breakup_flag=0
          //********************** BREAKUP ROUTINE ***************************************//
