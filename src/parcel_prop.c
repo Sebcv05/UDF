@@ -294,6 +294,6 @@ CONVERGE_UDF(parcel_strip,
    spray_parcel_cloud.num_drop[passed_spray_parcel_idx] =
        spray_parcel_cloud.num_drop[passed_spray_parcel_idx] * parcel_semi_mass_old / parcel_semi_mass_new;
 
-         parcel_cloud.parcel_index[passed_child_parcel_idx] = parcel_cloud.parcel_index[passed_parent_parcel_idx];
-       parcel_cloud.cloud_index[passed_child_parcel_idx] = parcel_cloud.cloud_index[passed_parent_parcel_idx];
+         spray_parcel_cloud.parcel_index[passed_spray_parcel_idx] = spray_parcel_cloud.parcel_index[passed_film_parcel_idx];
+       spray_parcel_cloud.cloud_index[passed_spray_parcel_idx] = spray_parcel_cloud.cloud_index[passed_film_parcel_idx];
 }
