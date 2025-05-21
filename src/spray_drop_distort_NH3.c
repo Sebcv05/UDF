@@ -411,7 +411,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                 old_parcel_cloud.thermal_breakup_flag[p_idx] = 5.0;
                 old_parcel_cloud.tbt[p_idx]=1;
                  old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
-                 old_parcel_cloud.v_bubble[p_idx] = Vb;
+               //   old_parcel_cloud.v_bubble[p_idx] = old_parcel_cloud.v_bubble;
               //  printf("Rb>Rd flag = %d\n", old_parcel_cloud.thermal_breakup_flag[p_idx]);
                 //printf("\n radius = %e r_bubble = %e",old_parcel_cloud.radius[p_idx],old_parcel_cloud.r_bubble[p_idx]);
                 FILE *fp2 = fopen("breakup_tracker.txt", "a");
