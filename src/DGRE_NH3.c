@@ -103,10 +103,12 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             {
                r1.x0 = 0;
             }
-            if (creal(r1.x0) < 0.0)
+            if (creal(r1.x0) <= 0.0)
             {
-               // printf("\nroot is negative");
-               old_parcel_cloud->omega[p_idx] = 0.0;
+                old_parcel_cloud->omega[p_idx] = 0.0;
             }
-             old_parcel_cloud->omega[p_idx] = creal(r1.x0)/c_omega;
+            else
+            {
+                old_parcel_cloud->omega[p_idx] = creal(r1.x0) / c_omega;
+            }
 }
