@@ -325,7 +325,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
                continue;
                // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
-            }
+            
                // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
             }
 
