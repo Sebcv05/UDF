@@ -141,7 +141,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    mass_after = 0;
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
-      if(CONVERGE_simulation_time_time_sec() > 1.0e-4)
+      if(CONVERGE_simulation_time_sec() > 1.0e-4)
       {
       //Timing 
          pre_TAB = 0.0; post_TAB = 0.0; pre_DGRE=0.0;post_DGRE=0.0;pre_Geom=0.0;post_Geom=0.0;pre_break=0.0;post_break=0.0;pre_bc=0.0;pre_bc=0.0;pre_pbr=0.0;post_bc=0.0;
