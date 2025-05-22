@@ -347,12 +347,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
                   continue;
                   }
-                  if(old_parcel_cloud.v_bubble[p_idx]==0.0)
-                  {
-                   //  printf("\nVb = 0 after bubble_velocity update");
-                  }
+                  // if(old_parcel_cloud.v_bubble[p_idx]==0.0)
+                  // {
+                  //  //  printf("\nVb = 0 after bubble_velocity update");
+                  // }
             CONVERGE_precision_t dR = old_parcel_cloud.v_bubble[p_idx] * dt;
-            if (dR > old_parcel_cloud.radius[p_idx])
+            if (dR >= 0.95* old_parcel_cloud.radius[p_idx])
             {
               // printf("\ndR> droplet radius, Vb = %e  dt= %e dR = %e rb = %e rad_before = %e", old_parcel_cloud.v_bubble[p_idx], dt,dR, old_parcel_cloud.r_bubble[p_idx]+dR,rad_before);
                //printf("Setting TBT and r_bubble = 0.95 * r_drop");
@@ -368,6 +368,13 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             else
             {
                printf("dR negative");
+            }
+            if(Rb_temp > old_parcel_cloud.radius[p_idx])
+            {
+               Rb_temp = 0.95* old_parcel_cloud.radius[p_idx];
+               old_parcel_cloud.tbt[p_idx] = 1;
+               old_parcel_cloud.thermal_breakup_flag[p_idx]=3;
+               continue;
             }
             // printf("\n Rb = %e	tau = %e		B = %e		A = %e",Rb_temp,tau,B,A);
             //	printf("\n el  %el		e %e	f %f	fl %fl",Rb_temp,Rb_temp,Rb_temp,Rb_temp);
