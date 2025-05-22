@@ -141,8 +141,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    mass_after = 0;
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
-      if(CONVERGE_simulation_time_sec() > 1.0e-4)
-      {
+      // if(CONVERGE_simulation_time_sec() > 1.0e-4)
+      // {
       //Timing 
          pre_TAB = 0.0; post_TAB = 0.0; pre_DGRE=0.0;post_DGRE=0.0;pre_Geom=0.0;post_Geom=0.0;pre_break=0.0;post_break=0.0;pre_bc=0.0;pre_bc=0.0;pre_pbr=0.0;post_bc=0.0;
          sopl = CONVERGE_mpi_wtime();
@@ -317,7 +317,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
 
             }
-       
+            if(old_parcel_cloud.radius[p_idx]> old_parcel_cloud.r_droop_0[p_idx]*1.5)
+            {
+               old_parcel_cloud.thermal_breakup_flag[p_idx] = 1;
+               old_parcel_cloud.tbt[p_idx] = 1;
+               old_parcel_cloud.pbt[p_idx] = 0;
+               old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
+               continue;
+               // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
+            }
+               // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
+            }
+
+
+
+
 
             //Calculate Species dependent properites
             CONVERGE_precision_t average_hvap = 0.0;
@@ -418,7 +432,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    fprintf(fp1,"\nBreakup");
                    fclose(fp1);
                // printf("\nBubble Radius > Droplet Radius\n");
-                old_parcel_cloud.thermal_breakup_flag[p_idx] = 5.0;
+                old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;
                 old_parcel_cloud.tbt[p_idx]=1;
                  old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
                //   old_parcel_cloud.v_bubble[p_idx] = old_parcel_cloud.v_bubble;
@@ -541,7 +555,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       //  }
     mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
      // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
-      } //time limieter >0.1ms 
+      // } //time limieter >0.1ms 
    }    // End of parcel loop
     
    // int rank;
