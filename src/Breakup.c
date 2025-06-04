@@ -116,6 +116,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // } // end of jj loop
 
     CONVERGE_vec3_t xx;
+    CONVERGE_vec3_t uu;
     for (int kk = 0; kk < 3; kk++)
     {
         xx[kk] = old_parcel_cloud->xx[p_idx][kk];
@@ -125,7 +126,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
     old_parcel_cloud->uu[p_idx][1] = c.vy[0] * aa * rad_vel + parent_vy;
     old_parcel_cloud->uu[p_idx][2] = c.vz[0] * aa * rad_vel + parent_vz;
-
+    uu = old_parcel_cloud->uu[p_idx];
     // Radius and Num Drop
     //Pre-Brekaup radius compare
    // printf("\nradius = %e  r_drop_0 = %e r_therm =%e dgre_cycles = %i",old_parcel_cloud->radius[p_idx],old_parcel_cloud->r_drop_0[p_idx],old_parcel_cloud->r_therm[p_idx],old_parcel_cloud->dgre_cycle_count[p_idx]);
@@ -178,6 +179,41 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
         printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);
         // printf("\nsurf ten = %e, density = %e rt3 = %e",old_parcel_cloud->surf_ten[p_idx],old_parcel_cloud->density[p_idx],rad_term3);
     }
+
+      
+    //--------- Testing Child Parcel Introduction ----------------//
+    printf("\n Testing Child Parcel Introduction....\n");
+    // Calculate number of child parcels
+    CONVERGE_index_t num_child_parcels = 1;
+    CONVERGE_index_t nnn;
+    CONVERGE_precision_t growth_rate, wave_length, radius_equil;
+    CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
+    growth_rate = 0.0;
+    wave_length = 0.0;
+    CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(old_parcel_cloud)
+    printf("\nInitial cloud size = %i",initial_cloud_size);
+            for(nnn = 0; nnn < num_child_parcels; nnn++)
+            {
+               CONVERGE_spray_child_parcel(uu,
+                                           growth_rate,
+                                           wave_length,
+                                           0.1* old_parcel_cloud->radius[p_idx],
+                                           0.001 * old_parcel_cloud->num_drop[p_idx],
+                                           p_idx,
+                                           old_parcel_cloud);
+            }
+
+            // reload after adding parcels
+            load_user_cloud(&parcel_cloud, passed_spray_cloud);
+            CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(old_parcel_cloud);
+            printf("\nNew cloud size = %i",new_cloud_size);
+            if(new_cloud_size <= initial_cloud_size)
+            {
+                printf("\nError: New cloud size is not larger than initial cloud size after breakup");
+                CONVERGE_mpi_abort();
+            }
+            // --------- End of Testing Child Parcel Introduction ----------------//
+
         // if (old_parcel_cloud->radius[p_idx] < parent_radius )
         // {
         //     printf("radius decreased by thermal breakup ");
