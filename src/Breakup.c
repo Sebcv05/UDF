@@ -126,7 +126,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
     old_parcel_cloud->uu[p_idx][1] = c.vy[0] * aa * rad_vel + parent_vy;
     old_parcel_cloud->uu[p_idx][2] = c.vz[0] * aa * rad_vel + parent_vz;
-    uu = old_parcel_cloud->uu[p_idx];
+    // uu = old_parcel_cloud->uu[p_idx];
     // Radius and Num Drop
     //Pre-Brekaup radius compare
    // printf("\nradius = %e  r_drop_0 = %e r_therm =%e dgre_cycles = %i",old_parcel_cloud->radius[p_idx],old_parcel_cloud->r_drop_0[p_idx],old_parcel_cloud->r_therm[p_idx],old_parcel_cloud->dgre_cycle_count[p_idx]);
@@ -194,7 +194,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\nInitial cloud size = %i",initial_cloud_size);
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
-               CONVERGE_spray_child_parcel(uu,
+               CONVERGE_spray_child_parcel(old_parcel_cloud.uu[p_idx],
                                            growth_rate,
                                            wave_length,
                                            0.1* old_parcel_cloud->radius[p_idx],
