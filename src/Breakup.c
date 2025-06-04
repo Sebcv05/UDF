@@ -194,16 +194,16 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\nInitial cloud size = %i",initial_cloud_size);
     if(initial_cloud_size >0)
     {
-            for(nnn = 0; nnn < num_child_parcels; nnn++)
-            {
-               CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
-                                           growth_rate,
-                                           wave_length,
-                                           0.1* old_parcel_cloud->radius[p_idx],
-                                           0.001 * old_parcel_cloud->num_drop[p_idx],
-                                           p_idx,
-                                           old_parcel_cloud);
-            }
+            // for(nnn = 0; nnn < num_child_parcels; nnn++)
+            // {
+            //    CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
+            //                                growth_rate,
+            //                                wave_length,
+            //                                0.1* old_parcel_cloud->radius[p_idx],
+            //                                0.001 * old_parcel_cloud->num_drop[p_idx],
+            //                                p_idx,
+            //                                old_parcel_cloud);
+            // }
 
             // reload after adding parcels
             load_user_cloud(&old_parcel_cloud, old_parcel_cloud);
