@@ -192,6 +192,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     wave_length = 0.0;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(old_parcel_cloud);
     printf("\nInitial cloud size = %i",initial_cloud_size);
+    if(initial_cloud_size >0)
+    {
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
                CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
@@ -212,6 +214,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 printf("\nError: New cloud size is not larger than initial cloud size after breakup");
                 CONVERGE_mpi_abort();
             }
+        }
             // --------- End of Testing Child Parcel Introduction ----------------//
 
         // if (old_parcel_cloud->radius[p_idx] < parent_radius )
