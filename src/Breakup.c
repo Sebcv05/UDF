@@ -194,7 +194,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\nInitial cloud size = %i",initial_cloud_size);
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
-               CONVERGE_spray_child_parcel(old_parcel_cloud.uu[p_idx],
+               CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
                                            growth_rate,
                                            wave_length,
                                            0.1* old_parcel_cloud->radius[p_idx],
