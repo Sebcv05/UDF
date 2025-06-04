@@ -505,7 +505,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // Check cloud size before breakup
                CONVERGE_index_t cloud_size_before_break = CONVERGE_cloud_size(cloud);
                printf("\nBreakup.cloud_size_before_break = %i", cloud_size_before_break);
-               Breakup(&old_parcel_cloud, p_idx, cloud);
+               Breakup(&old_parcel_cloud, p_idx, &cloud);
                post_break = CONVERGE_mpi_wtime();
          }
   
