@@ -13,7 +13,7 @@
 #ifndef BREAKUP_H
 #define BREAKUP_H
 
-void Breakup(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVERGE_cloud_t* cloud);
+void Breakup(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud);
 
 
 #endif // BREAKUP_H
