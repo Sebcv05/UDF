@@ -503,7 +503,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                
                pre_break = CONVERGE_mpi_wtime();
      
-               Breakup(&old_parcel_cloud, p_idx);
+               Breakup(&old_parcel_cloud, p_idx,cloud);
                post_break = CONVERGE_mpi_wtime();
          }
   

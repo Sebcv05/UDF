@@ -14,7 +14,7 @@
 #include <spray_break.h>
 #include <PsatNH3.h>
 #include<Vb.h>
-void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx)
+void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud)
 {
 
 if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
@@ -204,7 +204,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
             }
 
             // reload after adding parcels
-            load_user_cloud(&parcel_cloud, passed_spray_cloud);
+            load_user_cloud(&old_parcel_cloud, old_parcel_cloud);
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(old_parcel_cloud);
             printf("\nNew cloud size = %i",new_cloud_size);
             if(new_cloud_size <= initial_cloud_size)
