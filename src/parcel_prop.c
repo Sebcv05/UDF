@@ -182,7 +182,7 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.v_bubble[passed_child_parcel_idx] = 0.0;
    parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
    //Set these to prevent secondary thermal breakup 
-   parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;
+   parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 5;
    parcel_cloud.pbt[passed_child_parcel_idx] = 0;
    // printf("\n END OF PARCEL_PROP.C \n");
    // printf("\n\n r_bubble = %e 	r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parent_parcel_idx], parcel_cloud.r_bubble_0[passed_parent_parcel_idx]);
