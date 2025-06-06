@@ -176,7 +176,7 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.r_bubble[passed_child_parcel_idx] = 0.0;
       parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
    }
-   parcel_cldoud.r_bubble[passed_child_parcel_idx] = 0.0;
+   parcel_cloud.r_bubble[passed_child_parcel_idx] = 0.0;
 
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
    parcel_cloud.v_bubble[passed_child_parcel_idx] = 0.0;
