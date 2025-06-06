@@ -214,6 +214,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
 
             //Update parent drop's radius
             // old_parcel_cloud->radius[p_idx] = 0old_parcel_cloud->radius[p_idx];
+            old_parcel_cloud->radius[p_idx]=0.0;
             old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
             old_parcel_cloud->num_drop[p_idx] = 0.1 * nd_before_break;
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
