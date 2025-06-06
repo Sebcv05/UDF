@@ -200,7 +200,7 @@ CONVERGE_UDF(parcel_child,
 
    parcel_cloud.m0[passed_child_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parent_parcel_idx]) * parcel_cloud.num_drop[passed_parent_parcel_idx]);
    //Don't reset breakup flag
-   printf("\n\n parcel_child called for parcel %i with parent %i which has temp %f and radius %f\n",
+   printf("\n\n parcel_child called for parcel %i with parent %i which has temp %f and radius %e\n",
           passed_child_parcel_idx, passed_parent_parcel_idx, parcel_cloud.temp[passed_parent_parcel_idx],
           parcel_cloud.radius[passed_parent_parcel_idx]);
 }
