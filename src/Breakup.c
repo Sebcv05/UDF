@@ -187,7 +187,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
     // Calculate number of child parcels
-    CONVERGE_index_t num_child_parcels = 2;
+    CONVERGE_index_t num_child_parcels = 1;
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
