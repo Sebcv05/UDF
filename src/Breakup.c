@@ -184,7 +184,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     //--------- Testing Child Parcel Introduction ----------------//
     printf("\n Testing Child Parcel Introduction....\n");
 //Check to see if reducing parent's temperature prevents convergence failure
-    old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
+    // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
     // Calculate number of child parcels
     CONVERGE_index_t num_child_parcels = 9;
@@ -204,7 +204,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                                            growth_rate,
                                            wave_length,
                                            0.1 * old_parcel_cloud->radius[p_idx],
-                                           100 * old_parcel_cloud->num_drop[p_idx],
+                                           10 * old_parcel_cloud->num_drop[p_idx],
                                            p_idx,
                                            cloud);
             }
