@@ -161,30 +161,7 @@ CONVERGE_UDF(parcel_child,
        parcel_cloud.cloud_index[passed_child_parcel_idx] = parcel_cloud.cloud_index[passed_parent_parcel_idx];
 
 
- // Calculate Saturation Pressure from Antoine's Equation
-   CONVERGE_precision_t P_sat;
-   CONVERGE_precision_t A;
-   CONVERGE_precision_t B;
-   CONVERGE_precision_t C;
-   CONVERGE_precision_t Td;
-   A = 3.93679;
-   B = 1257.84;
-   C = -52.415;
-   Td = parcel_cloud.temp[passed_child_parcel_idx];
-   if (Td > 297.51 & Td < 373.28)
-   {
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
-   else if (Td < 297.51)
-   {
-      Td = 297.51;
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
-   else if (Td > 373.28)
-   {
-      Td = 373.28;
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
+ 
    // printf("PARCEL_PROP.C L70 P_sat = %f\n",P_sat);
    // printf("PARCEL_PROP.C L67\n");
 
@@ -193,17 +170,20 @@ CONVERGE_UDF(parcel_child,
 
 
    //Need to reset properties but not flags for breakup (Assumes breakup starts again if it hasn't already occured)
-   parcel_cloud.r_bubble[passed_child_parcel_idx] = 2.0 * parcel_cloud.surf_ten[passed_parent_parcel_idx] / (P_sat - ambient_pres);
+   // parcel_cloud.r_bubble[passed_child_parcel_idx] = 2.0 * parcel_cloud.surf_ten[passed_parent_parcel_idx] / (P_sat - ambient_pres);
    if (parcel_cloud.r_bubble[passed_child_parcel_idx] < 0.0)
    {
       parcel_cloud.r_bubble[passed_child_parcel_idx] = 0.0;
       parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
    }
-
+   parcel_cldoud.r_bubble[passed_child_parcel_idx] = 0.0;
 
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
    parcel_cloud.v_bubble[passed_child_parcel_idx] = 0.0;
-   parcel_cloud.r_bubble_0[passed_child_parcel_idx] = parcel_cloud.r_bubble[passed_parent_parcel_idx];
+   parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
+   //Set these to prevent secondary thermal breakup 
+   parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;
+   parcel_cloud.pbt[passed_child_parcel_idx] = 0;
    // printf("\n END OF PARCEL_PROP.C \n");
    // printf("\n\n r_bubble = %e 	r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parent_parcel_idx], parcel_cloud.r_bubble_0[passed_parent_parcel_idx]);
 
