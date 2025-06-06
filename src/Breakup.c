@@ -187,6 +187,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
     // Calculate number of child parcels
+    CONVERGE_precision_t old_mass, new_mass;
+
     CONVERGE_index_t num_child_parcels = 10;
     // Child radius and number of drops
     new_radius = old_parcel_cloud->radius[p_idx] * 0.1;
@@ -206,7 +208,6 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\nParent parcel radius = %e, num_drop = %e", old_parcel_cloud->radius[p_idx], old_parcel_cloud->num_drop[p_idx]);
     if(initial_cloud_size >0)
     {
-        CONVERGE_precision_t old_mass, new_mass;
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
