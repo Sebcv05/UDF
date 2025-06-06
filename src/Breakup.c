@@ -187,7 +187,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
     // Calculate number of child parcels
-    CONVERGE_index_t num_child_parcels = 9;
+    CONVERGE_index_t num_child_parcels = 2;
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
@@ -203,8 +203,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
                                            growth_rate,
                                            wave_length,
-                                           old_parcel_cloud->radius[p_idx],
-                                           0.1 * old_parcel_cloud->num_drop[p_idx],
+                                           0.1 * old_parcel_cloud->radius[p_idx],
+                                           100 * old_parcel_cloud->num_drop[p_idx],
                                            p_idx,
                                            cloud);
             }
@@ -221,7 +221,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
             old_parcel_cloud->pbt[p_idx] = 0;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 5; // Set to 5 to prevent secondary breakup
             old_parcel_cloud->tbt[p_idx] = 0; // Reset thermal breakup time
-
+        
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
             printf("\nNew cloud size = %i\n\n",new_cloud_size);
             // if(new_cloud_size <= initial_cloud_size)

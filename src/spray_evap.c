@@ -592,7 +592,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          CONVERGE_precision_t tdrop        = parcel_cloud.temp[i_pc];
          CONVERGE_precision_t tdrop_starm1 = parcel_cloud.temp[i_pc];
 
-         int max_inner_iter = 10;
+         int max_inner_iter = 100;
          int min_inner_iter = 1;
 
          // omega is the under-relaxation. if convergence not working this can be lowered.
