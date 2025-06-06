@@ -184,7 +184,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     //--------- Testing Child Parcel Introduction ----------------//
     printf("\n Testing Child Parcel Introduction....\n");
     // Calculate number of child parcels
-    CONVERGE_index_t num_child_parcels = 10;
+    CONVERGE_index_t num_child_parcels = 1;
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
@@ -200,7 +200,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                                            growth_rate,
                                            wave_length,
                                            0.1 * old_parcel_cloud->radius[p_idx],
-                                           100 * old_parcel_cloud->num_drop[p_idx],
+                                           1000 * old_parcel_cloud->num_drop[p_idx],
                                            p_idx,
                                            cloud);
             }
