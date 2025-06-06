@@ -242,7 +242,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
       if(Td > 300.0){
-      printf("\n\n before P_sat, Td = %f, p_idx = %i, tbt = %i, pbt = %i, thermal_breakup_flag = %i",Td,p_idx,old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
+      printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %i, tbt = %i, pbt = %i, thermal_breakup_flag = %i",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
 }
       Saturation_PressureNH3(Td, &P_sat);
       // Unit tests for saturation pressure function
