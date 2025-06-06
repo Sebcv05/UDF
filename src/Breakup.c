@@ -22,7 +22,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_mpi_abort();
 }
  CONVERGE_precision_t   old_r = old_parcel_cloud->radius[p_idx];
-
+ CONVERGE_precision_t  old_nd = old_parcel_cloud->num_drop[p_idx];
     breakup_counter++;
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
@@ -229,8 +229,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
         // }
 
     // printf("\nN = %i",N);
-    CONVERGE_precision_t old_nd;
-    old_nd = old_parcel_cloud->num_drop[p_idx];
+
     old_parcel_cloud->num_drop[p_idx] = old_parcel_cloud->num_drop[p_idx] * CONVERGE_cube(parent_radius / old_parcel_cloud->radius[p_idx]);
     CONVERGE_precision_t mnew = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
     //printf("\nm0 = %e m_old = %e m_new = %e",old_parcel_cloud->m0[p_idx],parent_nd*1.3333*PI*CONVERGE_cube(parent_radius),mnew);
