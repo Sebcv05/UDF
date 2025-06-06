@@ -200,7 +200,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                                            growth_rate,
                                            wave_length,
                                            0.1 * old_parcel_cloud->radius[p_idx],
-                                           0.001 * old_parcel_cloud->num_drop[p_idx],
+                                           100 * old_parcel_cloud->num_drop[p_idx],
                                            p_idx,
                                            cloud);
             }
