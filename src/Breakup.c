@@ -103,17 +103,17 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     c.vy[0] = v.y + (k_x_v.y * sin_psi) + k_x_k_x_v.y * (1 - cos_psi);
     c.vz[0] = v.z + (k_x_v.z * sin_psi) + k_x_k_x_v.z * (1 - cos_psi);
     //Developed to split parent parcel into N smaller parcels at breakup 
-    // for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
-    // {
-    //     // Using Rodrigues' rotation formula to rotate about parent velocity by angle theta
-    //     // v_rot = v + (1-cos(theta)) k x (k x v) + sin(theta) k x v;
-    //     CONVERGE_precision_t theta = jj * 2 * PI / N;
-    //     // printf(" jj= %i, theta = %f\n",jj,(psi+theta) * 360 / (2*PI));
-    //     //  Each of the remaining child parcels will be evenly distributed around the plane perpendicular to the normal
-    //     c.vx[jj] = v.x + (k_x_v.x * sin(theta + psi)) + k_x_k_x_v.x * (1 - cos(theta + psi));
-    //     c.vy[jj] = v.y + (k_x_v.y * sin(theta + psi)) + k_x_k_x_v.y * (1 - cos(theta + psi));
-    //     c.vz[jj] = v.z + (k_x_v.z * sin(theta + psi)) + k_x_k_x_v.z * (1 - cos(theta + psi));
-    // } // end of jj loop
+    for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
+    {
+        // Using Rodrigues' rotation formula to rotate about parent velocity by angle theta
+        // v_rot = v + (1-cos(theta)) k x (k x v) + sin(theta) k x v;
+        CONVERGE_precision_t theta = jj * 2 * PI / N;
+        // printf(" jj= %i, theta = %f\n",jj,(psi+theta) * 360 / (2*PI));
+        //  Each of the remaining child parcels will be evenly distributed around the plane perpendicular to the normal
+        c.vx[jj] = v.x + (k_x_v.x * sin(theta + psi)) + k_x_k_x_v.x * (1 - cos(theta + psi));
+        c.vy[jj] = v.y + (k_x_v.y * sin(theta + psi)) + k_x_k_x_v.y * (1 - cos(theta + psi));
+        c.vz[jj] = v.z + (k_x_v.z * sin(theta + psi)) + k_x_k_x_v.z * (1 - cos(theta + psi));
+    } // end of jj loop
 
     CONVERGE_vec3_t xx;
     CONVERGE_vec3_t uu;
@@ -123,9 +123,9 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     };
     // include a for loop to do it N times per parcel
 
-    old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
-    old_parcel_cloud->uu[p_idx][1] = c.vy[0] * aa * rad_vel + parent_vy;
-    old_parcel_cloud->uu[p_idx][2] = c.vz[0] * aa * rad_vel + parent_vz;
+    // old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
+    // old_parcel_cloud->uu[p_idx][1] = c.vy[0] * aa * rad_vel + parent_vy;
+    // old_parcel_cloud->uu[p_idx][2] = c.vz[0] * aa * rad_vel + parent_vz;
     // uu = old_parcel_cloud->uu[p_idx];
     // Radius and Num Drop
     //Pre-Brekaup radius compare
@@ -191,6 +191,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
+    CONVERGE_vec3_t new_parcel_uu;
     growth_rate = 0.0;
     wave_length = 0.0;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
@@ -200,7 +201,11 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
-               CONVERGE_spray_child_parcel(old_parcel_cloud->uu[p_idx],
+                //Calcualte velocity of each child parcel
+                new_parcel_uu[0] = c.vx[nnn] * aa * rad_vel + parent_vx;
+                new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
+                new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
+               CONVERGE_spray_child_parcel(new_parcel_uu,
                                            growth_rate,
                                            wave_length,
                                            0.1 * old_parcel_cloud->radius[p_idx],
