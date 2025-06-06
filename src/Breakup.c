@@ -196,6 +196,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     wave_length = 0.0;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
     printf("\nInitial cloud size = %i",initial_cloud_size);
+    printf("\nParent parcel radius = %e, num_drop = %e", old_parcel_cloud->radius[p_idx], old_parcel_cloud->num_drop[p_idx]);
     if(initial_cloud_size >0)
     {
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
