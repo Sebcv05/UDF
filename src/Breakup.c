@@ -200,10 +200,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
 
 
-    CONVERGE_index_t nnn;
-    CONVERGE_precision_t growth_rate, wave_length, radius_equil;
-    CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
-    CONVERGE_vec3_t new_parcel_uu;
+
     growth_rate = 0.0;
     wave_length = 0.0;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
