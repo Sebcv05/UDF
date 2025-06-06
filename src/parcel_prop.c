@@ -144,18 +144,18 @@ CONVERGE_UDF(parcel_child,
 
    load_user_cloud(&parcel_cloud, passed_spray_cloud);
 
-   parcel_semi_mass_old = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
-                          parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
+   // parcel_semi_mass_old = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
+   //                        parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
 
-   parcel_cloud.density[passed_child_parcel_idx] = parcel_cloud.density[passed_parent_parcel_idx];
-   parcel_cloud.radius[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
-   parcel_cloud.density_tm1[passed_child_parcel_idx] = parcel_cloud.density_tm1[passed_parent_parcel_idx];
+   // parcel_cloud.density[passed_child_parcel_idx] = parcel_cloud.density[passed_parent_parcel_idx];
+   // parcel_cloud.radius[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
+   // parcel_cloud.density_tm1[passed_child_parcel_idx] = parcel_cloud.density_tm1[passed_parent_parcel_idx];
 
-   parcel_semi_mass_new = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
-                          parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
+   // parcel_semi_mass_new = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
+   //                        parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
 
-   parcel_cloud.num_drop[passed_child_parcel_idx] =
-       parcel_cloud.num_drop[passed_child_parcel_idx] * parcel_semi_mass_old / parcel_semi_mass_new;
+   // parcel_cloud.num_drop[passed_child_parcel_idx] =
+   //     parcel_cloud.num_drop[passed_child_parcel_idx] * parcel_semi_mass_old / parcel_semi_mass_new;
 
        parcel_cloud.parcel_index[passed_child_parcel_idx] = parcel_cloud.parcel_index[passed_parent_parcel_idx];
        parcel_cloud.cloud_index[passed_child_parcel_idx] = parcel_cloud.cloud_index[passed_parent_parcel_idx];
