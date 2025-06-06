@@ -190,6 +190,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
     growth_rate = 0.0;
     wave_length = 0.0;
+    CONVERGE_precision_t old_nd = old_parcel_cloud->num_drop[p_idx];
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
     printf("\nInitial cloud size = %i",initial_cloud_size);
     if(initial_cloud_size >0)
@@ -211,7 +212,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
             //Update parent drop's radius
             old_parcel_cloud->radius[p_idx] = 0.1 * old_parcel_cloud->radius[p_idx];
             old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
-            old_parcel_cloud->num_drop[p_idx] = 100 * old_parcel_cloud->num_drop[p_idx];
+            old_parcel_cloud->num_drop[p_idx] = 100.0 * old_nd;
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
             printf("\nNew cloud size = %i\n\n",new_cloud_size);
             // if(new_cloud_size <= initial_cloud_size)
