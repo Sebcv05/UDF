@@ -187,7 +187,14 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
     // Calculate number of child parcels
-    CONVERGE_index_t num_child_parcels = 2;
+    CONVERGE_index_t num_child_parcels = 10;
+    // Child radius and number of drops
+    new_radius = old_parcel_cloud->radius[p_idx] * 0.1;
+    old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
+    new_mass = old_mass / num_child_parcels;
+    new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
+
+
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
@@ -208,11 +215,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
                 new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
 
-                // Child radius and number of drops
-                new_radius = old_parcel_cloud->radius[p_idx] * 0.1;
-                old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
-                new_mass = old_mass / num_child_parcels;
-                new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
+
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                            growth_rate,
                                            wave_length,
