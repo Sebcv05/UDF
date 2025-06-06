@@ -207,8 +207,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
 
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
-            CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(old_parcel_cloud);
-            printf("\nNew cloud size = %i",new_cloud_size);
+            CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
+            printf("\nNew cloud size = %i\n\n",new_cloud_size);
             // if(new_cloud_size <= initial_cloud_size)
             // {
             //     printf("\nError: New cloud size is not larger than initial cloud size after breakup");
