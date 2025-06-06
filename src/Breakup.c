@@ -141,8 +141,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
-    old_parcel_cloud->radius[p_idx] = 1.0 / (2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4));
-    old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
+    // old_parcel_cloud->radius[p_idx] = 1.0 / (2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4));
+    // old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
     if (old_parcel_cloud->radius[p_idx] < 0.0)
     {
         printf("\n radius negative \n");
@@ -230,7 +230,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
 
     // printf("\nN = %i",N);
 
-    old_parcel_cloud->num_drop[p_idx] = old_parcel_cloud->num_drop[p_idx] * CONVERGE_cube(parent_radius / old_parcel_cloud->radius[p_idx]);
+    // old_parcel_cloud->num_drop[p_idx] = old_parcel_cloud->num_drop[p_idx] * CONVERGE_cube(parent_radius / old_parcel_cloud->radius[p_idx]);
     CONVERGE_precision_t mnew = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
     //printf("\nm0 = %e m_old = %e m_new = %e",old_parcel_cloud->m0[p_idx],parent_nd*1.3333*PI*CONVERGE_cube(parent_radius),mnew);
     if(mnew > 1.01* old_parcel_cloud->m0[p_idx])
