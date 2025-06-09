@@ -78,7 +78,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
     
-   
+   //-----------------------------Calculate child parcel velocities----------------------------
 
     // First child parcel will have radial velocity along normal
     CONVERGE_vec3_dup(parent_normal,child_velocity[0]); // Set first child parcel's velocity to be along the normal
@@ -94,26 +94,41 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_precision_t cos_psi = cos(psi);
     //Rotation around parent's velocity vector by angle psi - Rodrigues' rotation formula
     // child velocity[i] = child_velocity[i-1]*cos(psi) + parent_velocity_normal_x_child_velocity[i-1] * sin(psi) + parent_velocity_x_parent_velocity_x_child_velocity[i-1] * (1 - cos(psi))
-    CONVERGE_vec3_t PVU_X_CV, PVU_X_PVU_X_CV;
-    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[0],&PVU_X_CV);
+    CONVERGE_vec3_t a,b,c,d;
 
-    child_velocity[0] = CONVERGE_vec3_scale(child_velocity[0], cos_psi) 
-                        + CONVERGE_vec3_scale(PVU_X_CV, sin_psi) 
-                        + CONVERGE_vec3_scale(parent_velocity_unit, CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi));
+    CONVERGE_vec3_dup(child_velocity[0], a); // Previous child parcel's velocity 
 
-    CONVERGE_precision_t sin_theta, cos_theta;
+    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[0],&b); 
+    CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
+    
+    CONVERGE_vec3_scale(a, cos_psi) ; //Term 1 
+    CONVERGE_vec3_scale(b, sin_psi); // Term 2 
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi)) //Term 3
+
+    CONVERGE_vec3_add(a,b,&d);
+    CONVERGE_vec3_add(d,c, &child_velocity[0]); // Final child velocity vector
+
+    CONVERGE_precision_t sin_theta, cos_theta, theta;
     theta = 2 * PI / N; // Angle between child parcels
     sin_theta = sin(theta);
     cos_theta = cos(theta);
     //Developed to split parent parcel into N smaller parcels at breakup 
     for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
     {
-    //Recalculate cross product for previous child parcel's velocity
-         CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[jj-1],&PVU_X_CV);
-        //Calculate next child's velocity
-         child_velocity[jj] = CONVERGE_vec3_scale(child_velocity[jj-1], cos_theta) 
-                        + CONVERGE_vec3_scale(PVU_X_CV, sin_theta) 
-                        + CONVERGE_vec3_scale(parent_velocity_unit, CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta));
+    CONVERGE_vec3_dup(child_velocity[jj-1], a); // Previous child parcel's velocity 
+
+    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[jj-1],&b); 
+    CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
+    
+    CONVERGE_vec3_scale(a, cos_theta) ; //Term 1 
+    CONVERGE_vec3_scale(b, sin_theta); // Term 2 
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta)) //Term 3
+
+    CONVERGE_vec3_add(a,b,&d);
+    CONVERGE_vec3_add(d,c, &child_velocity[jj]); // Final child velocity vector
+   
+   
+   
     } // end of jj loop
 
     //----------------------------Calculate post breakup radius and number of drops for each child parcel----------------------------
