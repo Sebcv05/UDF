@@ -36,12 +36,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
 
     // Calculate velocity
     CONVERGE_vec3_t child_velocity[20];
-    struct childv
-    {
-        CONVERGE_precision_t vx[50];
-        CONVERGE_precision_t vy[50];
-        CONVERGE_precision_t vz[50];
-    } c;
+
 
     // Create velocity vectors for all child parcels
     // Get parent parcel's velocity - v = vx i + vy j + vz k
