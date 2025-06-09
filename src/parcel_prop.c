@@ -210,11 +210,9 @@ CONVERGE_UDF(parcel_child,
       printf("\nParcel_Prop.c - Displacing parcel \n"
              "parent_position = %e %e %e\n"
              "unit_radial_velocity = %e %e %e\n"
-             "displacement = %e %e %e\n"
              "child position = %e %e %e\n",
              parent_position[0], parent_position[1], parent_position[2],
              unit_radial_velocity[0], unit_radial_velocity[1], unit_radial_velocity[2],
-             displacement[0], displacement[1], displacement[2],
              parcel_cloud.xx[passed_child_parcel_idx][0], parcel_cloud.xx[passed_child_parcel_idx][1], parcel_cloud.xx[passed_child_parcel_idx][2]);
    }
       // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
