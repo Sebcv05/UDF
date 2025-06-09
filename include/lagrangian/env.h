@@ -28,6 +28,7 @@ CONVERGE_id_t THERMAL_BREAKUP_FLAG;		//Flag to indicate that thermal breakup has
 CONVERGE_id_t TBT;
 CONVERGE_id_t PBT;
 CONVERGE_id_t M0;
+CONVERGE_id_t CHILD_UU;				//Child UU vector
 
 
 // Lagrangian Data Field IDs
@@ -376,6 +377,7 @@ struct ParcelCloud
    CONVERGE_vec3_t* uprime;
    CONVERGE_vec3_t* uu;
    CONVERGE_vec3_t* uu_tm1;
+   CONVERGE_vec3_t* child_uu;
    CONVERGE_vec3_t* xx;
    CONVERGE_vec3_t* xx_tm1;
    CONVERGE_vec3_t* drop_gas_src;

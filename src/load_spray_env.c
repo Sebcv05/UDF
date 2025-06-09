@@ -72,6 +72,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    USER_LAG_VAR    = CONVERGE_lagrangian_field_id("user_lag_var");
    USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
    USER_LAG_VARv3  = CONVERGE_lagrangian_field_id("user_lag_var_v3");
+   CHILD_UU = CONVERGE_lagrangian_field_id("child_uu");
    USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    R_BUBBLE = CONVERGE_lagrangian_field_id("r_bubble");
    V_BUBBLE = CONVERGE_lagrangian_field_id("v_bubble");
@@ -435,6 +436,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
 
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
+   parcel_cloud_loc->child_uu = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, CHILD_UU);
    parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
 
