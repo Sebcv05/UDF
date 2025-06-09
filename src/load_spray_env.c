@@ -44,6 +44,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("cloud_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("tbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("pbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
+   CONVERGE_variable_register("child_uu", CONVERGE_VEC3, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    // User defined component names, overrides automatic nameing for CONVERGE_VEC3
    const char *user_lag_var_v3_comp_names[] = {"user_lag_var0", "user_lag_var1", "user_lag_var2"};
