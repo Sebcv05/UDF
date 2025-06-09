@@ -103,7 +103,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     
     CONVERGE_vec3_scale(a, cos_psi) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_psi); // Term 2 
-    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi)) //Term 3
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi)); //Term 3
 
     CONVERGE_vec3_add(a,b,&d);
     CONVERGE_vec3_add(d,c, &child_velocity[0]); // Final child velocity vector
@@ -122,7 +122,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     
     CONVERGE_vec3_scale(a, cos_theta) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_theta); // Term 2 
-    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta)) //Term 3
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta)); //Term 3
 
     CONVERGE_vec3_add(a,b,&d);
     CONVERGE_vec3_add(d,c, &child_velocity[jj]); // Final child velocity vector
