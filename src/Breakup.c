@@ -35,7 +35,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_index_t N = 12;
 
     // Calculate velocity
-    CONVERGE_vec3_t child_velocity[50];
+    CONVERGE_vec3_t child_velocity[20];
     struct childv
     {
         CONVERGE_precision_t vx[50];
@@ -46,11 +46,22 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // Create velocity vectors for all child parcels
     // Get parent parcel's velocity - v = vx i + vy j + vz k
     CONVERGE_precision_t parent_vx, parent_vy, parent_vz;
-    parent_vx = old_parcel_cloud->uu[p_idx][0];
+    CONVERGE_vec3_t parent_velocity,parent_velocity_unit;
+    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
+    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit);
+    printf("\n Breakup.c\n
+        uu[p_idx] = %e %e %e\n
+        parent velocity = %e %e %e\n
+        parent_velocity = %e %e %e\n",
+           old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],
+           parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+    CONVERGE_vec3_normalize(parent_velocity_unit);
+       parent_vx = old_parcel_cloud->uu[p_idx][0];
     parent_vy = old_parcel_cloud->uu[p_idx][1];
     parent_vz = old_parcel_cloud->uu[p_idx][2];
 
-    CONVERGE_precision_t parent_vmag = CONVERGE_sqrt(CONVERGE_square(parent_vx) + CONVERGE_square(parent_vy) + CONVERGE_square(parent_vz));
+    // CONVERGE_precision_t parent_vmag = CONVERGE_sqrt(CONVERGE_square(parent_vx) + CONVERGE_square(parent_vy) + CONVERGE_square(parent_vz));
+    CONVERGE_precision_t parent_vmag = CONVERGE_vec3_length(parent_velocity);
     // Calculate magnitude of child parcel velocity
     CONVERGE_precision_t rad_vel = 3.0 * old_parcel_cloud->v_bubble[p_idx] * CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]) * (old_parcel_cloud->radius[p_idx] - old_parcel_cloud->r_bubble[p_idx]) / (CONVERGE_cube(old_parcel_cloud->radius[p_idx]) - CONVERGE_cube(old_parcel_cloud->r_bubble[p_idx]));
     if (rad_vel > parent_vmag)
@@ -64,6 +75,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     parent_vxu = parent_vx / parent_vmag;
     parent_vyu = parent_vy / parent_vmag;
     parent_vzu = parent_vz / parent_vmag;
+
 
     // Make unit vector perpendicular to direction ( a.b = 0)
     CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_vzu) + CONVERGE_square(parent_vxu + parent_vyu)) / parent_vzu;
