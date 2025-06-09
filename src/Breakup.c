@@ -49,9 +49,10 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_vec3_t parent_velocity,parent_velocity_unit;
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit);
-    printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent velocity = %e %e %e\nparent_velocity = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
     CONVERGE_vec3_normalize(parent_velocity_unit);
-       parent_vx = old_parcel_cloud->uu[p_idx][0];
+
+    printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+    parent_vx = old_parcel_cloud->uu[p_idx][0];
     parent_vy = old_parcel_cloud->uu[p_idx][1];
     parent_vz = old_parcel_cloud->uu[p_idx][2];
 
