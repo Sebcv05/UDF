@@ -35,6 +35,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_index_t N = 12;
 
     // Calculate velocity
+    CONVERGE_vec3_t child_velocity[50];
     struct childv
     {
         CONVERGE_precision_t vx[50];
