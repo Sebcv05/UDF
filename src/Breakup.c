@@ -70,7 +70,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     parent_normal[1] = 1 / parent_nmag; // Normalized y component
     parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
     
-    printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
+    // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
     
    //-----------------------------Calculate child parcel velocities----------------------------
@@ -125,6 +125,12 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
    
    
     } // end of jj loop
+
+    //Print chidl velcoities
+    for (int jj = 0; jj < N; jj++)
+    {
+        printf("\nChild velocity %i = %e %e %e", jj, child_velocity[jj][0], child_velocity[jj][1], child_velocity[jj][2]);
+    }    
 
     //----------------------------Calculate post breakup radius and number of drops for each child parcel----------------------------
 
