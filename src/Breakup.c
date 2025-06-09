@@ -33,7 +33,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
     CONVERGE_index_t N = 12;
-    CONVERGE_precision_t N_pres = 12; // N in precision form
+
     // Calculate velocity
     struct childv
     {
@@ -115,12 +115,12 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
         c.vz[jj] = v.z + (k_x_v.z * sin(theta + psi)) + k_x_k_x_v.z * (1 - cos(theta + psi));
     } // end of jj loop
 
-    CONVERGE_vec3_t xx;
-    CONVERGE_vec3_t uu;
-    for (int kk = 0; kk < 3; kk++)
-    {
-        xx[kk] = old_parcel_cloud->xx[p_idx][kk];
-    };
+    // CONVERGE_vec3_t xx;
+    // CONVERGE_vec3_t uu;
+    // for (int kk = 0; kk < 3; kk++)
+    // {
+    //     xx[kk] = old_parcel_cloud->xx[p_idx][kk];
+    // };
     // include a for loop to do it N times per parcel
 
     // old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
@@ -216,9 +216,9 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
                 new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
 
-                old_parcel_cloud->child_uu[0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
-                old_parcel_cloud->child_uu[1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
-                old_parcel_cloud->child_uu[2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
 
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                            growth_rate,
