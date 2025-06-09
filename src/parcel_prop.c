@@ -198,12 +198,26 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.eta_drop[passed_child_parcel_idx] = 0;
    parcel_cloud.dgre_cycle_count[passed_child_parcel_idx] = 0;
 
+   //if parent breakup flag  is set, adjust position
+   if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
+   {
+      CONVERGE_vec3_t uu_tm1 = parcel_cloud.uu[passed_parent_parcel_idx]; //The parent's uu vector has not been updated yet, so take the velocity as uu_tm1
+      CONVERGE_vec3_t uu = parcel_cloud.uu[passed_child_parcel_idx]; //Child's uu vector includes the increased radial velocity 
+      CONVERGE_vec3_t del_u = CONVERGE_vec3_diff(uu ,uu_tm1); //Difference in uu vectors - equal to the radial velocity 
+
+
+      
+
+   }
+   // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
+
+
    parcel_cloud.m0[passed_child_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parent_parcel_idx]) * parcel_cloud.num_drop[passed_parent_parcel_idx]);
    //Don't reset breakup flag
-   // printf("\n\n parcel_child called for parcel %i with parent %i which has temp %f\nradius %e and num_drop %e\nparent_radius = %e, parent_num_drop = %e\n",
-          passed_child_parcel_idx, passed_parent_parcel_idx, parcel_cloud.temp[passed_child_parcel_idx],
-          parcel_cloud.radius[passed_child_parcel_idx], parcel_cloud.num_drop[passed_child_parcel_idx],
-          parcel_cloud.radius[passed_parent_parcel_idx], parcel_cloud.num_drop[passed_parent_parcel_idx]);
+   // // printf("\n\n parcel_child called for parcel %i with parent %i which has temp %f\nradius %e and num_drop %e\nparent_radius = %e, parent_num_drop = %e\n",
+   //        passed_child_parcel_idx, passed_parent_parcel_idx, parcel_cloud.temp[passed_child_parcel_idx],
+   //        parcel_cloud.radius[passed_child_parcel_idx], parcel_cloud.num_drop[passed_child_parcel_idx],
+   //        parcel_cloud.radius[passed_parent_parcel_idx], parcel_cloud.num_drop[passed_parent_parcel_idx]);
 }
 // set values for the custom parcel properties when film parcels separate
 // from a surface and are converted to spray parcels
