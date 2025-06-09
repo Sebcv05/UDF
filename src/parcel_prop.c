@@ -199,8 +199,24 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.dgre_cycle_count[passed_child_parcel_idx] = 0;
 
    //if parent breakup flag  is set, adjust position
-
-   // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
+   if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
+   {
+      //Need to move parcel to edge of parent's radius 
+      CONVERGE_vec3_t parent_position = parcel_cloud.xx[passed_parent_parcel_idx];
+      CONVERGE_vec3_t unit_radial_velocity = parcel_cloud.child_uu[passed_parent_parcel_idx]; // This is updated in Breakup.c
+      CONVERGE_vec3_t displacement = CONVERGE_vec3_scale(unit_radial_velocity, parcel_cloud.radius[passed_parent_parcel_idx]); //need to displace the parcel by the parent's radius in the radial direction of the child parcel
+      parcel_cloud.xx[passed_child_parcel_idx]= CONVERGE_vec3_add(parent_position, displacement);
+      printf("\nParcel_Prop.c - Displacing parcel \n
+             parent_position = %f %f %f\n"
+             "unit_radial_velocity = %f %f %f\n"
+             "displacement = %f %f %f\n"
+             "child position = %f %f %f\n",
+             parent_position[0], parent_position[1], parent_position[2],
+             unit_radial_velocity[0], unit_radial_velocity[1], unit_radial_velocity[2],
+             displacement[0], displacement[1], displacement[2],
+             parcel_cloud.xx[passed_child_parcel_idx][0], parcel_cloud.xx[passed_child_parcel_idx][1], parcel_cloud.xx[passed_child_parcel_idx][2]);
+   }
+      // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
 
 
    parcel_cloud.m0[passed_child_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parent_parcel_idx]) * parcel_cloud.num_drop[passed_parent_parcel_idx]);
