@@ -378,7 +378,7 @@ struct ParcelCloud
    CONVERGE_vec3_t* uu;
    CONVERGE_vec3_t* uu_tm1;
    CONVERGE_vec3_t* child_uu;
-   CONVERGE_vec3_t* xx;
+   CONVERGE_vec3_t* xx; // adding a comment
    CONVERGE_vec3_t* xx_tm1;
    CONVERGE_vec3_t* drop_gas_src;
 
