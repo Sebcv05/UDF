@@ -216,7 +216,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
                 new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
 
-
+                // Parcel_prop.c will add displacement to 
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                            growth_rate,
                                            wave_length,
@@ -231,6 +231,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
 
             //Update parent drop's radius
             // old_parcel_cloud->radius[p_idx] = 0old_parcel_cloud->radius[p_idx];
+            old_parcel_cloud->radius[p_idx] = new_radius; // Set parent radius to new radius
+            old_parcel_cloud->num_drop[p_idx] = new_parcel_num_drop; // Set parent num_drop to new num_drop
             // old_parcel_cloud->radius[p_idx]=0.0;
             old_parcel_cloud->temp[p_idx] = 250.0;
             old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
