@@ -84,20 +84,6 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_vec3_dup(parent_normal,child_velocity[0]); // Set first child parcel's velocity to be along the normal
     
 
-    struct vect k;
-    struct vect v;
-    struct vect k_x_v;
-    struct vect k_x_k_x_v;
-
-
-
-    // v is the vector to be rotated - the first parcel's new velocity
-    v.x = parent_nxu;
-    v.y = parent_nyu;
-    v.z = parent_nzu;
-    // Calculate k x v and k x (k x v)
-    k_x_v = cross_product(k, v);
-    k_x_k_x_v = cross_product(k, k_x_v);
 
     // Rotate first parcel's velocity by a random angle
     CONVERGE_precision_t rand = CONVERGE_random_precision(); // Generates a random number between 0 and 1
