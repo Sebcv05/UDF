@@ -48,13 +48,11 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     CONVERGE_precision_t parent_vx, parent_vy, parent_vz;
     CONVERGE_vec3_t parent_velocity,parent_velocity_unit;
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
-    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit);
-    CONVERGE_vec3_normalize(parent_velocity_unit);
+    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
+    CONVERGE_vec3_normalize(parent_velocity_unit);      //Parent Unit velocity vector 
 
-    printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
-    parent_vx = old_parcel_cloud->uu[p_idx][0];
-    parent_vy = old_parcel_cloud->uu[p_idx][1];
-    parent_vz = old_parcel_cloud->uu[p_idx][2];
+    // printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+
 
     // CONVERGE_precision_t parent_vmag = CONVERGE_sqrt(CONVERGE_square(parent_vx) + CONVERGE_square(parent_vy) + CONVERGE_square(parent_vz));
     CONVERGE_precision_t parent_vmag = CONVERGE_vec3_length(parent_velocity);
@@ -66,33 +64,33 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     }
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
     CONVERGE_precision_t aa = 1; // Scale factor for velocity
-    // Make unit vector for direction
-    CONVERGE_precision_t parent_vxu, parent_vyu, parent_vzu;
-    parent_vxu = parent_vx / parent_vmag;
-    parent_vyu = parent_vy / parent_vmag;
-    parent_vzu = parent_vz / parent_vmag;
+   
+
 
 
     // Make unit vector perpendicular to direction ( a.b = 0)
-    CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_vzu) + CONVERGE_square(parent_vxu + parent_vyu)) / parent_vzu;
-    CONVERGE_precision_t parent_nxu, parent_nyu, parent_nzu;
-    parent_nxu = 1 / parent_nmag;
-    parent_nyu = 1 / parent_nmag;
-    parent_nzu = -(parent_vxu + parent_vyu) / CONVERGE_sqrt(2 * CONVERGE_square(parent_vzu) + CONVERGE_square(parent_vxu + parent_vyu));
+    CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])) / parent_velocity_unit[2];
+    CONVERGE_vec3_t parent_normal;
+    parent_normal[0] = 1 / parent_nmag; // Normalized x component
+    parent_normal[1] = 1 / parent_nmag; // Normalized y component
+    parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
+    
+    printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
+
+    
+   
 
     // First child parcel will have radial velocity along normal
-    c.vx[0] = parent_nxu;
-    c.vy[0] = parent_nyu;
-    c.vz[0] = parent_nzu;
+    CONVERGE_vec3_dup(parent_normal,child_velocity[0]); // Set first child parcel's velocity to be along the normal
+    
 
     struct vect k;
     struct vect v;
     struct vect k_x_v;
     struct vect k_x_k_x_v;
-    // k is the axis of rotation - the direction of the parent parcel
-    k.x = parent_vxu;
-    k.y = parent_vyu;
-    k.z = parent_vzu;
+
+
+
     // v is the vector to be rotated - the first parcel's new velocity
     v.x = parent_nxu;
     v.y = parent_nyu;
@@ -108,34 +106,32 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     //  Each of the remaining child parcels will be evenly distributed around the plane perpendicular to the normal
     CONVERGE_precision_t sin_psi = sin(psi);
     CONVERGE_precision_t cos_psi = cos(psi);
-    c.vx[0] = v.x + (k_x_v.x * sin_psi) + k_x_k_x_v.x * (1 - cos_psi);
-    c.vy[0] = v.y + (k_x_v.y * sin_psi) + k_x_k_x_v.y * (1 - cos_psi);
-    c.vz[0] = v.z + (k_x_v.z * sin_psi) + k_x_k_x_v.z * (1 - cos_psi);
+    //Rotation around parent's velocity vector by angle psi - Rodrigues' rotation formula
+    // child velocity[i] = child_velocity[i-1]*cos(psi) + parent_velocity_normal_x_child_velocity[i-1] * sin(psi) + parent_velocity_x_parent_velocity_x_child_velocity[i-1] * (1 - cos(psi))
+    CONVERGE_vec3_t PVU_X_CV, PVU_X_PVU_X_CV;
+    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[0],&PVU_X_CV);
+
+    child_velocity[0] = CONVERGE_vec3_scale(child_velocity[0], cos_psi) 
+                        + CONVERGE_vec3_scale(PVU_X_CV, sin_psi) 
+                        + CONVERGE_vec3_scale(parent_velocity_unit, CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi));
+
+    CONVERGE_precision_t sin_theta, cos_theta;
+    theta = 2 * PI / N; // Angle between child parcels
+    sin_theta = sin(theta);
+    cos_theta = cos(theta);
     //Developed to split parent parcel into N smaller parcels at breakup 
     for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
     {
-        // Using Rodrigues' rotation formula to rotate about parent velocity by angle theta
-        // v_rot = v + (1-cos(theta)) k x (k x v) + sin(theta) k x v;
-        CONVERGE_precision_t theta = jj * 2 * PI / N;
-        // printf(" jj= %i, theta = %f\n",jj,(psi+theta) * 360 / (2*PI));
-        //  Each of the remaining child parcels will be evenly distributed around the plane perpendicular to the normal
-        c.vx[jj] = v.x + (k_x_v.x * sin(theta + psi)) + k_x_k_x_v.x * (1 - cos(theta + psi));
-        c.vy[jj] = v.y + (k_x_v.y * sin(theta + psi)) + k_x_k_x_v.y * (1 - cos(theta + psi));
-        c.vz[jj] = v.z + (k_x_v.z * sin(theta + psi)) + k_x_k_x_v.z * (1 - cos(theta + psi));
+    //Recalculate cross product for previous child parcel's velocity
+         CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[jj-1],&PVU_X_CV);
+        //Calculate next child's velocity
+         child_velocity[jj] = CONVERGE_vec3_scale(child_velocity[jj-1], cos_theta) 
+                        + CONVERGE_vec3_scale(PVU_X_CV, sin_theta) 
+                        + CONVERGE_vec3_scale(parent_velocity_unit, CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta));
     } // end of jj loop
 
-    // CONVERGE_vec3_t xx;
-    // CONVERGE_vec3_t uu;
-    // for (int kk = 0; kk < 3; kk++)
-    // {
-    //     xx[kk] = old_parcel_cloud->xx[p_idx][kk];
-    // };
-    // include a for loop to do it N times per parcel
+    //----------------------------Calculate post breakup radius and number of drops for each child parcel----------------------------
 
-    // old_parcel_cloud->uu[p_idx][0] = c.vx[0] * aa * rad_vel + parent_vx;
-    // old_parcel_cloud->uu[p_idx][1] = c.vy[0] * aa * rad_vel + parent_vy;
-    // old_parcel_cloud->uu[p_idx][2] = c.vz[0] * aa * rad_vel + parent_vz;
-    // uu = old_parcel_cloud->uu[p_idx];
     // Radius and Num Drop
     //Pre-Brekaup radius compare
    // printf("\nradius = %e  r_drop_0 = %e r_therm =%e dgre_cycles = %i",old_parcel_cloud->radius[p_idx],old_parcel_cloud->r_drop_0[p_idx],old_parcel_cloud->r_therm[p_idx],old_parcel_cloud->dgre_cycle_count[p_idx]);
@@ -221,9 +217,11 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
                 //Calcualte velocity of each child parcel
-                new_parcel_uu[0] = c.vx[nnn] * aa * rad_vel + parent_vx;
-                new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
-                new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
+
+                CONVERGE_vec3_dup(child_velocity[nnn], new_parcel_uu); // Copy child's velocity from child_velocity array
+
+                // CONVERGE_vec3_dup(new_parcel_uu, old_parcel_cloud->child_uu[p_idx][nnn]); // Store child's velocity in old_parcel_cloud
+
 
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
