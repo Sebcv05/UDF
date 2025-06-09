@@ -216,9 +216,9 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 new_parcel_uu[1] = c.vy[nnn] * aa * rad_vel + parent_vy;
                 new_parcel_uu[2] = c.vz[nnn] * aa * rad_vel + parent_vz;
 
-                parcel_cloud->child_uu[0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
-                parcel_cloud->child_uu[1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
-                parcel_cloud->child_uu[2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
+                old_parcel_cloud->child_uu[2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
 
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                            growth_rate,
