@@ -199,16 +199,7 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.dgre_cycle_count[passed_child_parcel_idx] = 0;
 
    //if parent breakup flag  is set, adjust position
-   if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
-   {
-      CONVERGE_vec3_t uu_tm1 = parcel_cloud.uu[passed_parent_parcel_idx]; //The parent's uu vector has not been updated yet, so take the velocity as uu_tm1
-      CONVERGE_vec3_t uu = parcel_cloud.uu[passed_child_parcel_idx]; //Child's uu vector includes the increased radial velocity 
-      CONVERGE_vec3_t del_u = CONVERGE_vec3_diff(uu ,uu_tm1); //Difference in uu vectors - equal to the radial velocity 
 
-
-      
-
-   }
    // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
 
 
