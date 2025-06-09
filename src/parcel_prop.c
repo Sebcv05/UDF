@@ -205,9 +205,7 @@ CONVERGE_UDF(parcel_child,
       CONVERGE_vec3_t parent_position, unit_radial_velocity,displacement;
       CONVERGE_vec3_dup(parcel_cloud.xx[passed_parent_parcel_idx], parent_position);
       CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], unit_radial_velocity);
-      CONVERGE_precision_t mag_check = CONVERGE_vec3_length(unit_radial_velocity)
-   
-      
+      CONVERGE_precision_t mag_check = CONVERGE_vec3_length(unit_radial_velocity);
       CONVERGE_vec3_scale(unit_radial_velocity, parcel_cloud.radius[passed_parent_parcel_idx]); //need to displace the parcel by the parent's radius in the radial direction of the child parcel
       CONVERGE_vec3_add(parent_position, unit_radial_velocity,parcel_cloud.xx[passed_child_parcel_idx]);
       printf("\nParcel_Prop.c - Displacing parcel \n"
