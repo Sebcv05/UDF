@@ -195,7 +195,7 @@ CONVERGE_UDF(parcel_child,
       CONVERGE_vec3_scale(velocity_diff, parcel_cloud.radius[passed_parent_parcel_idx]);
       
       // Use velocity_diff as displacement vector since it's already scaled
-      CONVERGE_vec3_t displacement;
+
       CONVERGE_vec3_dup(velocity_diff, displacement);
       
       // Add displacement to parent's position to get child's position
