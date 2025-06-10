@@ -221,7 +221,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 CONVERGE_vec3_dup( &child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
                 CONVERGE_vec3_add(new_parcel_uu, old_parcel_cloud->uu[p_idx], &new_parcel_uu);
                 // CONVERGE_vec3_dup(new_parcel_uu, old_parcel_cloud->child_uu[p_idx][nnn]); // Store child's velocity in old_parcel_cloud
-                printf("\nBreakup.c child_uu[p_idx] = %e %e %e\n",old_parcel_cloud->child_uu[p_idx][0],old_parcel_cloud->child_uu[p_idx][1],old_parcel_cloud->child_uu[p_idx][2]);
+                printf("\nBreakup.c child_uu[p_idx] = %e %e %e\n",old_parcel_cloud->child_uu[p_idx].x, old_parcel_cloud->child_uu[p_idx].y, old_parcel_cloud->child_uu[p_idx].z);
 
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
