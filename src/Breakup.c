@@ -217,7 +217,8 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 //Calcualte velocity of each child parcel
 
                 CONVERGE_vec3_dup(child_velocity[nnn], new_parcel_uu); // Copy child's velocity from child_velocity array
-
+                CONVERGE_vec3_dup(child_velocity[nnn], old_parcel_cloud->child_uu[p_idx][nnn]);
+                CONVERGE_vec3_add(new_parcel_uu, old_parcel_cloud->uu[p_idx], &new_parcel_uu);
                 // CONVERGE_vec3_dup(new_parcel_uu, old_parcel_cloud->child_uu[p_idx][nnn]); // Store child's velocity in old_parcel_cloud
 
 
@@ -226,12 +227,12 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
                 // old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
 
                CONVERGE_spray_child_parcel(new_parcel_uu,
-                                           growth_rate,
-                                           wave_length,
-                                           new_radius,
-                                           new_parcel_num_drop,
-                                           p_idx,
-                                           cloud);
+                                            growth_rate,
+                                            wave_length,
+                                            new_radius,
+                                            new_parcel_num_drop,
+                                            p_idx,
+                                            cloud);
             }
 
             // reload after adding parcels
