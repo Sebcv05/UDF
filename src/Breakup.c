@@ -126,11 +126,7 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
    
     } // end of jj loop
 
-    //Print chidl velcoities
-    for (int jj = 0; jj < N; jj++)
-    {
-        printf("\nChild velocity %i = %e %e %e", jj, child_velocity[jj][0], child_velocity[jj][1], child_velocity[jj][2]);
-    }    
+
 
     //----------------------------Calculate post breakup radius and number of drops for each child parcel----------------------------
 
