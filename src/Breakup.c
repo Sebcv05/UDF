@@ -16,8 +16,31 @@
 #include<Vb.h>
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud)
 {
+    // Check if cloud and parcel cloud are valid
+    if (!cloud || !old_parcel_cloud) {
+        printf("\nBreakup.c: Invalid cloud or parcel cloud pointer\n");
+        CONVERGE_mpi_abort();
+    }
 
-if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
+    // Check if child_uu is loaded
+    if (!old_parcel_cloud->child_uu) {
+        printf("\nBreakup.c: child_uu field not loaded\n");
+        CONVERGE_mpi_abort();
+    }
+
+    // Check if uu is loaded
+    if (!old_parcel_cloud->uu) {
+        printf("\nBreakup.c: uu field not loaded\n");
+        CONVERGE_mpi_abort();
+    }
+
+    // Check if parcel index is valid
+    CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
+    if (p_idx >= cloud_size) {
+        printf("\nBreakup.c: Invalid parcel index %d (cloud size = %d)\n", p_idx, cloud_size);
+        CONVERGE_mpi_abort();
+    }
+    if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
     printf("\n ERROR, breakup routine being triggered on parcel with tbf = 4, tbf = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
     CONVERGE_mpi_abort();
 }
@@ -216,12 +239,15 @@ if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
             {
                 //Calcualte velocity of each child parcel
 
-                CONVERGE_vec3_dup(child_velocity[nnn], new_parcel_uu); // Copy child's velocity from child_velocity array
-                // printf("\nchild_uu[p_idx] = %e %e %e\n",old_parcel_cloud->child_uu[p_idx][0],old_parcel_cloud->child_uu[p_idx][1],old_parcel_cloud->child_uu[p_idx][2]);
-                CONVERGE_vec3_dup( &child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
-                CONVERGE_vec3_add(new_parcel_uu, old_parcel_cloud->uu[p_idx], &new_parcel_uu);
-                // CONVERGE_vec3_dup(new_parcel_uu, old_parcel_cloud->child_uu[p_idx][nnn]); // Store child's velocity in old_parcel_cloud
-                printf("\nBreakup.c child_uu[p_idx] = %e %e %e\n",old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
+                // Store the radial velocity component in child_uu
+                // The radial velocity is calculated as rad_vel * parent_normal
+                CONVERGE_vec3_scale(parent_normal, rad_vel, &old_parcel_cloud->child_uu[p_idx]);
+                
+                // Calculate child's final velocity by adding parent velocity to radial component
+                CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
+                
+                // Debug print of radial velocity component stored in child_uu
+                printf("\nBreakup.c radial velocity = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
 
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
