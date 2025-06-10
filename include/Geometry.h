@@ -11,11 +11,11 @@
 #include <complex.h>
 
 
-#ifndef GEMOETRY_H
-#define GEMOETRY_H
+#ifndef GEOMETRY_H
+#define GEOMETRY_H
 
 
 void Geometry(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVERGE_precision_t dt);
 
 
-#endif // GEMOETRY_H
+#endif // GEOMETRY_H

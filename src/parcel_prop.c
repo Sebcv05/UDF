@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <counter.h>
-
+#include <PsatNH3.h>
 #include <user_header.h>
 
 /**********************************************************************/
@@ -43,29 +43,10 @@ CONVERGE_UDF(parcel_inject,
    // printf("PARCEL_PROP.C L58\n");
    load_user_cloud(&parcel_cloud, passed_spray_cloud);
    // Calculate Saturation Pressure from Antoine's Equation
-   CONVERGE_precision_t P_sat;
-   CONVERGE_precision_t A;
-   CONVERGE_precision_t B;
-   CONVERGE_precision_t C;
-   CONVERGE_precision_t Td;
-   A = 3.93679;
-   B = 1257.84;
-   C = -52.415;
+   CONVERGE_precision_t P_sat,Td;
    Td = parcel_cloud.temp[passed_parcel_idx];
-   if (Td > 297.51 & Td < 373.28)
-   {
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
-   else if (Td < 297.51)
-   {
-      Td = 297.51;
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
-   else if (Td > 373.28)
-   {
-      Td = 373.28;
-      P_sat = pow(10, (A - (B / (C + Td)))) * 1e5; // P_sat in Pa
-   }
+   Saturation_PressureNH3(Td, &P_sat);
+
    // printf("PARCEL_PROP.C L70 P_sat = %f\n",P_sat);
    // printf("PARCEL_PROP.C L67\n");
 
