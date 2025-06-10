@@ -191,11 +191,14 @@ CONVERGE_UDF(parcel_child,
       // Normalize velocity difference to get direction
       CONVERGE_vec3_normalize(velocity_diff);
       
-      // Scale by parent's radius to get displacement vector
-      CONVERGE_vec3_scale(velocity_diff, parcel_cloud.radius[passed_parent_parcel_idx], displacement);
+      // Scale velocity_diff by parent's radius to get displacement vector
+      CONVERGE_vec3_scale(velocity_diff, parcel_cloud.radius[passed_parent_parcel_idx]);
+      
+      // Use velocity_diff as displacement vector since it's already scaled
+      CONVERGE_vec3_t displacement = velocity_diff;
       
       // Add displacement to parent's position to get child's position
-      CONVERGE_vec3_add(parcel_cloud.xx[passed_parent_parcel_idx], displacement, parcel_cloud.xx[passed_child_parcel_idx]);
+      CONVERGE_vec3_add(parcel_cloud.xx[passed_parent_parcel_idx], displacement, &parcel_cloud.xx[passed_child_parcel_idx]);
       
       // Debug print (can be removed later)
       printf("\nParcel_Prop.c - Displacing parcel \n"
