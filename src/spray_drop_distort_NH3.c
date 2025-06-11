@@ -219,7 +219,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    CONVERGE_precision_t T_amb = global_temperature[node_index];
    CONVERGE_precision_t csubp = global_csubp[node_index];
    CONVERGE_precision_t rho_v = global_density[node_index];
-      CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
+   CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
 
       // old_parcel_cloud.tbreak_rt[p_idx] = old_parcel_cloud.temp[p_idx];
       parcel_counter++;
@@ -265,7 +265,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       if (P_sat < 1)
       {
          printf("\nParcel Temperature outside of range for P_sat Correlation, continuing...");
+         old_parcel_cloud.v_bubble[p_idx] =0.0;
+         old_parcel_cloud.omega[p_idx] = 0.0;
+         old_parcel_cloud.eta_drop[p_idx] = 0.0;
+         old_parcel_cloud.int_omega[p_idx] =0.0;
+         old_parcel_cloud.int_omega[p_idx] = 0.0;
+         old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
+         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
+         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
+         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
          continue;
+
       }
       rho_b = bubble_densityNH3(P_sat, Td); // Not sure about using this to estimate rho_b
     
@@ -286,15 +296,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          
          }
 
-         old_parcel_cloud.v_bubble[p_idx] =0.0;
-         old_parcel_cloud.omega[p_idx] = 0.0;
-         old_parcel_cloud.eta_drop[p_idx] = 0.0;
-         old_parcel_cloud.int_omega[p_idx] =0.0;
-         old_parcel_cloud.int_omega[p_idx] = 0.0;
-         old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
-         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
-         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
+
       // }
 
        post_TAB = CONVERGE_mpi_wtime();
