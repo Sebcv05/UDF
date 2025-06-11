@@ -240,10 +240,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
             {
                 //Calcualte velocity of each child parcel
 
-                // Store the radial velocity component in child_uu
-                // The radial velocity is calculated as rad_vel * parent_normal
-
-                CONVERGE_vec3_scale(parent_normal, rad_vel, &old_parcel_cloud->child_uu[p_idx]);
+                //Copy child velocity to child_uu 
+                CONVERGE_vec3_dup(child_velocity[nnn], &old_parcel_cloud->child_uu[p_idx]);
                 
                 // Calculate child's final velocity by adding parent velocity to radial component
                 CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
