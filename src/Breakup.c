@@ -111,6 +111,9 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
         printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
         printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
         printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
+        printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
+        printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
+        printf("\n pbr = %e",old_parcel_cloud->pbr[p_idx]);
         CONVERGE_mpi_abort();
     }
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
