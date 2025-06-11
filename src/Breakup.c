@@ -105,7 +105,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     {
         printf("\nLarge rad vel ---- parent vel magnitude = %e, child_rad_vel = %e", parent_vmag, rad_vel);
     }
-    else if(abs(rad_vel)<1e-6){
+    else if(abs(rad_vel)<1e-9){
         printf("\n rad_vel = %e",rad_vel);
         printf("\n p_idx = %i",p_idx);
         printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
