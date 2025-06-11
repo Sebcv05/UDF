@@ -269,10 +269,16 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
                 printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
                 printf("\nBreakup.c: child_uu address = %p\n", (void*)&old_parcel_cloud->child_uu[p_idx]);
                 
-                // Store the radial velocity component in child_uu
+                // Create a temporary vector to store the scaled result
+                CONVERGE_vec3_t temp_vec;
+                
+                // Store the radial velocity component in temp_vec
                 // The radial velocity is calculated as rad_vel * parent_normal
                 printf("\nBreakup.c: Storing radial velocity in child_uu\n");
-                CONVERGE_vec3_scale(parent_normal, rad_vel, &old_parcel_cloud->child_uu[p_idx]);
+                CONVERGE_vec3_scale(parent_normal, rad_vel, temp_vec);
+                
+                // Copy the result to child_uu
+                CONVERGE_vec3_dup(&old_parcel_cloud->child_uu[p_idx], temp_vec);
                 
                 // Debug: Verify values after storing
                 printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
