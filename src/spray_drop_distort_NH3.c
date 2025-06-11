@@ -327,7 +327,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 1;
                old_parcel_cloud.tbt[p_idx] = 1;
                old_parcel_cloud.pbt[p_idx] = 0;
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
+               old_parcel_cloud.thermal_breakup_flag[p_idx] = 6;
                continue;
                // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
             
@@ -380,7 +380,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                //printf("Setting TBT and r_bubble = 0.95 * r_drop");
                old_parcel_cloud.r_bubble[p_idx] = 0.95* old_parcel_cloud.radius[p_idx];
                old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx]=3;
+               old_parcel_cloud.thermal_breakup_flag[p_idx]=9;
                continue;
             }
             if (dR > 0)
@@ -395,7 +395,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             {
                Rb_temp = 0.95* old_parcel_cloud.radius[p_idx];
                old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx]=3;
+               old_parcel_cloud.thermal_breakup_flag[p_idx]=12;
                continue;
             }
             // printf("\n Rb = %e	tau = %e		B = %e		A = %e",Rb_temp,tau,B,A);
