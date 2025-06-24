@@ -136,7 +136,7 @@ if (fabs(parent_velocity_unit[0]) < 0.9) {
 } else {
     arbitrary[0] = 0.0; arbitrary[1] = 0.0; arbitrary[2] = 1.0;
 }
-CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, parent_normal);
+CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, &parent_normal);
 CONVERGE_vec3_normalize(parent_normal);
 
 
@@ -155,7 +155,13 @@ CONVERGE_vec3_normalize(parent_normal);
     }else if(CONVERGE_vec3_length(parent_normal)==0.0){
         printf("\nparent_normal is zero\n");
         CONVERGE_mpi_abort();
-    }
+    }else if (CONVERGE_vec3_length(parent_normal)>1.01){
+        printf("\nparent_normal is not normalized\n");
+        CONVERGE_mpi_abort();
+    }else if (CONVERGE_vec3_length(parent_normal)<0.99){
+        printf("\nparent_normal is not normalized\n");
+        CONVERGE_mpi_abort();
+    }   
     // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
     
