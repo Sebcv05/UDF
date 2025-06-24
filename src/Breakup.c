@@ -128,14 +128,14 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     CONVERGE_precision_t aa = 1; // Scale factor for velocity
    
 // Assume parent_velocity_unit is already normalized
-CONVERGE_vec3_t arbitrary = {1.0, 0.0, 0.0};
-if (fabs(parent_velocity_unit[0]) > 0.99) {
-    // If velocity is close to x-axis, pick y-axis
-    arbitrary[0] = 0.0;
-    arbitrary[1] = 1.0;
-    arbitrary[2] = 0.0;
+CONVERGE_vec3_t arbitrary;
+if (fabs(parent_velocity_unit[0]) < 0.9) {
+    arbitrary[0] = 1.0; arbitrary[1] = 0.0; arbitrary[2] = 0.0;
+} else if (fabs(parent_velocity_unit[1]) < 0.9) {
+    arbitrary[0] = 0.0; arbitrary[1] = 1.0; arbitrary[2] = 0.0;
+} else {
+    arbitrary[0] = 0.0; arbitrary[1] = 0.0; arbitrary[2] = 1.0;
 }
-CONVERGE_vec3_t parent_normal;
 CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, parent_normal);
 CONVERGE_vec3_normalize(parent_normal);
 
@@ -314,7 +314,7 @@ CONVERGE_vec3_normalize(parent_normal);
                 CONVERGE_vec3_scale(parent_normal, rad_vel);  // This modifies parent_normal in place
                 
                 // Copy the modified parent_normal to child_uu
-                CONVERGE_vec3_dup(&old_parcel_cloud->child_uu[p_idx], parent_normal);
+                CONVERGE_vec3_dup(parent_normal,&old_parcel_cloud->child_uu[p_idx]);
                 
                 // Debug: Verify values after storing
                 printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
