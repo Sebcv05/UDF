@@ -354,6 +354,14 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                                             new_parcel_num_drop,
                                             p_idx,
                                             cloud);
+                //Update position of child Parcel
+                CONVERGE_vec3_t child_displacement;
+                CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
+                CONVERGE_vec3_normalize(child_displacement);
+                CONVERGE_vec3_scale(child_displacement, parent_radius);
+                CONVERGE_index_t child_idx = cloud_size+nnn;
+                CONVERGE_vec3_add(old_parcel_cloud->xx[child_idx], child_displacement, &old_parcel_cloud->xx[child_idx]);
+
             }
 
             // reload after adding parcels

@@ -193,54 +193,54 @@ CONVERGE_UDF(parcel_child,
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
-      CONVERGE_vec3_t rel_vel;
-      CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], &rel_vel);
-      printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
-         rel_vel[0],
-         rel_vel[1],
-         rel_vel[2],
-         (void*)rel_vel);
-      // Get the velocity difference between child and parent
-      CONVERGE_vec3_t velocity_diff, displacement;
+      // CONVERGE_vec3_t rel_vel;
+      // // CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], &rel_vel);
+      // printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
+      //    rel_vel[0],
+      //    rel_vel[1],
+      //    rel_vel[2],
+      //    (void*)rel_vel);
+      // // Get the velocity difference between child and parent
+      // CONVERGE_vec3_t velocity_diff, displacement;
 
-      CONVERGE_vec3_diff(rel_vel, 
-                       parcel_cloud.uu[passed_parent_parcel_idx], 
-                       &velocity_diff);
+      // CONVERGE_vec3_diff(rel_vel, 
+      //                  parcel_cloud.uu[passed_parent_parcel_idx], 
+      //                  &velocity_diff);
 
-      // Normalize velocity difference to get direction
-      CONVERGE_vec3_normalize(velocity_diff);
+      // // Normalize velocity difference to get direction
+      // CONVERGE_vec3_normalize(velocity_diff);
       
-      // Scale velocity_diff by parent's radius to get displacement vector
-      CONVERGE_vec3_scale(velocity_diff, parcel_cloud.radius[passed_parent_parcel_idx]);
+      // // Scale velocity_diff by parent's radius to get displacement vector
+      // CONVERGE_vec3_scale(velocity_diff, parcel_cloud.radius[passed_parent_parcel_idx]);
       
-      // Use velocity_diff as displacement vector since it's already scaled
+      // // Use velocity_diff as displacement vector since it's already scaled
 
-      CONVERGE_vec3_dup(velocity_diff, displacement);
+      // CONVERGE_vec3_dup(velocity_diff, displacement);
       
-      // Add displacement to parent's position to get child's position
-      CONVERGE_vec3_add(parcel_cloud.xx[passed_parent_parcel_idx], displacement, &parcel_cloud.xx[passed_child_parcel_idx]);
+      // // Add displacement to parent's position to get child's position
+      // CONVERGE_vec3_add(parcel_cloud.xx[passed_parent_parcel_idx], displacement, &parcel_cloud.xx[passed_child_parcel_idx]);
       
-      // Debug print (can be removed later)
-      printf("\nParcel_Prop.c - Displacing parcel \n"
-             "passed_parent_parcel_idx = %i\n"
-             "passed_child_parcel_idx = %i\n"
-             "parent_radius = %e\n"
-             "child_uu = %e %e %e\n"
-             "child_uu address = %p\n"
-             "radius address = %p\n"
-             "displacement = %e %e %e\n"
-             "child position = %e %e %e\n",
-             passed_parent_parcel_idx,
-             passed_child_parcel_idx,
-             parcel_cloud.radius[passed_parent_parcel_idx],
-             parcel_cloud.child_uu[passed_child_parcel_idx][0], parcel_cloud.child_uu[passed_child_parcel_idx][1], parcel_cloud.child_uu[passed_child_parcel_idx][2],
-             (void*)parcel_cloud.child_uu[passed_parent_parcel_idx],
-             (void*)parcel_cloud.radius,
-             velocity_diff[0], velocity_diff[1], velocity_diff[2],
-             displacement[0], displacement[1], displacement[2],
-             parcel_cloud.xx[passed_child_parcel_idx][0], 
-             parcel_cloud.xx[passed_child_parcel_idx][1], 
-             parcel_cloud.xx[passed_child_parcel_idx][2]);
+      // // Debug print (can be removed later)
+      // printf("\nParcel_Prop.c - Displacing parcel \n"
+      //        "passed_parent_parcel_idx = %i\n"
+      //        "passed_child_parcel_idx = %i\n"
+      //        "parent_radius = %e\n"
+      //        "child_uu = %e %e %e\n"
+      //        "child_uu address = %p\n"
+      //        "radius address = %p\n"
+      //        "displacement = %e %e %e\n"
+      //        "child position = %e %e %e\n",
+      //        passed_parent_parcel_idx,
+      //        passed_child_parcel_idx,
+      //        parcel_cloud.radius[passed_parent_parcel_idx],
+      //        parcel_cloud.child_uu[passed_child_parcel_idx][0], parcel_cloud.child_uu[passed_child_parcel_idx][1], parcel_cloud.child_uu[passed_child_parcel_idx][2],
+      //        (void*)parcel_cloud.child_uu[passed_parent_parcel_idx],
+      //        (void*)parcel_cloud.radius,
+      //        velocity_diff[0], velocity_diff[1], velocity_diff[2],
+      //        displacement[0], displacement[1], displacement[2],
+      //        parcel_cloud.xx[passed_child_parcel_idx][0], 
+      //        parcel_cloud.xx[passed_child_parcel_idx][1], 
+      //        parcel_cloud.xx[passed_child_parcel_idx][2]);
    }
    // }
       // parcel_cloud.tbt[passed_child_parcel_idx] = 0;
