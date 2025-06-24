@@ -306,10 +306,10 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // Store the radial velocity component in child_uu
                 // The radial velocity is calculated as rad_vel * parent_normal
                 printf("\nBreakup.c: Storing radial velocity in child_uu\n");
-                CONVERGE_vec3_scale(parent_normal, rad_vel);  // This modifies parent_normal in place
+                // CONVERGE_vec3_scale(parent_normal, rad_vel);  // This modifies parent_normal in place
                 
                 // Copy the modified parent_normal to child_uu
-                // CONVERGE_vec3_dup(parent_normal,&old_parcel_cloud->child_uu[p_idx]);
+                // CONVERGE_vec3_dup(child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
                 
                 // Debug: Verify values after storing
                 printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
