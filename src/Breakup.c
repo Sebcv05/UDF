@@ -282,6 +282,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
             {
                 // Debug: Print memory addresses and values before operations
                 printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
+                printf("\nBreakup.c: parent_uu = %e %e %e\n ", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
                 printf("\nBreakup.c: parent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
                 printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
                 printf("\nBreakup.c: child_uu address = %p\n", (void*)&old_parcel_cloud->child_uu[p_idx]);
