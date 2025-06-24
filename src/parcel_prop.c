@@ -118,7 +118,7 @@ CONVERGE_UDF(parcel_inject,
 CONVERGE_UDF(parcel_child,
              IN(VALUE(CONVERGE_index_t, passed_child_parcel_idx),
                 VALUE(CONVERGE_index_t, passed_parent_parcel_idx),
-                VALUE(CONVERGE_vec3_t, user_child_velocity),
+               //  VALUE(CONVERGE_vec3_t, user_child_velocity),
                 VALUE(CONVERGE_cloud_t, passed_spray_cloud)),
              OUT(CONVERGE_VOID))
 {
@@ -130,8 +130,8 @@ CONVERGE_UDF(parcel_child,
 
 
    // At the start of the function, with other variable declarations
-   CONVERGE_vec3_t rel_vel;
-   CONVERGE_vec3_dup(user_child_velocity[parcel_cloud.child_index[passed_parent_parcel_idx]], &rel_vel);
+   // CONVERGE_vec3_t rel_vel;
+   // CONVERGE_vec3_dup(user_child_velocity[parcel_cloud.child_index[passed_parent_parcel_idx]], &rel_vel);
 
    // parcel_semi_mass_old = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
    //                        parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
@@ -193,6 +193,8 @@ CONVERGE_UDF(parcel_child,
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
+      CONVERGE_vec3_t rel_vel;
+      CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_child_parcel_idx], &rel_vel);
       printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
          rel_vel[0],
          rel_vel[1],

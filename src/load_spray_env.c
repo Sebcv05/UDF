@@ -45,7 +45,6 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("cloud_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("tbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("pbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
-   CONVERGE_variable_register("child_uu", CONVERGE_VEC3, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    // User defined component names, overrides automatic nameing for CONVERGE_VEC3
    const char *user_lag_var_v3_comp_names[] = {"user_lag_var0", "user_lag_var1", "user_lag_var2"};
@@ -70,6 +69,15 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
       "dimension",
       3,
       END_ARG_LIST);
+      CONVERGE_variable_register(
+         "child_uu",
+         // CONVERGE_VEC3 will automattically append _1/_2/_3 to the end of the variable name
+         CONVERGE_VEC3,
+         DEFAULT_PARCEL_VARIABLE_SETTINGS,
+         // The purpose of specifying the dimension manually here is to demonstrate it is permitted to mix dimension with any CONVERGE_APIType
+         "dimension",
+         3,
+         END_ARG_LIST);
    // Get dynamic IDs to Lagrangian Cloud fields
    USER_LAG_VAR    = CONVERGE_lagrangian_field_id("user_lag_var");
    USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
