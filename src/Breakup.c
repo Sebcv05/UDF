@@ -134,6 +134,9 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     {
         printf("\nparent_normal is not perpendicular to parent_velocity_unit\n");
         CONVERGE_mpi_abort();
+    }else if{CONVERGE_length(parent_normal)<1.0e-20}{
+        printf("\nparent_normal is zero\n");
+        CONVERGE_mpi_abort();
     }
     // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
