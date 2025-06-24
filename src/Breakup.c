@@ -128,7 +128,13 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     parent_normal[0] = 1 / parent_nmag; // Normalized x component
     parent_normal[1] = 1 / parent_nmag; // Normalized y component
     parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
-    
+    //Check parent_normal is perpendicular to parent_velocity_unit
+    CONVERGE_precision_t dot_product = CONVERGE_vec3_dot(parent_normal, parent_velocity_unit);
+    if (dot_product > 1.0e-9)
+    {
+        printf("\nparent_normal is not perpendicular to parent_velocity_unit\n");
+        CONVERGE_mpi_abort();
+    }
     // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
     
