@@ -125,6 +125,11 @@ CONVERGE_UDF(parcel_child,
 
    load_user_cloud(&parcel_cloud, passed_spray_cloud);
 
+
+
+   // At the start of the function, with other variable declarations
+CONVERGE_precision_t *rel_vel = relative_velocity[(int)parcel_cloud.tbt[passed_parent_parcel_idx]];
+
    // parcel_semi_mass_old = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
    //                        parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
 
@@ -185,15 +190,15 @@ CONVERGE_UDF(parcel_child,
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
-
-      printf("\nparcel_child: child_uu = %e %e %e at %p\n",
-         parcel_cloud.child_uu[passed_parent_parcel_idx][0],
-         parcel_cloud.child_uu[passed_parent_parcel_idx][1],
-         parcel_cloud.child_uu[passed_parent_parcel_idx][2],
-         (void*)&parcel_cloud.child_uu[passed_parent_parcel_idx]);
+      printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
+         rel_vel[0],
+         rel_vel[1],
+         rel_vel[2],
+         (void*)rel_vel);
       // Get the velocity difference between child and parent
       CONVERGE_vec3_t velocity_diff, displacement;
-      CONVERGE_vec3_diff(parcel_cloud.child_uu[passed_parent_parcel_idx], 
+
+      CONVERGE_vec3_diff(rel_vel, 
                        parcel_cloud.uu[passed_parent_parcel_idx], 
                        &velocity_diff);
 
@@ -216,16 +221,12 @@ CONVERGE_UDF(parcel_child,
              "passed_child_parcel_idx = %i\n"
              "parent_radius = %e\n"
              "velocity_diff = %e %e %e\n"
-             "child_uu = %e %e %e\n"
-             "child_uu address = %p\n"
              "displacement = %e %e %e\n"
              "child position = %e %e %e\n",
              passed_parent_parcel_idx,
              passed_child_parcel_idx,
              parcel_cloud.radius[passed_parent_parcel_idx],
              velocity_diff[0], velocity_diff[1], velocity_diff[2],
-             parcel_cloud.child_uu[passed_parent_parcel_idx][0], parcel_cloud.child_uu[passed_parent_parcel_idx][1], parcel_cloud.child_uu[passed_parent_parcel_idx][2],
-             (void*)parcel_cloud.child_uu[passed_parent_parcel_idx],
              displacement[0], displacement[1], displacement[2],
              parcel_cloud.xx[passed_child_parcel_idx][0], 
              parcel_cloud.xx[passed_child_parcel_idx][1], 
