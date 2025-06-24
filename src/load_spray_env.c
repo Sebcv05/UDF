@@ -90,6 +90,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
    THERMAL_BREAKUP_FLAG = CONVERGE_lagrangian_field_id("thermal_breakup_flag");
    TBT      = CONVERGE_lagrangian_field_id("tbt");
+   CHILD_INDEX = CONVERGE_lagrangian_field_id("child_index");
    PBT      = CONVERGE_lagrangian_field_id("pbt");
    DGRE_COUNT = CONVERGE_lagrangian_field_id("dgre_cycle_count");
    CLOUD_INDEX = CONVERGE_lagrangian_field_id("cloud_index");
@@ -429,6 +430,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->tbt              = (int *)CONVERGE_cloud_get_field_data(c,TBT);
    parcel_cloud_loc->pbt              = (int *)CONVERGE_cloud_get_field_data(c,PBT);
+   parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
    parcel_cloud_loc->thermal_breakup_flag = (int *)CONVERGE_cloud_get_field_data(c, THERMAL_BREAKUP_FLAG);
    parcel_cloud_loc->dgre_cycle_count = (int *)CONVERGE_cloud_get_field_data(c, DGRE_COUNT);
    parcel_cloud_loc->parcel_index = (int *)CONVERGE_cloud_get_field_data(c, PARCEL_INDEX);
@@ -533,6 +535,7 @@ void load_user_solid_parcel_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE
    parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
    parcel_cloud_loc->child_uu =        (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, CHILD_UU);
+   parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
 
    parcel_cloud_loc->from_injector = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FROM_INJECTOR);
    parcel_cloud_loc->from_injector_type = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FROM_INJECTOR_TYPE);
