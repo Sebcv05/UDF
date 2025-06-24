@@ -89,7 +89,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     // Create velocity vectors for all child parcels
     // Get parent parcel's velocity - v = vx i + vy j + vz k
     CONVERGE_precision_t parent_vx, parent_vy, parent_vz;
-    CONVERGE_vec3_t parent_velocity,parent_velocity_unit;
+    CONVERGE_vec3_t parent_velocity,parent_velocity_unit,parent_normal ;
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
     CONVERGE_vec3_normalize(parent_velocity_unit);      //Parent Unit velocity vector 
