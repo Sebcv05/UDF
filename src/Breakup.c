@@ -10,10 +10,13 @@
 #include <assert.h>
 #include <complex.h>
 #include <Breakup.h>
-#include <CrossProduct.h>
 #include <spray_break.h>
 #include <PsatNH3.h>
 #include<Vb.h>
+
+static CONVERGE_vec3_t user_child_velocity[20];
+static int user_velocity_index = 0;
+
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud)
 {
     // Check if cloud and parcel cloud are valid
@@ -83,7 +86,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     CONVERGE_index_t N = 12;
 
     // Calculate velocity
-    CONVERGE_vec3_t child_velocity[20];
 
 
     // Create velocity vectors for all child parcels
@@ -157,7 +159,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
    //-----------------------------Calculate child parcel velocities------------------------------------------------
 
     // First child parcel will have radial velocity along normal
-    CONVERGE_vec3_dup(parent_normal,&child_velocity[0]); // Set first child parcel's velocity to be along the normal
+    CONVERGE_vec3_dup(parent_normal,&user_child_velocity[0]); // Set first child parcel's velocity to be along the normal
     
 
 
@@ -169,20 +171,20 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     CONVERGE_precision_t sin_psi = sin(psi);
     CONVERGE_precision_t cos_psi = cos(psi);
     //Rotation around parent's velocity vector by angle psi - Rodrigues' rotation formula
-    // child velocity[i] = child_velocity[i-1]*cos(psi) + parent_velocity_normal_x_child_velocity[i-1] * sin(psi) + parent_velocity_x_parent_velocity_x_child_velocity[i-1] * (1 - cos(psi))
+    // child velocity[i] = user_child_velocity[i-1]*cos(psi) + parent_velocity_normal_x_user_child_velocity[i-1] * sin(psi) + parent_velocity_x_parent_velocity_x_user_child_velocity[i-1] * (1 - cos(psi))
     CONVERGE_vec3_t a,b,c,d;
 
-    CONVERGE_vec3_dup(child_velocity[0], a); // Previous child parcel's velocity 
+    CONVERGE_vec3_dup(user_child_velocity[0], a); // Previous child parcel's velocity 
 
-    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[0],&b); 
+    CONVERGE_vec3_cross(parent_velocity_unit, user_child_velocity[0],&b); 
     CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
     
     CONVERGE_vec3_scale(a, cos_psi) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_psi); // Term 2 
-    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[0])* (1- cos_psi)); //Term 3
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, user_child_velocity[0])* (1- cos_psi)); //Term 3
 
     CONVERGE_vec3_add(a,b,&d);
-    CONVERGE_vec3_add(d,c, &child_velocity[0]); // Final child velocity vector
+    CONVERGE_vec3_add(d,c, &user_child_velocity[0]); // Final child velocity vector
 
     CONVERGE_precision_t sin_theta, cos_theta, theta;
     theta = 2 * PI / N; // Angle between child parcels
@@ -191,19 +193,19 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     //Developed to split parent parcel into N smaller parcels at breakup 
     for (int jj = 1; jj < N-1; jj++) // For all the other parcels 2:N
     {
-    CONVERGE_vec3_dup(child_velocity[jj-1], a); // Previous child parcel's velocity 
+    CONVERGE_vec3_dup(user_child_velocity[jj-1], a); // Previous child parcel's velocity 
 
-    CONVERGE_vec3_cross(parent_velocity_unit, child_velocity[jj-1],&b); 
+    CONVERGE_vec3_cross(parent_velocity_unit, user_child_velocity[jj-1],&b); 
     CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
     
     CONVERGE_vec3_scale(a, cos_theta) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_theta); // Term 2 
-    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, child_velocity[jj-1])* (1- cos_theta)); //Term 3
+    CONVERGE_vec3_scale(c,CONVERGE_vec3_dot(parent_velocity_unit, user_child_velocity[jj-1])* (1- cos_theta)); //Term 3
 
     CONVERGE_vec3_add(a,b,&d);
-    CONVERGE_vec3_add(d,c, &child_velocity[jj]); // Final child velocity vector
-   CONVERGE_vec3_normalize(child_velocity[jj]);
-    CONVERGE_vec3_scale(child_velocity[jj],rad_vel * aa);
+    CONVERGE_vec3_add(d,c, &user_child_velocity[jj]); // Final child velocity vector
+   CONVERGE_vec3_normalize(user_child_velocity[jj]);
+    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * aa);
     
    
     } // end of jj loop
@@ -309,13 +311,13 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // CONVERGE_vec3_scale(parent_normal, rad_vel);  // This modifies parent_normal in place
                 
                 // Copy the modified parent_normal to child_uu
-                // CONVERGE_vec3_dup(child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
+                // CONVERGE_vec3_dup(user_child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
                 //Manually copy to child_uu since dup isn't working
                 
-                old_parcel_cloud->child_uu[p_idx][0] = child_velocity[nnn][0];
-                old_parcel_cloud->child_uu[p_idx][1] = child_velocity[nnn][1];
-                old_parcel_cloud->child_uu[p_idx][2] = child_velocity[nnn][2];
-                printf("\nBreakup.c: child_velocity = %e %e %e\n", child_velocity[nnn][0], child_velocity[nnn][1], child_velocity[nnn][2]);
+                old_parcel_cloud->child_uu[p_idx][0] = user_child_velocity[nnn][0];
+                old_parcel_cloud->child_uu[p_idx][1] = user_child_velocity[nnn][1];
+                old_parcel_cloud->child_uu[p_idx][2] = user_child_velocity[nnn][2];
+                printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
 
 
@@ -333,7 +335,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 
                 // Debug print of radial velocity component stored in child_uu
                 printf("\nBreakup.c radial velocity = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                printf("\nBreakup.c child velocity = %e %e %e\n", child_velocity[nnn][0], child_velocity[nnn][1], child_velocity[nnn][2]);
+                printf("\nBreakup.c child velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
