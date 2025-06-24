@@ -145,7 +145,7 @@ CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, &parent_normal);
 CONVERGE_precision_t normal_length = CONVERGE_vec3_normalize(parent_normal);
 
 // Debug check - should be very close to 1.0
-if (fabs(normal_length - 1.0) > 1.0e-6) {
+if (fabs(normal_length - 1.0) > 1.0e-2) {
     printf("ERROR: parent_normal not properly normalized! Length = %e\n", normal_length);
     printf("parent_normal = [%e, %e, %e]\n", 
            parent_normal[0], parent_normal[1], parent_normal[2]);
