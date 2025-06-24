@@ -202,7 +202,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
 
     CONVERGE_vec3_add(a,b,&d);
     CONVERGE_vec3_add(d,c, &child_velocity[jj]); // Final child velocity vector
-   
+   CONVERGE_vec3_normalize(child_velocity[jj]);
     CONVERGE_vec3_scale(child_velocity[jj],rad_vel * aa);
     
    
