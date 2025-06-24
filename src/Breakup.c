@@ -337,6 +337,12 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
+                printf("\nBreakup.c: Before CONVERGE_spray_child_parcel - child_uu = %e %e %e at %p\n",
+                    old_parcel_cloud->child_uu[p_idx][0],
+                    old_parcel_cloud->child_uu[p_idx][1],
+                    old_parcel_cloud->child_uu[p_idx][2],
+                    (void*)&old_parcel_cloud->child_uu[p_idx]);
+
 
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                             growth_rate,

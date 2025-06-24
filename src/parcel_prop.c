@@ -185,6 +185,12 @@ CONVERGE_UDF(parcel_child,
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
+
+      printf("\nparcel_child: child_uu = %e %e %e at %p\n",
+         parcel_cloud.child_uu[passed_parent_parcel_idx][0],
+         parcel_cloud.child_uu[passed_parent_parcel_idx][1],
+         parcel_cloud.child_uu[passed_parent_parcel_idx][2],
+         (void*)&parcel_cloud.child_uu[passed_parent_parcel_idx]);
       // Get the velocity difference between child and parent
       CONVERGE_vec3_t velocity_diff, displacement;
       CONVERGE_vec3_diff(parcel_cloud.child_uu[passed_parent_parcel_idx], 
