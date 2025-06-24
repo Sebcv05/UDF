@@ -93,7 +93,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
     CONVERGE_vec3_normalize(parent_velocity_unit);      //Parent Unit velocity vector 
-    if(CONVERGE_vec3_length(parent_velocity_unit)<1.01){
+    if(CONVERGE_vec3_length(parent_velocity_unit)<0.99){
         printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
         printf("\n length of parent_velocity_unit = %e",CONVERGE_vec3_length(parent_velocity_unit));
         CONVERGE_mpi_abort();
