@@ -313,12 +313,9 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // Copy the modified parent_normal to child_uu
                 // CONVERGE_vec3_dup(user_child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
                 //Manually copy to child_uu since dup isn't working
-                
-                old_parcel_cloud->child_uu[p_idx][0] = user_child_velocity[nnn][0];
-                old_parcel_cloud->child_uu[p_idx][1] = user_child_velocity[nnn][1];
-                old_parcel_cloud->child_uu[p_idx][2] = user_child_velocity[nnn][2];
+             
                 printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
-                printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
+                // printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
                 old_parcel_cloud->child_index[p_idx] = user_velocity_index;
                 user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
 
