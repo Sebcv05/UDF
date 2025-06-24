@@ -168,7 +168,7 @@ CONVERGE_vec3_normalize(parent_normal);
    //-----------------------------Calculate child parcel velocities------------------------------------------------
 
     // First child parcel will have radial velocity along normal
-    CONVERGE_vec3_dup(parent_normal,child_velocity[0]); // Set first child parcel's velocity to be along the normal
+    CONVERGE_vec3_dup(parent_normal,&child_velocity[0]); // Set first child parcel's velocity to be along the normal
     
 
 
