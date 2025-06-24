@@ -118,6 +118,7 @@ CONVERGE_UDF(parcel_inject,
 CONVERGE_UDF(parcel_child,
              IN(VALUE(CONVERGE_index_t, passed_child_parcel_idx),
                 VALUE(CONVERGE_index_t, passed_parent_parcel_idx),
+                FIELD(CONVERGE_vec3_t *, user_child_velocity),
                 VALUE(CONVERGE_cloud_t, passed_spray_cloud)),
              OUT(CONVERGE_VOID))
 {
