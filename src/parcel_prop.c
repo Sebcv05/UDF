@@ -194,7 +194,7 @@ CONVERGE_UDF(parcel_child,
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
       CONVERGE_vec3_t rel_vel;
-      CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_child_parcel_idx], &rel_vel);
+      CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], &rel_vel);
       printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
          rel_vel[0],
          rel_vel[1],
