@@ -93,7 +93,13 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
     CONVERGE_vec3_normalize(parent_velocity_unit);      //Parent Unit velocity vector 
-
+    if(CONVERGE_vec3_length(parent_velocity_unit)<1.0){
+        printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+        CONVERGE_mpi_abort();
+    }else if(CONVERGE_vec3_length(parent_velocity_unit)>1.0){
+        printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+        CONVERGE_mpi_abort();
+    }
     // printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
 
 
@@ -119,16 +125,26 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
     CONVERGE_precision_t aa = 1; // Scale factor for velocity
    
+// Assume parent_velocity_unit is already normalized
+CONVERGE_vec3_t arbitrary = {1.0, 0.0, 0.0};
+if (fabs(parent_velocity_unit[0]) > 0.99) {
+    // If velocity is close to x-axis, pick y-axis
+    arbitrary[0] = 0.0;
+    arbitrary[1] = 1.0;
+    arbitrary[2] = 0.0;
+}
+CONVERGE_vec3_t parent_normal;
+CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, parent_normal);
+CONVERGE_vec3_normalize(parent_normal);
 
 
-
-    // Make unit vector perpendicular to direction ( a.b = 0)
-    CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])) / parent_velocity_unit[2];
-    CONVERGE_vec3_t parent_normal;
-    parent_normal[0] = 1 / parent_nmag; // Normalized x component
-    parent_normal[1] = 1 / parent_nmag; // Normalized y component
-    parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
-    //Check parent_normal is perpendicular to parent_velocity_unit
+    // // Make unit vector perpendicular to direction ( a.b = 0)
+    // CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])) / parent_velocity_unit[2];
+    // CONVERGE_vec3_t parent_normal;
+    // parent_normal[0] = 1 / parent_nmag; // Normalized x component
+    // parent_normal[1] = 1 / parent_nmag; // Normalized y component
+    // parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
+    // //Check parent_normal is perpendicular to parent_velocity_unit
     CONVERGE_precision_t dot_product = CONVERGE_vec3_dot(parent_normal, parent_velocity_unit);
     if (dot_product > 1.0e-9)
     {
