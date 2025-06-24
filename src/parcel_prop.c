@@ -18,6 +18,7 @@
 #include <counter.h>
 #include <PsatNH3.h>
 #include <user_header.h>
+#include "Breakup.h"
 
 /**********************************************************************/
 /*                                                                    */
