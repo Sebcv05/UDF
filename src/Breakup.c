@@ -14,7 +14,7 @@
 #include <PsatNH3.h>
 #include<Vb.h>
 
-extern CONVERGE_vec3_t user_child_velocity[20];
+CONVERGE_vec3_t user_child_velocity[20];
 static int user_velocity_index = 0;
 
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud)
