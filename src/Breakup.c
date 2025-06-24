@@ -304,7 +304,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 printf("\nBreakup.c: parent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
                 printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
                 printf("\nBreakup.c: child_uu address = %p\n", (void*)&old_parcel_cloud->child_uu[p_idx]);
-                
+                printf("\nBreakup.c: radius address = %p\n", (void*)&old_parcel_cloud->radius[p_idx]);
                 // Store the radial velocity component in child_uu
                 // The radial velocity is calculated as rad_vel * parent_normal
                 printf("\nBreakup.c: Storing radial velocity in child_uu\n");
