@@ -127,7 +127,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
     CONVERGE_precision_t aa = 1; // Scale factor for velocity
    
-// Assume parent_velocity_unit is already normalized
+// 
+//perpendicular vector calculation
 CONVERGE_vec3_t arbitrary;
 if (fabs(parent_velocity_unit[0]) < 0.9) {
     arbitrary[0] = 1.0; arbitrary[1] = 0.0; arbitrary[2] = 0.0;
@@ -136,32 +137,20 @@ if (fabs(parent_velocity_unit[0]) < 0.9) {
 } else {
     arbitrary[0] = 0.0; arbitrary[1] = 0.0; arbitrary[2] = 1.0;
 }
+
+// Pass address of parent_normal to store the cross product result
 CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, &parent_normal);
-CONVERGE_vec3_normalize(parent_normal);
 
+// Normalize the result
+CONVERGE_precision_t normal_length = CONVERGE_vec3_normalize(parent_normal);
 
-    // // Make unit vector perpendicular to direction ( a.b = 0)
-    // CONVERGE_precision_t parent_nmag = CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])) / parent_velocity_unit[2];
-    // CONVERGE_vec3_t parent_normal;
-    // parent_normal[0] = 1 / parent_nmag; // Normalized x component
-    // parent_normal[1] = 1 / parent_nmag; // Normalized y component
-    // parent_normal[2] = -(parent_velocity_unit[0] + parent_velocity_unit[1]) / CONVERGE_sqrt(2 * CONVERGE_square(parent_velocity_unit[2]) + CONVERGE_square(parent_velocity_unit[0] + parent_velocity_unit[1])); // Normalized z component
-    // //Check parent_normal is perpendicular to parent_velocity_unit
-    CONVERGE_precision_t dot_product = CONVERGE_vec3_dot(parent_normal, parent_velocity_unit);
-    if (dot_product > 1.0e-9)
-    {
-        printf("\nparent_normal is not perpendicular to parent_velocity_unit\n");
-        CONVERGE_mpi_abort();
-    }else if(CONVERGE_vec3_length(parent_normal)==0.0){
-        printf("\nparent_normal is zero\n");
-        CONVERGE_mpi_abort();
-    }else if (CONVERGE_vec3_length(parent_normal)>1.01){
-        printf("\nparent_normal is not normalized\n");
-        CONVERGE_mpi_abort();
-    }else if (CONVERGE_vec3_length(parent_normal)<0.99){
-        printf("\nparent_normal is not normalized\n");
-        CONVERGE_mpi_abort();
-    }   
+// Debug check - should be very close to 1.0
+if (fabs(normal_length - 1.0) > 1.0e-6) {
+    printf("ERROR: parent_normal not properly normalized! Length = %e\n", normal_length);
+    printf("parent_normal = [%e, %e, %e]\n", 
+           parent_normal[0], parent_normal[1], parent_normal[2]);
+    CONVERGE_mpi_abort();
+}
     // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
     
