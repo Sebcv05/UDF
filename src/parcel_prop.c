@@ -225,13 +225,16 @@ CONVERGE_UDF(parcel_child,
              "passed_parent_parcel_idx = %i\n"
              "passed_child_parcel_idx = %i\n"
              "parent_radius = %e\n"
-             "velocity_diff = %e %e %e\n"
+             "child_uu = %e %e %e\n"
+             "child_uu address = %p\n"
              "displacement = %e %e %e\n"
              "child position = %e %e %e\n",
              passed_parent_parcel_idx,
              passed_child_parcel_idx,
              parcel_cloud.radius[passed_parent_parcel_idx],
-             velocity_diff[0], velocity_diff[1], velocity_diff[2],
+             parcel_cloud.child_uu[passed_child_parcel_idx][0], parcel_cloud.child_uu[passed_child_parcel_idx][1], parcel_cloud.child_uu[passed_child_parcel_idx][2],
+             (void*)parcel_cloud.child_uu[passed_child_parcel_idx],
+            velocity_diff[0], velocity_diff[1], velocity_diff[2],
              displacement[0], displacement[1], displacement[2],
              parcel_cloud.xx[passed_child_parcel_idx][0], 
              parcel_cloud.xx[passed_child_parcel_idx][1], 
