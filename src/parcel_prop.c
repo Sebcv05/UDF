@@ -128,7 +128,8 @@ CONVERGE_UDF(parcel_child,
 
 
    // At the start of the function, with other variable declarations
-CONVERGE_vec3_t *rel_vel = user_child_velocity[(int)parcel_cloud.child_index[passed_parent_parcel_idx]];
+   CONVERGE_vec3_t rel_vel;
+   CONVERGE_vec3_dup(user_child_velocity[parcel_cloud.child_index[passed_parent_parcel_idx]], &rel_vel);
 
    // parcel_semi_mass_old = parcel_cloud.density[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx] *
    //                        parcel_cloud.radius[passed_child_parcel_idx] * parcel_cloud.radius[passed_child_parcel_idx];
