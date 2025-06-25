@@ -277,6 +277,8 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
         // printf("\nsurf ten = %e, density = %e rt3 = %e",old_parcel_cloud->surf_ten[p_idx],old_parcel_cloud->density[p_idx],rad_term3);
     }
 
+
+
       
     //--------- Testing Child Parcel Introduction ----------------//
     // printf("\n Testing Child Parcel Introduction....\n");
@@ -291,7 +293,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     CONVERGE_vec3_t new_parcel_uu;
     CONVERGE_index_t num_child_parcels = 10;
     // Child radius and number of drops
-    new_radius = old_parcel_cloud->radius[p_idx] * 0.1;
+    new_radius = old_parcel_cloud->radius[p_idx] ;
     old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
     new_mass = old_mass / num_child_parcels;
     new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
