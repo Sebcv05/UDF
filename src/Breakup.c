@@ -352,7 +352,8 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 //     old_parcel_cloud->child_uu[p_idx][1],
                 //     old_parcel_cloud->child_uu[p_idx][2],
                 //     (void*)&old_parcel_cloud->child_uu[p_idx]);
-                CONVERGE_vec3_t parent_velocity = old_parcel_cloud->uu[p_idx];
+                CONVERGE_vec3_t parent_velocity;
+                CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &parent_velocity);
 
                CONVERGE_spray_child_parcel(parent_velocity,
                                             growth_rate,
