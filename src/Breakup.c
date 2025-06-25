@@ -386,13 +386,11 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
 
             //Update parent drop's radius
             // old_parcel_cloud->radius[p_idx] = 0old_parcel_cloud->radius[p_idx];
-            old_parcel_cloud->radius[p_idx] = new_radius; // Set parent radius to new radius
-            old_parcel_cloud->num_drop[p_idx] = new_parcel_num_drop; // Set parent num_drop to new num_drop
-            // old_parcel_cloud->radius[p_idx]=0.0;
+            old_parcel_cloud->radius[p_idx] = calculated_radius; // Set parent radius to new radius
+            old_parcel_cloud->radius_tm1[p_idx] = calculated_radius;
+            old_parcel_cloud->num_drop[p_idx] = new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
+            old_parcel_cloud->num_drop_tm1[p_idx] = new_parcel_num_drop;
             old_parcel_cloud->temp[p_idx] = 250.0;
-            old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
-            old_parcel_cloud->num_drop[p_idx] = 0.1 * nd_before_break;
-            old_parcel_cloud->num_drop[p_idx] = 0;
             old_parcel_cloud->pbt[p_idx] = 0;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 5; // Set to 5 to prevent secondary breakup
             old_parcel_cloud->tbt[p_idx] = 0; // Reset thermal breakup time
