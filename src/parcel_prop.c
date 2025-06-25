@@ -186,13 +186,16 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.omega[passed_child_parcel_idx] = parcel_cloud.omega_tm1[passed_parent_parcel_idx] = 0;
    parcel_cloud.eta_drop[passed_child_parcel_idx] = 0;
    parcel_cloud.dgre_cycle_count[passed_child_parcel_idx] = 0;
-   parcel_cloud.child_uu[passed_child_parcel_idx][0] = 0.0;
-   parcel_cloud.child_uu[passed_child_parcel_idx][1] = 0.0;
-   parcel_cloud.child_uu[passed_child_parcel_idx][2] = 0.0;
+
 
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
+//Set pbt to 0 , tbt to 0 and thermal_breakupflag = 4
+   parcel_cloud.pbt[passed_child_parcel_idx] = 0;
+   parcel_cloud.tbt[passed_child_parcel_idx] = 0;
+   parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;   
+      
       // CONVERGE_vec3_t rel_vel;
       // // CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], &rel_vel);
       // printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
