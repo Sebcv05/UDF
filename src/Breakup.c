@@ -293,7 +293,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     CONVERGE_vec3_t new_parcel_uu;
     CONVERGE_index_t num_child_parcels = 10;
     // Child radius and number of drops
-    new_radius = calculated_radius ;
+    // new_radius = calculated_radius ;
+    new_radius = old_parcel_cloud->radius[p_idx];
     //Calculate new number of droplets to conserve mass 
     old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
     new_mass = old_mass / num_child_parcels;
