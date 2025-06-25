@@ -316,16 +316,16 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
              
                 printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 // printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                old_parcel_cloud->child_index[p_idx] = user_velocity_index;
+                // old_parcel_cloud->child_index[p_idx] = user_velocity_index;
                 user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
 
                 // Debug: Verify values after storing
-                printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
-                       old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
+                // printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
+                //        old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
                 
                 // Calculate child's final velocity by adding parent velocity to radial component
-                printf("\nBreakup.c: Calculating final velocity\n");
-                CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
+                // printf("\nBreakup.c: Calculating final velocity\n");
+                // CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
                 
                 // Debug: Verify final velocity
                 printf("\nBreakup.c: Final velocity = %e %e %e\n", 
