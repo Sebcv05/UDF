@@ -61,7 +61,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
         CONVERGE_mpi_abort();
     }
     // printf("\nBreakup.c: Parent velocity = %e %e %e\n", 
-           old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
+        //    old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
 
     // Verify child_uu exists for this parcel
     if (!old_parcel_cloud->child_uu[p_idx]) {
