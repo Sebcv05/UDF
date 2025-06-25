@@ -122,7 +122,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
         printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
         printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
         printf("\n parent velocity = %e %e %e",old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
-        rel_vel = 0.0;
+        rad_vel = 0.0;
     
     }
     else if(fabs(rad_vel)<1.0e-9){
