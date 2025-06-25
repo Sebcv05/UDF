@@ -27,7 +27,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
 
     // Get cloud size and verify parcel index
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
-    printf("\nBreakup.c: Cloud size = %d, p_idx = %d\n", cloud_size, p_idx);
+    // printf("\nBreakup.c: Cloud size = %d, p_idx = %d\n", cloud_size, p_idx);
     if (p_idx >= cloud_size) {
         printf("\nBreakup.c: Invalid parcel index %d (cloud size = %d)\n", p_idx, cloud_size);
         CONVERGE_mpi_abort();
@@ -60,7 +60,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
         printf("\nBreakup.c: Parent velocity at p_idx %d is NULL\n", p_idx);
         CONVERGE_mpi_abort();
     }
-    printf("\nBreakup.c: Parent velocity = %e %e %e\n", 
+    // printf("\nBreakup.c: Parent velocity = %e %e %e\n", 
            old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
 
     // Verify child_uu exists for this parcel
