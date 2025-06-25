@@ -336,7 +336,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // Calculate child's final velocity by adding parent velocity to radial component
                 // printf("\nBreakup.c: Calculating final velocity\n");
                 // CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
-                
+                CONVERGE_vec3_add(old_parcel_cloud->uu[p_idx], user_child_velocity[nnn], &new_parcel_uu)
                 // Debug: Verify final velocity
                 // printf("\nBreakup.c: Final velocity = %e %e %e\n", 
                     //    new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
@@ -352,10 +352,9 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 //     old_parcel_cloud->child_uu[p_idx][1],
                 //     old_parcel_cloud->child_uu[p_idx][2],
                 //     (void*)&old_parcel_cloud->child_uu[p_idx]);
-                CONVERGE_vec3_t parent_velocity;
-                CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &parent_velocity);
 
-               CONVERGE_spray_child_parcel(parent_velocity,
+
+               CONVERGE_spray_child_parcel(new_parcel_uu,
                                             growth_rate,
                                             wave_length,
                                             new_radius,
