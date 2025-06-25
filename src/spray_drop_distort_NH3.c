@@ -315,6 +315,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                
                continue;
             }
+            //Delay breakup for parcels with lifetime < 1e-5
+            if(old_parcel_cloud.lifetime[p_idx]<1.0e-5)
+            {
+               continue;
+            }
+
          if (old_parcel_cloud.thermal_breakup_flag[p_idx] <0 && old_parcel_cloud.pbt[p_idx]==1)
          {
             if(old_parcel_cloud.thermal_breakup_flag[p_idx]>0)
