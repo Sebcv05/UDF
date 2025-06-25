@@ -354,9 +354,9 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 //Update position of child Parcel
 
                 CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
-                printf("\nBreakup.c: old_cloud_size = %i, new_cloud_size = %i\n", old_cloud_size, new_cloud_size);
+                printf("\nBreakup.c: initial_cloud_size = %i, new_cloud_size = %i\n", initial_cloud_size, new_cloud_size);
                 printf("\nBreakup.c: nnn = %i\n", nnn);
-                
+
                 if(old_cloud_size + nnn < new_cloud_size) {
                     CONVERGE_vec3_t child_displacement,old_position;
                     CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
