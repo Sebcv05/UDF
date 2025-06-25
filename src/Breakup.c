@@ -269,7 +269,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
 
       
     //--------- Testing Child Parcel Introduction ----------------//
-    printf("\n Testing Child Parcel Introduction....\n");
+    // printf("\n Testing Child Parcel Introduction....\n");
 //Check to see if reducing parent's temperature prevents convergence failure
     // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
 
@@ -299,12 +299,12 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
                 // Debug: Print memory addresses and values before operations
-                printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
-                printf("\nBreakup.c: parent_uu = %e %e %e\n ", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
-                printf("\nBreakup.c: parent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
-                printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
+                // printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
+                // printf("\nBreakup.c: parent_uu = %e %e %e\n ", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
+                // printf("\nBreakup.c: parent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
+                // printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
                 // printf("\nBreakup.c: child_uu address = %p\n", (void*)&old_parcel_cloud->child_uu[p_idx]);
-                printf("\nBreakup.c: radius address = %p\n", (void*)&old_parcel_cloud->radius);
+                // printf("\nBreakup.c: radius address = %p\n", (void*)&old_parcel_cloud->radius);
                 // Store the radial velocity component in child_uu
                 // The radial velocity is calculated as rad_vel * parent_normal
                 // printf("\nBreakup.c: Storing radial velocity in child_uu\n");
@@ -314,7 +314,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // CONVERGE_vec3_dup(user_child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
                 //Manually copy to child_uu since dup isn't working
              
-                printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
+                // printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 // printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
                 // old_parcel_cloud->child_index[p_idx] = user_velocity_index;
                 user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
@@ -328,12 +328,12 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 // CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
                 
                 // Debug: Verify final velocity
-                printf("\nBreakup.c: Final velocity = %e %e %e\n", 
-                       new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
+                // printf("\nBreakup.c: Final velocity = %e %e %e\n", 
+                    //    new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
                 
                 // Debug print of radial velocity component stored in child_uu
                 // printf("\nBreakup.c radial velocity = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                printf("\nBreakup.c child velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
+                // printf("\nBreakup.c child velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
                 // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
                 // // old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
@@ -353,19 +353,19 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                                             cloud);
                 //Update position of child Parcel
 
-                CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
-                printf("\nBreakup.c: initial_cloud_size = %i, new_cloud_size = %i\n", initial_cloud_size, new_cloud_size);
-                printf("\nBreakup.c: nnn = %i\n", nnn);
-                CONVERGE_index_t child_idx = initial_cloud_size+nnn;
+                // CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
+                // printf("\nBreakup.c: initial_cloud_size = %i, new_cloud_size = %i\n", initial_cloud_size, new_cloud_size);
+                // printf("\nBreakup.c: nnn = %i\n", nnn);
+                // CONVERGE_index_t child_idx = initial_cloud_size+nnn;
 
-                if(child_idx < new_cloud_size) {
-                    CONVERGE_vec3_t child_displacement,old_position;
-                    CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
-                    CONVERGE_vec3_normalize(child_displacement);
-                    CONVERGE_vec3_scale(child_displacement, parent_radius);
-                    CONVERGE_vec3_dup(old_parcel_cloud->xx[child_idx], &old_position);
-                CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
-                }
+                // if(child_idx < new_cloud_size) {
+                //     CONVERGE_vec3_t child_displacement,old_position;
+                //     CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
+                //     CONVERGE_vec3_normalize(child_displacement);
+                //     CONVERGE_vec3_scale(child_displacement, parent_radius);
+                //     CONVERGE_vec3_dup(old_parcel_cloud->xx[child_idx], &old_position);
+                // CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
+                // }
             }
 
             // reload after adding parcels
