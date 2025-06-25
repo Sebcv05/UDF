@@ -356,13 +356,13 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
                 CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
                 printf("\nBreakup.c: initial_cloud_size = %i, new_cloud_size = %i\n", initial_cloud_size, new_cloud_size);
                 printf("\nBreakup.c: nnn = %i\n", nnn);
+                CONVERGE_index_t child_idx = initial_cloud_size+nnn;
 
-                if(old_cloud_size + nnn < new_cloud_size) {
+                if(child_idx < new_cloud_size) {
                     CONVERGE_vec3_t child_displacement,old_position;
                     CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
                     CONVERGE_vec3_normalize(child_displacement);
                     CONVERGE_vec3_scale(child_displacement, parent_radius);
-                    CONVERGE_index_t child_idx = cloud_size+nnn;
                     CONVERGE_vec3_dup(old_parcel_cloud->xx[child_idx], &old_position);
                 CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
                 }
