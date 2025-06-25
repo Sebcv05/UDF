@@ -1320,6 +1320,10 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       radius_new[i_pc] = (radius_new[i_pc] < 1.0e-18) ? (1.0e-18) : (radius_new[i_pc]);
 
       parcel_cloud.radius[i_pc] = radius_new[i_pc];
+      if(radius_new[i_pc] < 1.0e-18)
+      {
+         printf("\n parcel removed at %e %e %e\n", parcel_cloud.xx[i_pc][0], parcel_cloud.xx[i_pc][1], parcel_cloud.xx[i_pc][2]);
+      }
    }
 
    *CONVERGE_cloud_get_cell_tot_evap(cloud) = cell_tot_evap;
