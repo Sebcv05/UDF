@@ -114,6 +114,15 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     if (rad_vel > parent_vmag)
     {
         printf("\nLarge rad vel ---- parent vel magnitude = %e, child_rad_vel = %e", parent_vmag, rad_vel);
+        printf("\n p_idx = %i",p_idx);
+        printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
+        printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
+        printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
+        printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
+        printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
+        printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
+        printf("\n parent velocity = %e %e %e",old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
+    
     }
     else if(fabs(rad_vel)<1.0e-9){
         printf("\n rad_vel = %e",rad_vel);
