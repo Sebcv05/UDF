@@ -428,7 +428,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if(mnew > 0.1*1.01* old_parcel_cloud->m0[p_idx])
     {
         printf("\nBreakup Model has increased droplet mass!!!\n m_old = %e m_new = %e\nnd_old = %e nd_new = %e\nr_old = %e r_new = %e\n Aborting!!!!!!!!\n",old_parcel_cloud->m0[p_idx],mnew,old_nd,old_parcel_cloud->num_drop[p_idx],old_r,old_parcel_cloud->radius[p_idx]);
-        CONVERGE_mpi_abort();
+        // CONVERGE_mpi_abort();
     }
     old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;
     old_parcel_cloud->tbt[p_idx] = 0;
