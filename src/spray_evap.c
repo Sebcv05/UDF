@@ -1021,9 +1021,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   cond_term1 =
                      (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
                   
-                  if( user_dT_sh > 0.002 )
+                  // if( user_dT_sh > 0.002 )
+                  // {
+                  //    cond_term1 =     dt * drop_area * heat_trans_coeff; //If Flash boiiling don't include Spalding number correlation
+                  // }
+                  if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] <  1.0e-4)
                   {
-                     cond_term1 =     dt * drop_area * heat_trans_coeff; //If Flash boiiling don't include Spalding number correlation
+                     cond_term1 = dt* drop_area* heat_trans_coeff; //disable Spalding number correlation for children after breakup
                   }
                }
                else if(spray_evap_flag == 2)
