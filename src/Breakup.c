@@ -291,7 +291,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
     CONVERGE_vec3_t new_parcel_uu;
-    CONVERGE_index_t num_child_parcels = 100;
+    CONVERGE_index_t num_child_parcels = 10;
     // Child radius and number of drops
     // if(calculated_radius< 0.4*old_parcel_cloud->radius[p_idx])
     // {
@@ -309,6 +309,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
     // new_parcel_num_drop = old_parcel_cloud->num_drop[p_idx];
 
+    //Try cooling the parcel to saturation temp -2 to prevent excessive evap 
+    //Just doing this manually for 2 bar for now T -> 252 K 
+    old_parcel_cloud->temp[p_idx] = 252.0;
+    
 
 
     growth_rate = 0.0;
