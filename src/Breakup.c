@@ -293,9 +293,9 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     CONVERGE_vec3_t new_parcel_uu;
     CONVERGE_index_t num_child_parcels = 10;
     // Child radius and number of drops
-    if(calculated_radius< 0.1*old_parcel_cloud->radius[p_idx])
+    if(calculated_radius< 0.8*old_parcel_cloud->radius[p_idx])
     {
-        calculated_radius = 0.1*old_parcel_cloud->radius[p_idx];
+        calculated_radius = 0.8*old_parcel_cloud->radius[p_idx];
     }
     else if(calculated_radius> old_parcel_cloud->radius[p_idx])
     {
