@@ -240,7 +240,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
 CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4));
     // old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
-    if (old_parcel_cloud->radius[p_idx] < 0.0)
+    if (calculated_radius < 0.0)
     {
         printf("\n radius negative \n");
     }
@@ -249,7 +249,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     {
         printf("\nbubble radius larger than droplet's original radius");
     }
-    if (old_parcel_cloud->radius[p_idx] > parent_radius )
+    if (calculated_radius > parent_radius )
     {
         CONVERGE_int_t rankb;
         CONVERGE_mpi_comm_rank(&rankb);
@@ -291,7 +291,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
     CONVERGE_vec3_t new_parcel_uu;
-    CONVERGE_index_t num_child_parcels = 10;
+    CONVERGE_index_t num_child_parcels = 100;
     // Child radius and number of drops
     // if(calculated_radius< 0.4*old_parcel_cloud->radius[p_idx])
     // {
@@ -306,8 +306,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     //Calculate new number of droplets to conserve mass 
     old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
     new_mass = old_mass / num_child_parcels;
-    // new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
-    new_parcel_num_drop = old_parcel_cloud->num_drop[p_idx];
+    new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
+    // new_parcel_num_drop = old_parcel_cloud->num_drop[p_idx];
 
 
 
@@ -428,7 +428,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if(mnew > 0.1*1.01* old_parcel_cloud->m0[p_idx])
     {
         printf("\nBreakup Model has increased droplet mass!!!\n m_old = %e m_new = %e\nnd_old = %e nd_new = %e\nr_old = %e r_new = %e\n Aborting!!!!!!!!\n",old_parcel_cloud->m0[p_idx],mnew,old_nd,old_parcel_cloud->num_drop[p_idx],old_r,old_parcel_cloud->radius[p_idx]);
-        // CONVERGE_mpi_abort();
+        CONVERGE_mpi_abort();
     }
     old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;
     old_parcel_cloud->tbt[p_idx] = 0;
