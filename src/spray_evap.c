@@ -503,6 +503,14 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
+      /// USER ADDED Skip Children of thermal breakup for 100 microseconds
+      if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] <  1.0e-4)
+      {
+         continue;
+      }
+
+
+
       //   //USER ADDED      //Add a cloud index if one doesn't exist already
          if(parcel_cloud.cloud_index[i_pc]==-1)    //If cloud index = -1 then it hasn't been set
          {

@@ -61,6 +61,9 @@ CONVERGE_UDF(parcel_inject,
       parcel_cloud.r_bubble_0[passed_parcel_idx] = 0.0;
    }
 
+
+   
+   parcel_cloud.is_child[passed_parcel_idx] = 0;
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
    parcel_cloud.r_bubble_0[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
@@ -187,7 +190,9 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.eta_drop[passed_child_parcel_idx] = 0;
    parcel_cloud.dgre_cycle_count[passed_child_parcel_idx] = 0;
 
-
+   // In the parcel_child function, add this line where other parcel properties are being set:
+   parcel_cloud.lifetime[passed_child_parcel_idx] = 0.0;  // Reset lifetime for new child droplets 
+   parcel_cloud.is_child[passed_child_parcel_idx] = 1;   //Field to identify whether parent has undrgone breakup 
    // If parent's thermal_breakup_flag is set, displace the child parcel
    if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
    {
