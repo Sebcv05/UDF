@@ -819,8 +819,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   }
                }
 
-               if( evap_flag_flash_boiling==1 )
-               {
+               // if( evap_flag_flash_boiling==1 )
+               // {
                   double super_heat_degree = tdrop - temp_boil[isp];
                   user_dT_sh = super_heat_degree;
                   if( super_heat_degree > 0.2 )
@@ -880,7 +880,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                               super_heat_degree / density_sp / hvap;
                         }
                      }
-                  }
+                  // }
 
 
                }
