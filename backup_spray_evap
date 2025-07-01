@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <counter.h>
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
 static void reset_parcel_temp_mfrac(const CONVERGE_index_t parcel_idx,
                                     CONVERGE_precision_t *temp_drop,
@@ -43,6 +43,7 @@ static CONVERGE_index_t compute_parcel_mole_fractions(CONVERGE_precision_t *mass
 
 // Local UDF Field Variable Arrays
 // Declared here to simplify function signature for spray_evap_cell
+double user_dT_sh;
 static const CONVERGE_precision_t *global_density;
 static const CONVERGE_precision_t *global_mol_cond;
 static const CONVERGE_precision_t *global_csubp;
@@ -159,7 +160,7 @@ CONVERGE_UDF(spray_evap,
             }
             rel_vel_mag[i_p] = CONVERGE_vec3_magnitude(rel_vel[i_p]);
          }
-
+       
          CONVERGE_cloud_iterator_destroy(&pc_it);
       }
    }
@@ -215,9 +216,12 @@ CONVERGE_UDF(spray_evap,
       {
          CONVERGE_logger_verbose("BEFORE spray_evap_cell DELMAS = %17.6e at ncyc= %ld", delmas, CONVERGE_ncyc());
       }
-
+      update_cloud_counter_flag = 0;      //Set this to 0 so cloud counter only updated if index setter triggered
       spray_evap_cell(cloud);
-
+      if(update_cloud_counter_flag)
+      {
+         user_cloud_counter++;
+      }
       delmas = global_src_ex_density[node_index] * dt / global_density[node_index];
       if(delmas > 0.2)
       {
@@ -242,6 +246,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // Setup parcel cloud iterator for this cloud
    CONVERGE_iterator_t pc_it;
    CONVERGE_cloud_iterator_create(cloud, &pc_it);
+
 
    // Get relevent flags
    CONVERGE_flag_t parcel_boil_correlation_flag = CONVERGE_get_int("simulation.parcel_boil_correlation");
@@ -310,8 +315,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
    const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
 
-   const CONVERGE_precision_t min_spray_temp          = 200.0;
-   const CONVERGE_precision_t min_spray_recovery_temp = 270.0;
+   const CONVERGE_precision_t min_spray_temp          = 185.0;
+   const CONVERGE_precision_t min_spray_recovery_temp = 194.0;
 
    // Old table lookup vars
    CONVERGE_precision_t temp1;
@@ -498,6 +503,23 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
+      // /// USER ADDED Skip Children of thermal breakup for 100 microseconds
+      // if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] <  1.0e-4)
+      // {
+      //    continue;
+      // }
+
+
+
+      //   //USER ADDED      //Add a cloud index if one doesn't exist already
+         if(parcel_cloud.cloud_index[i_pc]==-1)    //If cloud index = -1 then it hasn't been set
+         {
+            parcel_cloud.cloud_index[i_pc] = user_cloud_counter;     //want the same index for all parcels in the cloud so will update after the end of cloud loop
+            update_cloud_counter_flag = 1;
+         } 
+   ////////////////
+
+
       // see Borman and Ragland 1998 edition, p. 596
       tg       = (2.0 * parcel_cloud.temp[i_pc] + temp_gas) / 3.0;
       mol_visc = 0.0;
@@ -533,6 +555,24 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       }
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
+   
+   if(CONVERGE_ncyc()%100 == 0)
+   {
+            // ******************************************************************************************************//
+         // Print  Droplet Data to File
+         CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
+         char *filename1 = "Temp_Tracker.txt";
+         FILE *fp1 = fopen("Temp_Tracker.txt", "a");
+         if (fp1 == NULL)
+         {
+            printf("Error opening the file %s", filename1);
+         }
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag);
+         fclose(fp1);
+         // ******************************************************************************************************//
+
+      }
+
 
    //******************************************************************************************************//
    //
@@ -560,7 +600,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          CONVERGE_precision_t tdrop        = parcel_cloud.temp[i_pc];
          CONVERGE_precision_t tdrop_starm1 = parcel_cloud.temp[i_pc];
 
-         int max_inner_iter = 10;
+         int max_inner_iter = 100;
          int min_inner_iter = 1;
 
          // omega is the under-relaxation. if convergence not working this can be lowered.
@@ -779,9 +819,10 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   }
                }
 
-               if( evap_flag_flash_boiling==1 )
-               {
+               // if( evap_flag_flash_boiling==1 )
+               // {
                   double super_heat_degree = tdrop - temp_boil[isp];
+                  user_dT_sh = super_heat_degree;
                   if( super_heat_degree > 0.2 )
                   {
                      double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
@@ -809,7 +850,59 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                            super_heat_degree / density_sp / hvap;
                      }
                   }
-               }
+                  /// USER ADDED After breakup, only use adachi contribution for 0.1ms - will substantially reduce evap rate in this period
+               //    if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] <  1.0e-4)
+               //    {
+               //       if( super_heat_degree > 0.2 )
+               //       {
+               //          double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
+               //          if( super_heat_degree < 5 )
+               //          {
+               //             parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-
+               //                evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //                pre_coeff_flshblg_l5 * pow(super_heat_degree, expnt_flshblg_l5) *
+               //                super_heat_degree / density_sp / hvap;
+               //          }
+               //          else if( super_heat_degree < 25 && super_heat_degree >= 5 )
+               //          {
+               //             parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
+               //                (1.0 + distort_scale*parcel_cloud.distort[i_pc]) *
+               //                evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //                pre_coeff_flshblg_l25 * pow(super_heat_degree, expnt_flshblg_l25) *
+               //                super_heat_degree / density_sp / hvap;
+               //          }
+               //          else
+               //          {
+               //             parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-
+               //                (1.0 + distort_scale * parcel_cloud.distort[i_pc]) *
+               //                evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //                pre_coeff_flshblg_g25 * pow(super_heat_degree, expnt_flshblg_g25) *
+               //                super_heat_degree / density_sp / hvap;
+               //          }
+               //       }
+               //    // }
+
+
+               // }
+               //The 
+               //  if( evap_flag_flash_boiling==1 )
+               // {
+               //    double super_heat_degree = tdrop - temp_boil[isp];
+               //    if( super_heat_degree > 0.2 )
+               //    {
+               //          //Diffusion Coefficient
+               //          CONVERGE_precision_t user_D =  1e-7 * (pow(temp_gas,1.75) * CONVERGE_sqrt(1/17 + 1/28) )/((global_pressure[node_index]/1e5) * CONVERGE_square(pow(17.9,0.33) + pow(14.9,0.33)));
+               //          //Pvap 
+               //          CONVERGE_precision_t user_Pv = y1 * global_pressure[node_index];
+               //          //Psat
+               //          CONVERGE_precision_t user_Ps =  CONVERGE_table_lookup(pvap_table[isp], temp1);
+               //          CONVERGE_precision_t user_denom = 2 * parcel_cloud.radius[i_pc] * gas_constant;
+               //          parcel_cloud.drdt[i_pc * num_parcel_species + isp] -=  parcel_cloud.v_sh[i_pc] * user_D * 17 * ((user_Ps/temp1)-(user_Pv/temp_gas)) /user_denom;
+               //    }
+               // }
+
+
+
 
                if((parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt + parcel_cloud.radius[i_pc]) <
                   evap_min_radius[isp])
@@ -927,6 +1020,15 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   cond_term1 =
                      (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
+                  
+                  // if( user_dT_sh > 0.002 )
+                  // {
+                  //    cond_term1 =     dt * drop_area * heat_trans_coeff; //If Flash boiiling don't include Spalding number correlation
+                  // }
+                  // if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] <  1.0e-4)
+                  // {
+                  //    cond_term1 = dt* drop_area* heat_trans_coeff; //disable Spalding number correlation for children after breakup
+                  // }
                }
                else if(spray_evap_flag == 2)
                {
@@ -1263,6 +1365,10 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       radius_new[i_pc] = (radius_new[i_pc] < 1.0e-18) ? (1.0e-18) : (radius_new[i_pc]);
 
       parcel_cloud.radius[i_pc] = radius_new[i_pc];
+      if(radius_new[i_pc] < 1.0e-18)
+      {
+         printf("\n parcel removed at %e %e %e\n", parcel_cloud.xx[i_pc][0], parcel_cloud.xx[i_pc][1], parcel_cloud.xx[i_pc][2]);
+      }
    }
 
    *CONVERGE_cloud_get_cell_tot_evap(cloud) = cell_tot_evap;
@@ -1389,7 +1495,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
        free(mult_sc_num);
        free(mult_sh_num);
    }
-}
+} //end of spray_evap_cell
+
 
 /**
  * @brief reset_parcel_temp_mfrac: Reset the parcel temperature and mass fractions to tm1 values
