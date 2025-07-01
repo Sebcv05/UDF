@@ -973,7 +973,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
             {
                if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                {
-                  cond_term1 = dt * drop_area * heat_trans_coeff;
+                  // cond_term1 = dt * drop_area * heat_trans_coeff;
+                  cond_term1 = 0.0; //Zero
+                  printf(" setting cond_term1 to zero for child %ld\n", i_pc);
                }
             }
 
