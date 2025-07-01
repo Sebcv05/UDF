@@ -822,6 +822,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   printf("\n spray_evap_cell: parcel is child\n");
                   if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                   {
+                     printf("\n tdrop = %e\n ", tdrop);
+                     printf("\n temp_boil = %e\n", temp_boil[isp]);
                      double super_heat_degree = tdrop - temp_boil[isp];
 
                      printf("\n spray_evap_cell: parcel lifetime < 1.0e-4\n");   
