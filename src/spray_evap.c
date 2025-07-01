@@ -968,6 +968,14 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   cond_term1 = dt * drop_area * heat_trans_coeff;
                }
             }
+            //Turn of spalding number correlation for children after breakup 
+            if(parcel_cloud.is_child[i_pc])
+            {
+               if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
+               {
+                  cond_term1 = dt * drop_area * heat_trans_coeff;
+               }
+            }
 
             CONVERGE_precision_t denom = cond_term1 + (csubp_liquid * mass_drop_new);
 
