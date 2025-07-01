@@ -975,7 +975,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                {
                   // cond_term1 = dt * drop_area * heat_trans_coeff;
                   cond_term1 = 0.0; //Zero
+                  if(i_pc%100==0){
                   printf(" setting cond_term1 to zero for child %ld\n", i_pc);
+                  }
                }
             }
 
