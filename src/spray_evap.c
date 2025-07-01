@@ -812,10 +812,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      }
                   }
                }
+               printf("\n spray_evap_cell L815 ")
                if(parcel_cloud.is_child[i_pc])
                {
+                  printf("\n spray_evap_cell: parcel is child\n");
                   if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                   {
+                     printf("\n spray_evap_cell: parcel lifetime < 1.0e-4\n");
                      // parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                      double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
                      if( super_heat_degree < 5 )
