@@ -840,7 +840,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                //             super_heat_degree / density_sp / hvap;
                //       }
                //    }
-               // }
+               }
             }
 
                if((parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt + parcel_cloud.radius[i_pc]) <
