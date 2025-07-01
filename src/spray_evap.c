@@ -782,12 +782,12 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                         -mass_trans_coeff * (y1_star - y1) * (bsub_d / (pow((1.0 + bsub_d), 0.568)));
                   }
                }
-               printf("\n spray_evap_cell: L750, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
-               double super_heat_degree = tdrop - temp_boil[isp];
-               printf("\n spray_evap_cell: L752, super_heat_degree = %e\n  ", super_heat_degree);
+               printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
                if( evap_flag_flash_boiling==1 )
                {
                   double super_heat_degree = tdrop - temp_boil[isp];
+                  printf("\n spray_evap_cell: L789, super_heat_degree = %e\n  ", super_heat_degree);
+
                   if( super_heat_degree > 0.2 )
                   {
                      double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
