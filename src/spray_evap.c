@@ -498,7 +498,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
-      printf("\n spray_evap_cell: L501, i_pc = %ld\n  ", i_pc);
+      //printf("\n spray_evap_cell: L501, i_pc = %ld\n  ", i_pc);
       // see Borman and Ragland 1998 edition, p. 596
       tg       = (2.0 * parcel_cloud.temp[i_pc] + temp_gas) / 3.0;
       mol_visc = 0.0;
@@ -747,7 +747,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                CONVERGE_precision_t log_bsub_d = log(bsub_d + 1.0);
 
 
-               printf("\n spray_evap_cell: L750, bsub_d = %e\n  ", bsub_d);
+               //printf("\n spray_evap_cell: L750, bsub_d = %e\n  ", bsub_d);
 
                CONVERGE_precision_t mass_trans_coeff = 0.0;
                if(hidden_multi_component_diffusion_flag == 1)
@@ -782,15 +782,15 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                         -mass_trans_coeff * (y1_star - y1) * (bsub_d / (pow((1.0 + bsub_d), 0.568)));
                   }
                }
-               printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
+               //printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
                if( evap_flag_flash_boiling==1 )
                {
-                  printf("\n is child %d\n", parcel_cloud.is_child[i_pc]);
-                  printf("\n lifetime %e\n", parcel_cloud.lifetime[i_pc]);
-                  printf("\n tdrop %e\n", tdrop);
-                  printf("\n temp_boil %e\n", temp_boil[isp]);
+                  //printf("\n is child %d\n", parcel_cloud.is_child[i_pc]);
+                  //printf("\n lifetime %e\n", parcel_cloud.lifetime[i_pc]);
+                  //printf("\n tdrop %e\n", tdrop);
+                  //printf("\n temp_boil %e\n", temp_boil[isp]);
                   double super_heat_degree = tdrop - temp_boil[isp];
-                  printf("\n spray_evap_cell: L789, super_heat_degree = %e\n  ", super_heat_degree);
+                  //printf("\n spray_evap_cell: L789, super_heat_degree = %e\n  ", super_heat_degree);
 
                   if( super_heat_degree > 0.2 )
                   {
@@ -820,22 +820,22 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      }
                   }
                }
-               printf("\n spray_evap_cell L815 ");
+               //printf("\n spray_evap_cell L815 ");
                if(parcel_cloud.is_child[i_pc]==2)
                {
-                  printf("\n spray_evap_cell: parcel is child\n");
+                  //printf("\n spray_evap_cell: parcel is child\n");
                   if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                   {
-                     printf("\n tdrop = %e\n ", tdrop);
-                     printf("\n temp_boil = %e\n", temp_boil[isp]);
+                     //printf("\n tdrop = %e\n ", tdrop);
+                     //printf("\n temp_boil = %e\n", temp_boil[isp]);
                      double super_heat_degree = tdrop - temp_boil[isp];
 
-                     printf("\n spray_evap_cell: parcel lifetime < 1.0e-4\n");   
+                     //printf("\n spray_evap_cell: parcel lifetime < 1.0e-4\n");   
                      // parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                      double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
-                     if( super_heat_degree < 5 )
+                     if( super_heat_degree < 5 && super_heat_degree >0.2)
                      {
-                        printf("super_heat_degree < 5\n");
+                        //printf("super_heat_degree < 5\n");
                         parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                         // parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
                         //    evap_scale_factor_flash_boiling * volume_fraction[isp] *
@@ -844,7 +844,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      }
                      else if( super_heat_degree < 25 && super_heat_degree >= 5 )
                      {
-                        printf("super_heat_degree < 25 && super_heat_degree >= 5\n");
+                        // printf("super_heat_degree < 25 && super_heat_degree >= 5\n");
                         parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                         // parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
                         //    (1.0 + distort_scale*parcel_cloud.distort[i_pc]) *
@@ -854,7 +854,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      }
                      else
                      {
-                        printf("super_heat_degree >= 25\n");
+                        //printf("super_heat_degree >= 25\n");
                         parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                         // parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-
                         //    (1.0 + distort_scale * parcel_cloud.distort[i_pc]) *
