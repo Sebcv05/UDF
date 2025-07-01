@@ -399,14 +399,17 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             load_user_cloud(old_parcel_cloud, cloud);
 
             //Update parent drop's radius
-            // old_parcel_cloud->radius[p_idx] = 0old_parcel_cloud->radius[p_idx];
             old_parcel_cloud->radius[p_idx] = calculated_radius; // Set parent radius to new radius
             old_parcel_cloud->radius_tm1[p_idx] = calculated_radius;
             old_parcel_cloud->num_drop[p_idx] = new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
             old_parcel_cloud->num_drop_tm1[p_idx] = new_parcel_num_drop;
-            // old_parcel_cloud->temp[p_idx] = 250.0;
+
+            //Update Parent velocity 
+            CONVERGE_vec3_t new_parent_velocity ;
+            CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &new_parent_velocity);
+            CONVERGE_vec3_add(new_parent_velocity, user_child_velocity[num_child_parcels], &new_parent_velocity);
+            CONVERGE_vec3_dup(new_parent_velocity, &old_parcel_cloud->uu[p_idx]);
             old_parcel_cloud->pbt[p_idx] = 0;
-            old_parcel_cloud->thermal_breakup_flag[p_idx] = 5; // Set to 5 to prevent secondary breakup
             old_parcel_cloud->tbt[p_idx] = 0; // Reset thermal breakup time
             old_parcel_cloud->lifetime[p_idx] = 0;
             old_parcel_cloud->is_child[p_idx] = 1;
@@ -416,16 +419,12 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
             //Set these to prevent secondary thermal breakup 
-            old_parcel_cloud->thermal_breakup_flag[p_idx] = 5;
             old_parcel_cloud->pbt[p_idx] = 0;
             old_parcel_cloud->int_omega[p_idx] = 0;
             old_parcel_cloud->pbt[p_idx] = 0;
             old_parcel_cloud->tbt[p_idx] = 0;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;   
-            // printf("\n END OF PARCEL_PROP.C \n");
-            // printf("\n\n r_bubble = %e 	r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parent_parcel_idx], parcel_cloud.r_bubble_0[passed_parent_parcel_idx]);
          
-            // R_D_0
 
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
             // printf("\nNew cloud size = %i\n\n",new_cloud_size);
