@@ -785,6 +785,10 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
                if( evap_flag_flash_boiling==1 )
                {
+                  printf("\n is child %d\n", parcel_cloud.is_child[i_pc]);
+                  printf("\n lifetime %e\n", parcel_cloud.lifetime[i_pc]);
+                  printf("\n tdrop %e\n", tdrop);
+                  printf("\n temp_boil %e\n", temp_boil[isp]);
                   double super_heat_degree = tdrop - temp_boil[isp];
                   printf("\n spray_evap_cell: L789, super_heat_degree = %e\n  ", super_heat_degree);
 
