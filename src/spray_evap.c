@@ -779,6 +779,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   }
                }
 
+               double super_heat_degree = tdrop - temp_boil[isp];
+
                if( evap_flag_flash_boiling==1 )
                {
                   double super_heat_degree = tdrop - temp_boil[isp];
