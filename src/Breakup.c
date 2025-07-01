@@ -414,7 +414,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             old_parcel_cloud->lifetime[p_idx] = 0;
             old_parcel_cloud->is_child[p_idx] = 1;
             old_parcel_cloud->r_bubble[p_idx] = 0.0;
-
+            old_parcel_cloud->temp[p_idx] = 250.0;
             // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
