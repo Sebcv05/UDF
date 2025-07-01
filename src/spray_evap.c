@@ -814,32 +814,33 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   {
                      if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                   {
-                     double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
-                     if( super_heat_degree < 5 )
-                     {
-                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
-                           evap_scale_factor_flash_boiling * volume_fraction[isp] *
-                           pre_coeff_flshblg_l5 * pow(super_heat_degree, expnt_flshblg_l5) *
-                           super_heat_degree / density_sp / hvap;
-                     }
-                     else if( super_heat_degree < 25 && super_heat_degree >= 5 )
-                     {
-                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
-                           (1.0 + distort_scale*parcel_cloud.distort[i_pc]) *
-                           evap_scale_factor_flash_boiling * volume_fraction[isp] *
-                           pre_coeff_flshblg_l25 * pow(super_heat_degree, expnt_flshblg_l25) *
-                           super_heat_degree / density_sp / hvap;
-                     }
-                     else
-                     {
-                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-
-                           (1.0 + distort_scale * parcel_cloud.distort[i_pc]) *
-                           evap_scale_factor_flash_boiling * volume_fraction[isp] *
-                           pre_coeff_flshblg_g25 * pow(super_heat_degree, expnt_flshblg_g25) *
-                           super_heat_degree / density_sp / hvap;
-                     }
-                  }
-               }
+                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+               //       double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
+               //       if( super_heat_degree < 5 )
+               //       {
+               //          parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
+               //             evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //             pre_coeff_flshblg_l5 * pow(super_heat_degree, expnt_flshblg_l5) *
+               //             super_heat_degree / density_sp / hvap;
+               //       }
+               //       else if( super_heat_degree < 25 && super_heat_degree >= 5 )
+               //       {
+               //          parcel_cloud.drdt[i_pc * num_parcel_species + isp] =- 
+               //             (1.0 + distort_scale*parcel_cloud.distort[i_pc]) *
+               //             evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //             pre_coeff_flshblg_l25 * pow(super_heat_degree, expnt_flshblg_l25) *
+               //             super_heat_degree / density_sp / hvap;
+               //       }
+               //       else
+               //       {
+               //          parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-
+               //             (1.0 + distort_scale * parcel_cloud.distort[i_pc]) *
+               //             evap_scale_factor_flash_boiling * volume_fraction[isp] *
+               //             pre_coeff_flshblg_g25 * pow(super_heat_degree, expnt_flshblg_g25) *
+               //             super_heat_degree / density_sp / hvap;
+               //       }
+               //    }
+               // }
             }
 
                if((parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt + parcel_cloud.radius[i_pc]) <
