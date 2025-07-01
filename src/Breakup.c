@@ -410,18 +410,18 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             old_parcel_cloud->tbt[p_idx] = 0; // Reset thermal breakup time
             old_parcel_cloud->lifetime[p_idx] = 0;
             old_parcel_cloud->is_child[p_idx] = 1;
-            parcel_cloud.r_bubble[p_idx] = 0.0;
+            old_parcel_cloud->r_bubble[p_idx] = 0.0;
 
             // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
-            parcel_cloud.v_bubble[p_idx] = 0.0;
-            parcel_cloud.r_bubble_0[p_idx] = 0.0;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
             //Set these to prevent secondary thermal breakup 
-            parcel_cloud.thermal_breakup_flag[p_idx] = 5;
-            parcel_cloud.pbt[p_idx] = 0;
-            parcel_cloud.int_omega[p_idx] = 0;
-            parcel_cloud.pbt[p_idx] = 0;
-            parcel_cloud.tbt[p_idx] = 0;
-            parcel_cloud.thermal_breakup_flag[p_idx] = 4;   
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = 5;
+            old_parcel_cloud->pbt[p_idx] = 0;
+            old_parcel_cloud->int_omega[p_idx] = 0;
+            old_parcel_cloud->pbt[p_idx] = 0;
+            old_parcel_cloud->tbt[p_idx] = 0;
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;   
             // printf("\n END OF PARCEL_PROP.C \n");
             // printf("\n\n r_bubble = %e 	r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parent_parcel_idx], parcel_cloud.r_bubble_0[passed_parent_parcel_idx]);
          
