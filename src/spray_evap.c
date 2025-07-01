@@ -809,10 +809,10 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                            super_heat_degree / density_sp / hvap;
                      }
                   }
-                 
-                  if(parcel_cloud.is_child[i_pc])
-                  {
-                     if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
+               }
+               if(parcel_cloud.is_child[i_pc])
+               {
+                  if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                //       double density_sp = CONVERGE_table_lookup(rho_table[isp], tdrop);
@@ -840,7 +840,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                //             super_heat_degree / density_sp / hvap;
                //       }
                   }
-               }
             }
 
                if((parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt + parcel_cloud.radius[i_pc]) <
