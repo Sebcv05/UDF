@@ -498,6 +498,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
+      printf("\n spray_evap_cell: L501, i_pc = %ld\n  ", i_pc);
       // see Borman and Ragland 1998 edition, p. 596
       tg       = (2.0 * parcel_cloud.temp[i_pc] + temp_gas) / 3.0;
       mol_visc = 0.0;
