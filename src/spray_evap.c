@@ -746,6 +746,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                bsub_d_avg += bsub_d * parcel_cloud.mfrac[i_pc * num_parcel_species + isp];
                CONVERGE_precision_t log_bsub_d = log(bsub_d + 1.0);
 
+
+               printf("\n spray_evap_cell: L750, bsub_d = %e\n  ", bsub_d);
+
                CONVERGE_precision_t mass_trans_coeff = 0.0;
                if(hidden_multi_component_diffusion_flag == 1)
                {
