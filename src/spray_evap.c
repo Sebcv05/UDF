@@ -821,7 +821,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                   }
                }
                printf("\n spray_evap_cell L815 ");
-               if(parcel_cloud.is_child[i_pc])
+               if(parcel_cloud.is_child[i_pc]==2)
                {
                   printf("\n spray_evap_cell: parcel is child\n");
                   if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
