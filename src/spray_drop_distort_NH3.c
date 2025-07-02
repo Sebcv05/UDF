@@ -45,7 +45,7 @@ static CONVERGE_precision_t pbr_time = 0.0;
 
 // Function to print profiling information
 static void print_distort_profiling() {
-    if (distort_call_count % 100 == 0 && distort_call_count > 0) {  // Print every 100 calls
+    if (distort_call_count > 0) {  // Only print if we have calls
         printf("\n=== Spray Distort Profiling (calls: %d) ===\n", distort_call_count);
         printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
                total_distort_time, (total_distort_time/distort_call_count)*1000.0);
@@ -180,17 +180,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    // Section 1: Initialization
    init_start = CONVERGE_mpi_wtime();
    
+   // Initialize timing variables
+   pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
+   post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
+   sopl = CONVERGE_mpi_wtime();
+   
+   // End of initialization section
+   init_time += CONVERGE_mpi_wtime() - init_start;
+   
+   // Start of parcel processing loop
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
-      // if(CONVERGE_simulation_time_sec() > 1.0e-4)
-      // {
-      // End of initialization section for this parcel
-      init_time += CONVERGE_mpi_wtime() - init_start;
-      
-      // Timing initialization for this parcel
+      // Reset timing for this parcel
       pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
       post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
-         sopl = CONVERGE_mpi_wtime();
+      sopl = CONVERGE_mpi_wtime();
 
          mass_before= mass_before + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
@@ -639,6 +643,30 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       
    }    // End of parcel loop
     
+   // Update timing for the last parcel if needed
+   if (num_parcels_in_cloud > 0) {
+       eopl = CONVERGE_mpi_wtime();
+       // Update any remaining timing for the last parcel
+   }
+   
+   // Update total time for this function call
+   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
+   total_distort_time += end_time - start_time;
+   
+   // Increment call counter
+   distort_call_count++;
+   
+   // Print profiling information periodically
+   if (distort_call_count % 1000 == 0) {
+       // Normalize times by number of parcels to get average per parcel
+       CONVERGE_precision_t scale = 1.0 / distort_call_count;
+       if (num_parcels_in_cloud > 0) {
+           scale /= num_parcels_in_cloud;
+       }
+       
+       // Print the profiling information
+       print_distort_profiling();
+   }   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
