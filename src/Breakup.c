@@ -431,7 +431,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             child_parcel_time = CONVERGE_mpi_wtime() - section_start;
 
             section_start = CONVERGE_mpi_wtime();
-            zero_time = CONVERGE_mpi_wtime() - section_start;
+            
 
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
@@ -481,8 +481,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     // End of child parcel section
     
     // Update profiling information
-   CONVERGE_precision_t wind_time = CONVERGE_mpi_wtime() - start_time;
-
+   zero_time = CONVERGE_mpi_wtime() - section_start;
     
     total_breakup_time = CONVERGE_mpi_wtime() - start_time;
     
@@ -492,13 +491,11 @@ init_time_frac = init_time / total_breakup_time;
 breakup_calc_time_frac = breakup_calc_time / total_breakup_time;
 child_parcel_time_frac = child_parcel_time / total_breakup_time;
 zero_time_frac = zero_time / total_breakup_time;
-wind_time_frac = wind_time / total_breakup_time;
     // Print profiling information periodically
     printf("\nbreakup.c total time = %e ms\n\n",total_breakup_time*1000);
-    printf("\ninit_time_frac = %e\n",init_time_frac);
-    printf("\nbreakup_calc_time_frac = %e\n",breakup_calc_time_frac);
-    printf("\nchild_parcel_time_frac = %e\n",child_parcel_time_frac);
-    printf("\nzero_time_frac = %e\n",zero_time_frac);
-    printf("\nwind_time_frac = %e\n",wind_time_frac);    
+    printf("\ninit_time_frac = %e \%\n",init_time_frac*100);
+    printf("\nbreakup_calc_time_frac = %e \%\n",breakup_calc_time_frac*100);
+    printf("\nchild_parcel_time_frac = %e \%\n",child_parcel_time_frac*100);
+    printf("\nzero_time_frac = %e \%\n",zero_time_frac*100);
     old_parcel_cloud->tbreak_kh[p_idx] = old_parcel_cloud->thermal_breakup_flag[p_idx];
 }
