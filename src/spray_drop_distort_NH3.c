@@ -73,6 +73,8 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
 
    time_t cl_start,cl_end;
      time(&cl_start);
+
+     CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
    CONVERGE_index_t parcel_counter = 0;
    const CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    global_pressure = pressure;
@@ -112,6 +114,12 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
    // printf("cloud loop time = %f\n",cl_diff);
    // }
    CONVERGE_iterator_destroy(&cl_it);
+
+   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
+   CONVERGE_precision_t total_time = end_time - start_time;
+
+      printf("\n Distort Total time: %f\n",total_time);
+   
 }
 
 
