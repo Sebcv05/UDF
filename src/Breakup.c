@@ -21,6 +21,7 @@ static CONVERGE_precision_t init_time = 0.0;
 static CONVERGE_precision_t vel_calc_time = 0.0;
 static CONVERGE_precision_t breakup_calc_time = 0.0;
 static CONVERGE_precision_t child_parcel_time = 0.0;
+static CONVERGE_precision_t zero_time = 0.0;
 
 static int user_velocity_index = 0;
 
