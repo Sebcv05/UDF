@@ -26,7 +26,7 @@ static int user_velocity_index = 0;
 
 // Function to print profiling information
 static void print_profiling_info() {
-    if (breakup_call_count % 100 == 0 && breakup_call_count > 0) {  // Print every 100 calls
+    if (breakup_call_count % 1000 == 0 && breakup_call_count > 0) {  // Print every 100 calls
      
      
             printf("\n=== Breakup Profiling (calls: %d) ===\n", breakup_call_count);
@@ -41,6 +41,8 @@ static void print_profiling_info() {
                   (breakup_calc_time/total_breakup_time)*100.0, (breakup_calc_time/breakup_call_count)*1000.0);
             printf("  Child Parcels:  %.2f%% (%.3f ms/call)\n",
                   (child_parcel_time/total_breakup_time)*100.0, (child_parcel_time/breakup_call_count)*1000.0);
+            printf("  Zeroing:        %.2f%% (%.3f ms/call)\n",
+                  (zero_time/total_breakup_time)*100.0, (zero_time/breakup_call_count)*1000.0);
         
     }
 }
@@ -445,6 +447,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
                 // CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
                 // }
             }
+            child_parcel_time += CONVERGE_mpi_wtime() - section_start;
+
+            section_start = CONVERGE_mpi_wtime();
+            zero_time += CONVERGE_mpi_wtime() - section_start;
 
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
@@ -492,7 +498,6 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
         printf("\nParcel N_drop < 0!!!!\n");
     }
     // End of child parcel section
-    child_parcel_time += CONVERGE_mpi_wtime() - section_start;
     
     // Update profiling information
     breakup_call_count++;

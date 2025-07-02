@@ -46,24 +46,29 @@ static CONVERGE_precision_t pbr_time = 0.0;
 // Function to print profiling information
 static void print_distort_profiling() {
     if (distort_call_count > 0) {  // Only print if we have calls
+        CONVERGE_precision_t total_measured_time = init_time + tab_time + dgre_time + 
+                                                 geom_time + breakup_time + bc_time + pbr_time;
+        
         printf("\n=== Spray Distort Profiling (calls: %d) ===\n", distort_call_count);
         printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
                total_distort_time, (total_distort_time/distort_call_count)*1000.0);
-        printf("Time distribution:\n");
-        printf("  Initialization: %.2f%% (%.3f ms/call)\n", 
-              (init_time/total_distort_time)*100.0, (init_time/distort_call_count)*1000.0);
-        printf("  TAB Calc:       %.2f%% (%.3f ms/call)\n",
-              (tab_time/total_distort_time)*100.0, (tab_time/distort_call_count)*1000.0);
-        printf("  DGRE Calc:      %.2f%% (%.3f ms/call)\n",
-              (dgre_time/total_distort_time)*100.0, (dgre_time/distort_call_count)*1000.0);
-        printf("  Geometry Calc:  %.2f%% (%.3f ms/call)\n",
-              (geom_time/total_distort_time)*100.0, (geom_time/distort_call_count)*1000.0);
-        printf("  Breakup Calc:   %.2f%% (%.3f ms/call)\n",
-              (breakup_time/total_distort_time)*100.0, (breakup_time/distort_call_count)*1000.0);
-        printf("  BC Calc:        %.2f%% (%.3f ms/call)\n",
-              (bc_time/total_distort_time)*100.0, (bc_time/distort_call_count)*1000.0);
-        printf("  PBR Calc:       %.2f%% (%.3f ms/call)\n",
-              (pbr_time/total_distort_time)*100.0, (pbr_time/distort_call_count)*1000.0);
+        printf("Total measured time: %.6f s (%.2f%% of total)\n",
+               total_measured_time, (total_measured_time/total_distort_time)*100.0);
+        printf("Time distribution (of measured time):\n");
+        printf("  Initialization: %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * init_time / total_measured_time, (init_time/distort_call_count)*1000.0);
+        printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * tab_time / total_measured_time, (tab_time/distort_call_count)*1000.0);
+        printf("  DGRE Calc:      %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * dgre_time / total_measured_time, (dgre_time/distort_call_count)*1000.0);
+        printf("  Geometry Calc:  %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * geom_time / total_measured_time, (geom_time/distort_call_count)*1000.0);
+        printf("  Breakup Calc:   %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * breakup_time / total_measured_time, (breakup_time/distort_call_count)*1000.0);
+        printf("  BC Calc:        %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * bc_time / total_measured_time, (bc_time/distort_call_count)*1000.0);
+        printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * pbr_time / total_measured_time, (pbr_time/distort_call_count)*1000.0);
     }
 }
 
@@ -183,18 +188,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    // Initialize timing variables
    pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
    post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
-   sopl = CONVERGE_mpi_wtime();
-   
-   // End of initialization section
-   init_time += CONVERGE_mpi_wtime() - init_start;
    
    // Start of parcel processing loop
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
+      // Start timing for this parcel
+      sopl = CONVERGE_mpi_wtime();
+      
       // Reset timing for this parcel
       pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
       post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
-      sopl = CONVERGE_mpi_wtime();
 
          mass_before= mass_before + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
@@ -643,12 +646,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       
    }    // End of parcel loop
     
-   // Update timing for the last parcel if needed
-   if (num_parcels_in_cloud > 0) {
-       eopl = CONVERGE_mpi_wtime();
-       // Update any remaining timing for the last parcel
-   }
-   
    // Update total time for this function call
    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
    total_distort_time += end_time - start_time;
@@ -658,12 +655,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    
    // Print profiling information periodically
    if (distort_call_count % 1000 == 0) {
-       // Normalize times by number of parcels to get average per parcel
-       CONVERGE_precision_t scale = 1.0 / distort_call_count;
-       if (num_parcels_in_cloud > 0) {
-           scale /= num_parcels_in_cloud;
-       }
-       
        // Print the profiling information
        print_distort_profiling();
    }   
