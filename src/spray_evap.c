@@ -28,11 +28,10 @@ static CONVERGE_precision_t other_time = 0.0;  // Track unaccounted time
 
 // Function to print profiling information
 static void print_evap_profiling() {
-    CONVERGE_int_t rank = 0;
-    CONVERGE_mpi_comm_rank(&rank);
+ 
     
-    // Only print from rank 0 to avoid clutter
-    if (rank != 0) return;
+
+
     
     // Calculate unaccounted time
     CONVERGE_precision_t measured_time = init_time + boil_time + evap_time + source_time;
@@ -1506,7 +1505,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    evap_call_count++;
 
    // Print profiling information periodically
-   if (evap_call_count % 100 == 0) {
+   if (evap_call_count % 1000 == 0) {
        CONVERGE_int_t rank;
        CONVERGE_mpi_comm_rank(&rank);
        if (rank == 0)
