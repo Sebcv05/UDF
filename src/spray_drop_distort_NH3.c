@@ -46,16 +46,22 @@ static CONVERGE_precision_t pbr_time = 0.0;
 static CONVERGE_precision_t load_cloud_time = 0.0;
 static CONVERGE_precision_t save_cloud_time = 0.0;
 static CONVERGE_precision_t loop_overhead_time = 0.0;
+static CONVERGE_precision_t table_init_time = 0.0;
+static CONVERGE_precision_t table_destroy_time = 0.0;
+static CONVERGE_precision_t local_var_init_time = 0.0;
+static CONVERGE_precision_t parcel_init_time = 0.0;
 static CONVERGE_precision_t other_time = 0.0;
 
 // Function to print profiling information
 static void print_distort_profiling() {
     if (parcels_processed > 0) {  // Only print if we've processed parcels
-        // Calculate total measured time including the new categories
+        // Calculate total measured time including all categories
         CONVERGE_precision_t total_measured_time = init_time + tab_time + dgre_time + 
                                                  geom_time + breakup_time + bc_time + 
                                                  pbr_time + load_cloud_time + 
-                                                 save_cloud_time + loop_overhead_time;
+                                                 save_cloud_time + loop_overhead_time +
+                                                 table_init_time + table_destroy_time +
+                                                 local_var_init_time + parcel_init_time;
         
         // Calculate unaccounted time
         other_time = (total_distort_time > total_measured_time) ? 
@@ -70,9 +76,15 @@ static void print_distort_profiling() {
         printf("  Load Cloud:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * load_cloud_time / total_measured_time, 
                (load_cloud_time/parcels_processed)*1000.0);
-        printf("  Initialization: %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * init_time / total_measured_time, 
-               (init_time/parcels_processed)*1000.0);
+        printf("  Table Init:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
+               100.0 * table_init_time / total_measured_time, 
+               (table_init_time/parcels_processed)*1000.0);
+        printf("  Local Vars:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
+               100.0 * local_var_init_time / total_measured_time, 
+               (local_var_init_time/parcels_processed)*1000.0);
+        printf("  Parcel Init:    %8.2f%% (avg: %9.6f ms/parcel)\n", 
+               100.0 * parcel_init_time / total_measured_time, 
+               (parcel_init_time/parcels_processed)*1000.0);
         printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * tab_time / total_measured_time, 
                (tab_time/parcels_processed)*1000.0);
@@ -97,6 +109,9 @@ static void print_distort_profiling() {
         printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * loop_overhead_time / total_measured_time, 
                (loop_overhead_time/parcels_processed)*1000.0);
+        printf("  Table Destroy:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
+               100.0 * table_destroy_time / total_measured_time, 
+               (table_destroy_time/parcels_processed)*1000.0);
         printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * other_time / total_distort_time, 
                (other_time/parcels_processed)*1000.0);
