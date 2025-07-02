@@ -1546,14 +1546,14 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       
       
       
-      ;
-      printf("\n==========================");
-      printf("\n spray_evap.c total time = %e ms\n\n",total_time*1000);
-      printf("\ninit_time_frac = %f \%\n",init_time_frac*100);
-      printf("\nboil_time_frac = %f \%\n",boil_time_frac*100);
-      printf("\nevap_time_frac = %f \%\n",evap_time_frac*100);
-      printf("\nsource_time_frac = %f \%\n",source_time_frac*100);
-      printf("\n==========================");
+      // ;
+      // printf("\n==========================");
+      // printf("\n spray_evap.c total time = %e ms\n\n",total_time*1000);
+      // printf("\ninit_time_frac = %f \%\n",init_time_frac*100);
+      // printf("\nboil_time_frac = %f \%\n",boil_time_frac*100);
+      // printf("\nevap_time_frac = %f \%\n",evap_time_frac*100);
+      // printf("\nsource_time_frac = %f \%\n",source_time_frac*100);
+      // printf("\n==========================");
 
 
    if( (parcel_boil_correlation_flag==1 && spray_evap_flag!=0) || (evap_flag_flash_boiling==1) )
