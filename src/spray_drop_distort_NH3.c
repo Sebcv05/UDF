@@ -103,9 +103,6 @@ static void print_distort_profiling() {
         printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * pbr_time / total_measured_time, 
                (pbr_time/parcels_processed)*1000.0);
-        printf("  Save Cloud:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * save_cloud_time / total_measured_time, 
-               (save_cloud_time/parcels_processed)*1000.0);
         printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * loop_overhead_time / total_measured_time, 
                (loop_overhead_time/parcels_processed)*1000.0);
