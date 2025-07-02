@@ -12,18 +12,53 @@
 #include <Breakup.h>
 #include <spray_break.h>
 #include <PsatNH3.h>
-#include<Vb.h>
+#include <Vb.h>
+
+// Profiling variables
+static int breakup_call_count = 0;
+static CONVERGE_precision_t total_breakup_time = 0.0;
+static CONVERGE_precision_t init_time = 0.0;
+static CONVERGE_precision_t vel_calc_time = 0.0;
+static CONVERGE_precision_t breakup_calc_time = 0.0;
+static CONVERGE_precision_t child_parcel_time = 0.0;
 
 static int user_velocity_index = 0;
 
-void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVERGE_cloud_t cloud)
+// Function to print profiling information
+static void print_profiling_info() {
+    if (breakup_call_count % 100 == 0 && breakup_call_count > 0) {  // Print every 100 calls
+     
+     
+            printf("\n=== Breakup Profiling (calls: %d) ===\n", breakup_call_count);
+            printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
+                   total_breakup_time, (total_breakup_time/breakup_call_count)*1000.0);
+            printf("Time distribution:\n");
+            printf("  Initialization: %.2f%% (%.3f ms/call)\n", 
+                  (init_time/total_breakup_time)*100.0, (init_time/breakup_call_count)*1000.0);
+            printf("  Velocity Calc:  %.2f%% (%.3f ms/call)\n",
+                  (vel_calc_time/total_breakup_time)*100.0, (vel_calc_time/breakup_call_count)*1000.0);
+            printf("  Breakup Calc:   %.2f%% (%.3f ms/call)\n",
+                  (breakup_calc_time/total_breakup_time)*100.0, (breakup_calc_time/breakup_call_count)*1000.0);
+            printf("  Child Parcels:  %.2f%% (%.3f ms/call)\n",
+                  (child_parcel_time/total_breakup_time)*100.0, (child_parcel_time/breakup_call_count)*1000.0);
+        
+    }
+}
+
+void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_cloud_t cloud)
 {
+    // Start timing the entire function
+    CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
+    CONVERGE_precision_t section_start;
+    // Section 1: Initialization and validation
+    section_start = CONVERGE_mpi_wtime();
+    
     // Check if cloud and parcel cloud are valid
     if (!cloud || !old_parcel_cloud) {
         printf("\nBreakup.c: Invalid cloud or parcel cloud pointer\n");
         CONVERGE_mpi_abort();
     }
-    CONVERGE_vec3_t user_child_velocity[20];
+    CONVERGE_vec3_t user_child_velocity[13];
 
     // Get cloud size and verify parcel index
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
@@ -85,9 +120,16 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx,CONVER
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
     CONVERGE_index_t N = 12;
 
-    // Calculate velocity
-
-
+    // End of initialization section
+    init_time += CONVERGE_mpi_wtime() - section_start;
+    // printf("\nbreakup count %i",breakup_counter);
+    if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
+    {
+        old_parcel_cloud->r_bubble[p_idx] = 0.95 * old_parcel_cloud->radius[p_idx];
+    }
+    // Section 2: Velocity calculations
+    section_start = CONVERGE_mpi_wtime();
+    
     // Create velocity vectors for all child parcels
     // Get parent parcel's velocity - v = vx i + vy j + vz k
     CONVERGE_precision_t parent_vx, parent_vy, parent_vz;
@@ -230,9 +272,12 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     CONVERGE_precision_t rad_denom, rad_term1, rad_term2, rad_term3, rad_term4, parent_radius,parent_nd;
     parent_radius = old_parcel_cloud->radius[p_idx];
     parent_nd= old_parcel_cloud->num_drop[p_idx];
-    rad_denom = 0.5 * (1.0 / (CONVERGE_cube(old_parcel_cloud->radius[p_idx]) - CONVERGE_cube(old_parcel_cloud->r_bubble[p_idx])));
+    CONVERGE_precision_t r_bubble_cube = CONVERGE_cube(old_parcel_cloud->r_bubble[p_idx]);
+    
+
+    rad_denom = 0.5 * (1.0 / (CONVERGE_cube(old_parcel_cloud->radius[p_idx]) - r_bubble_cube));
     rad_term1 = (CONVERGE_square(old_parcel_cloud->radius[p_idx]) + CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]));
-    rad_term2 = 3.0 * CONVERGE_square(old_parcel_cloud->v_bubble[p_idx]) * (CONVERGE_cube(old_parcel_cloud->r_bubble[p_idx]) - (old_parcel_cloud->r_bubble[p_idx] * old_parcel_cloud->r_bubble[p_idx] * old_parcel_cloud->r_bubble[p_idx] * old_parcel_cloud->r_bubble[p_idx]) * (1 / old_parcel_cloud->radius[p_idx]));
+    rad_term2 = 3.0 * CONVERGE_square(old_parcel_cloud->v_bubble[p_idx]) * (r_bubble_cube - (r_bubble_cube*old_parcel_cloud->r_bubble[p_idx]) * (1 /parent_radius));
     rad_term3 = old_parcel_cloud->density[p_idx] / (3.0 * old_parcel_cloud->surf_ten[p_idx]);
 
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
@@ -280,6 +325,12 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
 
 
       
+    // End of breakup calculation section
+    breakup_calc_time += CONVERGE_mpi_wtime() - section_start;
+    
+    // Section 4: Child parcel creation
+    section_start = CONVERGE_mpi_wtime();
+    
     //--------- Testing Child Parcel Introduction ----------------//
     // printf("\n Testing Child Parcel Introduction....\n");
 //Check to see if reducing parent's temperature prevents convergence failure
@@ -398,33 +449,12 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
 
-            //Zero parent drop's radius
-            old_parcel_cloud->radius[p_idx] = 0.0; // Set parent radius to new radius
-            old_parcel_cloud->radius_tm1[p_idx] = 0.0;
-            old_parcel_cloud->num_drop[p_idx] = 0.0; //new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
-            old_parcel_cloud->num_drop_tm1[p_idx] = 0.0; //new_parcel_num_drop;
+            //Zero parent drop's radius - this triggers CONVERGE to remove the parent 
 
-            // //Update Parent velocity 
-            // CONVERGE_vec3_t new_parent_velocity ;
-            // CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &new_parent_velocity);
-            // CONVERGE_vec3_add(new_parent_velocity, user_child_velocity[num_child_parcels], &new_parent_velocity);
-            // CONVERGE_vec3_dup(new_parent_velocity, &old_parcel_cloud->uu[p_idx]);
-            // old_parcel_cloud->pbt[p_idx] = 0;
-            // old_parcel_cloud->tbt[p_idx] = 0; // Reset thermal breakup time
-            // old_parcel_cloud->lifetime[p_idx] = 0;
-            // old_parcel_cloud->is_child[p_idx] = 1;
-            // old_parcel_cloud->r_bubble[p_idx] = 0.0;
-            // // old_parcel_cloud->temp[p_idx] = 250.0;
-            // // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
-            // old_parcel_cloud->v_bubble[p_idx] = 0.0;
-            // old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
-            // //Set these to prevent secondary thermal breakup 
-            // old_parcel_cloud->pbt[p_idx] = 0;
-            // old_parcel_cloud->int_omega[p_idx] = 0;
-            // old_parcel_cloud->pbt[p_idx] = 0;
-            // old_parcel_cloud->tbt[p_idx] = 0;
-            // old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;   
-         
+            old_parcel_cloud->radius[p_idx] = 0.0; 
+            old_parcel_cloud->radius_tm1[p_idx] = 0.0;
+            old_parcel_cloud->num_drop[p_idx] = 0.0; 
+            old_parcel_cloud->num_drop_tm1[p_idx] = 0.0; 
 
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
             // printf("\nNew cloud size = %i\n\n",new_cloud_size);
@@ -461,5 +491,15 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     {
         printf("\nParcel N_drop < 0!!!!\n");
     }
+    // End of child parcel section
+    child_parcel_time += CONVERGE_mpi_wtime() - section_start;
+    
+    // Update profiling information
+    breakup_call_count++;
+    total_breakup_time += CONVERGE_mpi_wtime() - start_time;
+    
+    // Print profiling information periodically
+    print_profiling_info();
+    
     old_parcel_cloud->tbreak_kh[p_idx] = old_parcel_cloud->thermal_breakup_flag[p_idx];
 }

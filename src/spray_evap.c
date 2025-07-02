@@ -17,6 +17,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Profiling variables
+static int evap_call_count = 0;
+static CONVERGE_precision_t total_evap_time = 0.0;
+static CONVERGE_precision_t init_time = 0.0;
+static CONVERGE_precision_t boil_time = 0.0;
+static CONVERGE_precision_t evap_time = 0.0;
+static CONVERGE_precision_t source_time = 0.0;
+
+// Function to print profiling information
+static void print_evap_profiling() {
+    CONVERGE_int_t rank;
+    CONVERGE_mpi_comm_rank(&rank);
+    
+    printf("\n=== Spray Evaporation Profiling (Rank %d) ===\n", rank);
+    printf("Total calls: %d\n", evap_call_count);
+    printf("Total time: %.6f seconds\n", total_evap_time);
+    printf("Average time per call: %.6f seconds\n", total_evap_time / (evap_call_count > 0 ? evap_call_count : 1));
+    printf("\nTime distribution:\n");
+    printf("  Initialization: %.2f%% (%.6f s)\n", 100.0 * init_time / total_evap_time, init_time);
+    printf("  Boiling calcs:  %.2f%% (%.6f s)\n", 100.0 * boil_time / total_evap_time, boil_time);
+    printf("  Evaporation:    %.2f%% (%.6f s)\n", 100.0 * evap_time / total_evap_time, evap_time);
+    printf("  Source terms:   %.2f%% (%.6f s)\n", 100.0 * source_time / total_evap_time, source_time);
+    printf("=== End Profiling ===\n");
+}
+
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
 static void reset_parcel_temp_mfrac(const CONVERGE_index_t parcel_idx,
                                     CONVERGE_precision_t *temp_drop,
@@ -232,6 +257,13 @@ CONVERGE_UDF(spray_evap,
 
 void spray_evap_cell(CONVERGE_cloud_t cloud)
 {
+   // Start timing the entire function
+   CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
+   CONVERGE_precision_t section_start;
+   
+   // Section 1: Initialization
+   section_start = CONVERGE_mpi_wtime();
+   
    // Setup parcel species counts and iterator
    CONVERGE_iterator_t psp_it;
    CONVERGE_species_parcel_iterator_create(sp, &psp_it);
@@ -265,6 +297,16 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t *cell_tot_temp_species      = SAFE_calloc(num_parcel_species, CONVERGE_precision_t);
    int *evap_all_flag                               = SAFE_calloc(num_parcel_species, int);
    int *parcel_species_boil_flag                    = SAFE_calloc(num_parcel_species, int);
+
+
+   // Record initialization time
+   init_time += CONVERGE_mpi_wtime() - section_start;
+   
+   // Section 2: Boiling calculations
+   section_start = CONVERGE_mpi_wtime();
+   
+   // Get spray_in variables
+
 
    // Get spray_in varables
    CONVERGE_index_t spray_evap_flag           = CONVERGE_get_int("lagrangian.evap_flag");
@@ -300,6 +342,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t expnt_flshblg_l25 = CONVERGE_get_double("lagrangian.expnt_flshblg_l25");
    CONVERGE_precision_t pre_coeff_flshblg_g25 = CONVERGE_get_double("lagrangian.pre_coeff_flshblg_g25");
    CONVERGE_precision_t expnt_flshblg_g25 = CONVERGE_get_double("lagrangian.expnt_flshblg_g25");
+   
+   // Record boiling calculation time
+   boil_time += CONVERGE_mpi_wtime() - section_start;
+   
+   // Section 3: Evaporation calculations
+   section_start = CONVERGE_mpi_wtime();
+   
    /////////////////////////////////////////////////////////////////////
 
    CONVERGE_precision_t *temp_boil = NULL;
@@ -424,7 +473,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
    // set initial values
    CONVERGE_precision_t temp_0 = global_temperature[node_index];
-
+   
    // TODO: (rkratt) Change this in the internal code to make sense
    cell_mass = global_density[node_index] / (1.0 / global_volume[node_index]);   //FIXVOL
 
@@ -1423,6 +1472,21 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          CONVERGE_get_sensible_sie_from_temp_massfrac(local_species, temp_new, global_pressure[node_index]);
       global_src_sie_ex[node_index] = (local_sensible_sie - global_sensible_sie[node_index]) * local_density / dt;
       CONVERGE_set_dt_recover(CONVERGE_get_dt_max() * 10.0);
+   }
+
+   // Update profiling info
+   total_evap_time += CONVERGE_mpi_wtime() - start_time;
+   evap_call_count++;
+
+   // Print profiling info every 100 calls
+   if (evap_call_count % 100 == 0)
+   {
+      CONVERGE_int_t rank;
+      CONVERGE_mpi_comm_rank(&rank);
+      if (rank == 0)
+      {
+         print_evap_profiling();
+      }
    }
 
    free(radius_new);
