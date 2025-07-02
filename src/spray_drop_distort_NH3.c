@@ -226,17 +226,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    load_user_cloud(&old_parcel_cloud, cloud);
    load_cloud_time += CONVERGE_mpi_wtime() - load_start;
 
+   // Time initialization of local variables
+   CONVERGE_precision_t local_var_init_start = CONVERGE_mpi_wtime();
    CONVERGE_precision_t pre_TAB, post_TAB, pre_DGRE, post_DGRE, pre_Geom, post_Geom, pre_break, post_break, pre_bc, post_bc, pre_pbr, post_pbr, sopl, eopl;
-   // printf("\n 0.1");
-   // printf("starting loop over parcels in cloud\n");
    mass_before = 0;
    mass_after = 0;
-   // Section 1: Initialization
-   init_start = CONVERGE_mpi_wtime();
-   
-   // Initialize timing variables
-   pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
-   post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
+   local_var_init_time += CONVERGE_mpi_wtime() - local_var_init_start;
+
+   // Time table initialization
+   CONVERGE_precision_t table_init_start = CONVERGE_mpi_wtime();
+   init_tables(sp);
+   table_init_time += CONVERGE_mpi_wtime() - table_init_start;
    
    // Start of parcel processing loop
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
@@ -685,30 +685,32 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       distort_call_count++;
       total_distort_time += CONVERGE_mpi_wtime() - start_time;
       
-      // // Print profiling information periodically
-      // if (distort_call_count % 1000 == 0) {
-      //     print_distort_profiling();
-      // }
-      
       // Reset start time for next parcel
       start_time = CONVERGE_mpi_wtime();
       
    }    // End of parcel loop
     
-   // Time loop overhead
-   CONVERGE_precision_t loop_start = CONVERGE_mpi_wtime();
-   for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
-   {
-      // Start timing for this parcel
-      sopl = CONVERGE_mpi_wtime();
-      
-      // Reset timing for this parcel
-      pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
-      post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
-
-      // ... rest of the loop code ...
+   // Calculate loop overhead time
+   CONVERGE_precision_t loop_total = 0.0;
+   for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++) {
+      CONVERGE_precision_t sopl = CONVERGE_mpi_wtime();
+      CONVERGE_precision_t eopl = CONVERGE_mpi_wtime();
+      loop_total += eopl - sopl;
    }
-   loop_overhead_time += CONVERGE_mpi_wtime() - loop_start;
+   loop_overhead_time += loop_total;
+
+   // Time table destruction
+   CONVERGE_precision_t table_destroy_start = CONVERGE_mpi_wtime();
+   destroy_tables(sp);
+   table_destroy_time += CONVERGE_mpi_wtime() - table_destroy_start;
+
+   // Time save_user_cloud operation
+   CONVERGE_precision_t save_start = CONVERGE_mpi_wtime();
+   // save_user_cloud(&old_parcel_cloud, cloud);
+   save_cloud_time += CONVERGE_mpi_wtime() - save_start;
+
+   // Update parcel counter
+   parcels_processed += num_parcels_in_cloud;
 
    // Update total time for this function call
    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
