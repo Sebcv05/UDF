@@ -34,6 +34,7 @@
 
 // Profiling variables
 static int distort_call_count = 0;
+static int parcels_processed = 0;
 static CONVERGE_precision_t total_distort_time = 0.0;
 static CONVERGE_precision_t init_time = 0.0;
 static CONVERGE_precision_t tab_time = 0.0;
@@ -49,7 +50,7 @@ static CONVERGE_precision_t other_time = 0.0;
 
 // Function to print profiling information
 static void print_distort_profiling() {
-    if (distort_call_count > 0) {  // Only print if we have calls
+    if (parcels_processed > 0) {  // Only print if we've processed parcels
         // Calculate total measured time including the new categories
         CONVERGE_precision_t total_measured_time = init_time + tab_time + dgre_time + 
                                                  geom_time + breakup_time + bc_time + 
@@ -60,45 +61,45 @@ static void print_distort_profiling() {
         other_time = (total_distort_time > total_measured_time) ? 
                     (total_distort_time - total_measured_time) : 0.0;
         
-        printf("\n=== Spray Distort Profiling (calls: %d) ===\n", distort_call_count);
-        printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
-               total_distort_time, (total_distort_time/distort_call_count)*1000.0);
+        printf("\n=== Spray Distort Profiling (parcels: %d) ===\n", parcels_processed);
+        printf("Total time: %.6f s (avg: %.6f ms/parcel)\n", 
+               total_distort_time, (total_distort_time/parcels_processed)*1000.0);
         printf("Total measured time: %.6f s (%.2f%% of total)\n",
                total_measured_time, (total_measured_time/total_distort_time)*100.0);
         printf("Time distribution (of measured time):\n");
-        printf("  Load Cloud:     %8.2f%% (avg: %9.6f ms/call)\n", 
+        printf("  Load Cloud:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * load_cloud_time / total_measured_time, 
-               (load_cloud_time/distort_call_count)*1000.0);
-        printf("  Initialization: %8.2f%% (avg: %9.6f ms/call)\n", 
+               (load_cloud_time/parcels_processed)*1000.0);
+        printf("  Initialization: %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * init_time / total_measured_time, 
-               (init_time/distort_call_count)*1000.0);
-        printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
+               (init_time/parcels_processed)*1000.0);
+        printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * tab_time / total_measured_time, 
-               (tab_time/distort_call_count)*1000.0);
-        printf("  DGRE Calc:      %8.2f%% (avg: %9.6f ms/call)\n", 
+               (tab_time/parcels_processed)*1000.0);
+        printf("  DGRE Calc:      %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * dgre_time / total_measured_time, 
-               (dgre_time/distort_call_count)*1000.0);
-        printf("  Geometry Calc:  %8.2f%% (avg: %9.6f ms/call)\n", 
+               (dgre_time/parcels_processed)*1000.0);
+        printf("  Geometry Calc:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * geom_time / total_measured_time, 
-               (geom_time/distort_call_count)*1000.0);
-        printf("  Breakup Calc:   %8.2f%% (avg: %9.6f ms/call)\n", 
+               (geom_time/parcels_processed)*1000.0);
+        printf("  Breakup Calc:   %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * breakup_time / total_measured_time, 
-               (breakup_time/distort_call_count)*1000.0);
-        printf("  BC Calc:        %8.2f%% (avg: %9.6f ms/call)\n", 
+               (breakup_time/parcels_processed)*1000.0);
+        printf("  BC Calc:        %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * bc_time / total_measured_time, 
-               (bc_time/distort_call_count)*1000.0);
-        printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
+               (bc_time/parcels_processed)*1000.0);
+        printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * pbr_time / total_measured_time, 
-               (pbr_time/distort_call_count)*1000.0);
-        printf("  Save Cloud:     %8.2f%% (avg: %9.6f ms/call)\n", 
+               (pbr_time/parcels_processed)*1000.0);
+        printf("  Save Cloud:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * save_cloud_time / total_measured_time, 
-               (save_cloud_time/distort_call_count)*1000.0);
-        printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/call)\n", 
+               (save_cloud_time/parcels_processed)*1000.0);
+        printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * loop_overhead_time / total_measured_time, 
-               (loop_overhead_time/distort_call_count)*1000.0);
-        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/call)\n", 
+               (loop_overhead_time/parcels_processed)*1000.0);
+        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/parcel)\n", 
                100.0 * other_time / total_distort_time, 
-               (other_time/distort_call_count)*1000.0);
+               (other_time/parcels_processed)*1000.0);
     }
 }
 
@@ -698,18 +699,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
    total_distort_time += end_time - start_time;
    
-   // Increment call counter
-   distort_call_count++;
+   // Update parcel counter
+   parcels_processed += num_parcels_in_cloud;
    
    // Time save_user_cloud operation
    CONVERGE_precision_t save_start = CONVERGE_mpi_wtime();
+   save_user_cloud(&old_parcel_cloud, cloud);
    save_cloud_time += CONVERGE_mpi_wtime() - save_start;
    
-   // Print profiling information periodically
-   // if (distort_call_count % 1000 == 0) {
-   //     // Print the profiling information
-   //     print_distort_profiling();
-   // }   
+   // Print profiling information after each cloud
+   print_distort_profiling();// }   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
