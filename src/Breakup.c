@@ -481,7 +481,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     // End of child parcel section
     
     // Update profiling information
-    breakup_call_count++;
+
     total_breakup_time = CONVERGE_mpi_wtime() - start_time;
     
 //Timing Fractions
