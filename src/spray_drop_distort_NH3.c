@@ -32,89 +32,6 @@
 //#include <DestroyTables.h>
 #include <Vb.h>
 
-// Profiling variables
-static int distort_call_count = 0;
-static int parcels_processed = 0;
-static CONVERGE_precision_t total_distort_time = 0.0;
-static CONVERGE_precision_t init_time = 0.0;
-static CONVERGE_precision_t tab_time = 0.0;
-static CONVERGE_precision_t dgre_time = 0.0;
-static CONVERGE_precision_t geom_time = 0.0;
-static CONVERGE_precision_t breakup_time = 0.0;
-static CONVERGE_precision_t bc_time = 0.0;
-static CONVERGE_precision_t pbr_time = 0.0;
-static CONVERGE_precision_t load_cloud_time = 0.0;
-static CONVERGE_precision_t save_cloud_time = 0.0;
-static CONVERGE_precision_t loop_overhead_time = 0.0;
-static CONVERGE_precision_t table_init_time = 0.0;
-static CONVERGE_precision_t table_destroy_time = 0.0;
-static CONVERGE_precision_t local_var_init_time = 0.0;
-static CONVERGE_precision_t parcel_init_time = 0.0;
-static CONVERGE_precision_t other_time = 0.0;
-
-// Function to print profiling information
-static void print_distort_profiling() {
-    if (parcels_processed > 0) {  // Only print if we've processed parcels
-        // Calculate total measured time including all categories
-        CONVERGE_precision_t total_measured_time = init_time + tab_time + dgre_time + 
-                                                 geom_time + breakup_time + bc_time + 
-                                                 pbr_time + load_cloud_time + 
-                                                 save_cloud_time + loop_overhead_time +
-                                                 table_init_time + table_destroy_time +
-                                                 local_var_init_time + parcel_init_time;
-        
-        // Calculate unaccounted time
-        other_time = (total_distort_time > total_measured_time) ? 
-                    (total_distort_time - total_measured_time) : 0.0;
-        
-        printf("\n=== Spray Distort Profiling (parcels: %d) ===\n", parcels_processed);
-        printf("Total time: %.6f s (avg: %.6f ms/parcel)\n", 
-               total_distort_time, (total_distort_time/parcels_processed)*1000.0);
-        printf("Total measured time: %.6f s (%.2f%% of total)\n",
-               total_measured_time, (total_measured_time/total_distort_time)*100.0);
-        printf("Time distribution (of measured time):\n");
-        printf("  Load Cloud:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * load_cloud_time / total_measured_time, 
-               (load_cloud_time/parcels_processed)*1000.0);
-        printf("  Table Init:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * table_init_time / total_measured_time, 
-               (table_init_time/parcels_processed)*1000.0);
-        printf("  Local Vars:     %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * local_var_init_time / total_measured_time, 
-               (local_var_init_time/parcels_processed)*1000.0);
-        printf("  Parcel Init:    %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * parcel_init_time / total_measured_time, 
-               (parcel_init_time/parcels_processed)*1000.0);
-        printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * tab_time / total_measured_time, 
-               (tab_time/parcels_processed)*1000.0);
-        printf("  DGRE Calc:      %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * dgre_time / total_measured_time, 
-               (dgre_time/parcels_processed)*1000.0);
-        printf("  Geometry Calc:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * geom_time / total_measured_time, 
-               (geom_time/parcels_processed)*1000.0);
-        printf("  Breakup Calc:   %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * breakup_time / total_measured_time, 
-               (breakup_time/parcels_processed)*1000.0);
-        printf("  BC Calc:        %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * bc_time / total_measured_time, 
-               (bc_time/parcels_processed)*1000.0);
-        printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * pbr_time / total_measured_time, 
-               (pbr_time/parcels_processed)*1000.0);
-        printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * loop_overhead_time / total_measured_time, 
-               (loop_overhead_time/parcels_processed)*1000.0);
-        printf("  Table Destroy:  %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * table_destroy_time / total_measured_time, 
-               (table_destroy_time/parcels_processed)*1000.0);
-        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/parcel)\n", 
-               100.0 * other_time / total_distort_time, 
-               (other_time/parcels_processed)*1000.0);
-    }
-}
-
 /// @brief UDF Thermal Breakup Model with all thermal properties for ammonia
 /// @param mesh 
 /// @param cloud 
@@ -201,10 +118,6 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
 
 static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index, const CONVERGE_precision_t *global_density, const CONVERGE_precision_t *global_viscosity, CONVERGE_index_t parcel_counter,CONVERGE_species_t sp)
 {
-    // Start timing the entire function
-    CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
-    CONVERGE_precision_t section_start, init_start, tab_start, dgre_start, geom_start, 
-                        breakup_start, bc_start, pbr_start;
    /*  fprintf(stderr,"mesh size = %i\n",sizeof(mesh));
             fprintf(stderr,"cloud size = %i\n",sizeof(cloud));
                   fprintf(stderr,"mesh size = %i\n",sizeof(spray_cloud_list));
@@ -218,32 +131,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    CONVERGE_size_t num_parcels_in_cloud = CONVERGE_cloud_size(cloud);
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
 
-   // Time load_user_cloud operation
-   CONVERGE_precision_t load_start = CONVERGE_mpi_wtime();
    load_user_cloud(&old_parcel_cloud, cloud);
-   load_cloud_time += CONVERGE_mpi_wtime() - load_start;
 
-   // Time initialization of local variables
-   CONVERGE_precision_t local_var_init_start = CONVERGE_mpi_wtime();
-   CONVERGE_precision_t pre_TAB, post_TAB, pre_DGRE, post_DGRE, pre_Geom, post_Geom, pre_break, post_break, pre_bc, post_bc, pre_pbr, post_pbr, sopl, eopl;
+   CONVERGE_precision_t pre_pl = CONVERGE_mpi_wtime();
+   CONVERGE_precision_t pre_TAB,post_TAB,pre_DGRE,post_DGRE,pre_Geom,post_Geom,pre_break,post_break,pre_bc,post_bc,pre_pbr,post_pbr,sopl,eopl;
+   // printf("\n 0.1");
+   // printf("starting loop over parcels in cloud\n");
    mass_before = 0;
    mass_after = 0;
-   local_var_init_time += CONVERGE_mpi_wtime() - local_var_init_start;
-
-   // Time table initialization
-   CONVERGE_precision_t table_init_start = CONVERGE_mpi_wtime();
-   init_tables(sp);
-   table_init_time += CONVERGE_mpi_wtime() - table_init_start;
-   
-   // Start of parcel processing loop
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
-      // Start timing for this parcel
-      sopl = CONVERGE_mpi_wtime();
-      
-      // Reset timing for this parcel
-      pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
-      post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
+      // if(CONVERGE_simulation_time_sec() > 1.0e-4)
+      // {
+      //Timing 
+         pre_TAB = 0.0; post_TAB = 0.0; pre_DGRE=0.0;post_DGRE=0.0;pre_Geom=0.0;post_Geom=0.0;pre_break=0.0;post_break=0.0;pre_bc=0.0;pre_bc=0.0;pre_pbr=0.0;post_bc=0.0;
+         sopl = CONVERGE_mpi_wtime();
 
          mass_before= mass_before + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
@@ -398,18 +300,13 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       // }
 
        post_TAB = CONVERGE_mpi_wtime();
-       tab_time += post_TAB - pre_TAB;
-       
-       // End of TAB section
-       dgre_start = CONVERGE_mpi_wtime();
       theskyisblue = 1;    //it is 
       theskyisgreen = 0;   // it is not
       if (theskyisblue)
       {
 
-         // Section 4: Pre-breakup routine
+         // Pre-breakup routine
          pre_pbr = CONVERGE_mpi_wtime();
-         pbr_start = CONVERGE_mpi_wtime();
 
          //printf("\ntbf before start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
          if(old_parcel_cloud.thermal_breakup_flag[p_idx]==4){
@@ -469,14 +366,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             // printf("\n H = %e	T = %e	csubp_l = %e",average_hvap,Td,csubp_l);
                */
       
-                  // Section 3: DGRE Calculation
-                  pre_DGRE = CONVERGE_mpi_wtime();
-                  CONVERGE_precision_t rad_before = old_parcel_cloud.radius[p_idx];
-                  
-                  // Call bubble velocity function
-                  Bubble_Velocity(&old_parcel_cloud, p_idx, P_sat, P_amb);
-                  post_DGRE = CONVERGE_mpi_wtime();
-                  dgre_time += post_DGRE - pre_DGRE;
+                  //VB function 
+                  CONVERGE_precision_t rad_before= old_parcel_cloud.radius[p_idx];
+                  Bubble_Velocity(&old_parcel_cloud,p_idx,P_sat,P_amb);
                   if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
                   {//printf("\n v_bubble  = %e, P_sat - P_amb = %e ",old_parcel_cloud.v_bubble[p_idx],P_sat-P_amb);
                   old_parcel_cloud.pbt[p_idx] = 0;
@@ -677,49 +569,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       //  }
     mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
      // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
-      
-      // Update profiling information for this parcel
-      distort_call_count++;
-      total_distort_time += CONVERGE_mpi_wtime() - start_time;
-      
-      // Reset start time for next parcel
-      start_time = CONVERGE_mpi_wtime();
-      
+      // } //time limieter >0.1ms 
    }    // End of parcel loop
     
-   // Calculate loop overhead time
-   CONVERGE_precision_t loop_total = 0.0;
-   for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++) {
-      CONVERGE_precision_t sopl = CONVERGE_mpi_wtime();
-      CONVERGE_precision_t eopl = CONVERGE_mpi_wtime();
-      loop_total += eopl - sopl;
-   }
-   loop_overhead_time += loop_total;
-
-   // Time table destruction
-   CONVERGE_precision_t table_destroy_start = CONVERGE_mpi_wtime();
-   destroy_tables(sp);
-   table_destroy_time += CONVERGE_mpi_wtime() - table_destroy_start;
-
-   // Time save_user_cloud operation
-   CONVERGE_precision_t save_start = CONVERGE_mpi_wtime();
-   // save_user_cloud(&old_parcel_cloud, cloud);
-   save_cloud_time += CONVERGE_mpi_wtime() - save_start;
-
-   // Update parcel counter
-   parcels_processed += num_parcels_in_cloud;
-
-   // Update total time for this function call
-   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
-   total_distort_time += end_time - start_time;
-   
-   // Update parcel counter
-   parcels_processed += num_parcels_in_cloud;
-   
-   
-   
-   // Print profiling information after each cloud
-   // print_distort_profiling();// }   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
