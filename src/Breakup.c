@@ -399,8 +399,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             load_user_cloud(old_parcel_cloud, cloud);
 
             //Update parent drop's radius
-            old_parcel_cloud->radius[p_idx] = 1.0e-9; // Set parent radius to new radius
-            old_parcel_cloud->radius_tm1[p_idx] = 1.0e-9;
+            old_parcel_cloud->radius[p_idx] = 0.0; // Set parent radius to new radius
+            old_parcel_cloud->radius_tm1[p_idx] = 0.0;
             old_parcel_cloud->num_drop[p_idx] = 1.0e-9; //new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
             old_parcel_cloud->num_drop_tm1[p_idx] = 1.0e-9; //new_parcel_num_drop;
 
