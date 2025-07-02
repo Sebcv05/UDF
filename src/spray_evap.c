@@ -24,22 +24,43 @@ static CONVERGE_precision_t init_time = 0.0;
 static CONVERGE_precision_t boil_time = 0.0;
 static CONVERGE_precision_t evap_time = 0.0;
 static CONVERGE_precision_t source_time = 0.0;
+static CONVERGE_precision_t other_time = 0.0;  // Track unaccounted time
 
 // Function to print profiling information
 static void print_evap_profiling() {
-    CONVERGE_int_t rank;
+    CONVERGE_int_t rank = 0;
     CONVERGE_mpi_comm_rank(&rank);
     
-    printf("\n=== Spray Evaporation Profiling (Rank %d) ===\n", rank);
+    // Only print from rank 0 to avoid clutter
+    if (rank != 0) return;
+    
+    // Calculate unaccounted time
+    CONVERGE_precision_t measured_time = init_time + boil_time + evap_time + source_time;
+    other_time = (total_evap_time > measured_time) ? (total_evap_time - measured_time) : 0.0;
+    
+    printf("\n=== Spray Evaporation Profiling ===\n");
     printf("Total calls: %d\n", evap_call_count);
-    printf("Total time: %.6f seconds\n", total_evap_time);
-    printf("Average time per call: %.6f seconds\n", total_evap_time / (evap_call_count > 0 ? evap_call_count : 1));
-    printf("\nTime distribution:\n");
-    printf("  Initialization: %.2f%% (%.6f s)\n", 100.0 * init_time / total_evap_time, init_time);
-    printf("  Boiling calcs:  %.2f%% (%.6f s)\n", 100.0 * boil_time / total_evap_time, boil_time);
-    printf("  Evaporation:    %.2f%% (%.6f s)\n", 100.0 * evap_time / total_evap_time, evap_time);
-    printf("  Source terms:   %.2f%% (%.6f s)\n", 100.0 * source_time / total_evap_time, source_time);
-    printf("=== End Profiling ===\n");
+    printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
+           total_evap_time, (total_evap_time/(evap_call_count > 0 ? evap_call_count : 1))*1000.0);
+    printf("Measured time: %.6f s (%.1f%% of total)\n", 
+           measured_time, (measured_time/total_evap_time)*100.0);
+    
+    printf("\nTime distribution (of measured time):\n");
+    printf("  Initialization: %8.2f%% (avg: %9.6f ms/call)\n", 
+           100.0 * init_time / measured_time, (init_time/evap_call_count)*1000.0);
+    printf("  Boiling calcs:  %8.2f%% (avg: %9.6f ms/call)\n", 
+           100.0 * boil_time / measured_time, (boil_time/evap_call_count)*1000.0);
+    printf("  Evaporation:    %8.2f%% (avg: %9.6f ms/call)\n", 
+           100.0 * evap_time / measured_time, (evap_time/evap_call_count)*1000.0);
+    printf("  Source terms:   %8.2f%% (avg: %9.6f ms/call)\n", 
+           100.0 * source_time / measured_time, (source_time/evap_call_count)*1000.0);
+    
+    if (other_time > 0.0) {
+        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * other_time / total_evap_time, (other_time/evap_call_count)*1000.0);
+    }
+    printf("=== End Profiling ===\n\n");
+    fflush(stdout);  // Ensure output is flushed immediately
 }
 
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
@@ -259,7 +280,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 {
    // Start timing the entire function
    CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
-   CONVERGE_precision_t section_start;
+   CONVERGE_precision_t section_start, section_end;
    
    // Section 1: Initialization
    section_start = CONVERGE_mpi_wtime();
@@ -300,7 +321,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
 
    // Record initialization time
-   init_time += CONVERGE_mpi_wtime() - section_start;
+   section_end = CONVERGE_mpi_wtime();
+   init_time += section_end - section_start;
+   section_start = section_end;  // Reset section start for next timing section
    
    // Section 2: Boiling calculations
    section_start = CONVERGE_mpi_wtime();
@@ -344,10 +367,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t expnt_flshblg_g25 = CONVERGE_get_double("lagrangian.expnt_flshblg_g25");
    
    // Record boiling calculation time
-   boil_time += CONVERGE_mpi_wtime() - section_start;
+   section_end = CONVERGE_mpi_wtime();
+   boil_time += section_end - section_start;
+   section_start = section_end;  // Reset section start for next timing section
    
    // Section 3: Evaporation calculations
    section_start = CONVERGE_mpi_wtime();
+   // This section timing will be updated at the end of the section
    
    /////////////////////////////////////////////////////////////////////
 
@@ -1216,7 +1242,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      // Urea model to be implemented
                      CONVERGE_index_t isp1 = CONVERGE_parcel_evap_species_lookup(isp);
                      enth += CONVERGE_table_lookup(evap_species_sensible_h_table[isp1], temp1) *
-                             (-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp]) * dt * parcel_cloud.num_drop[i_pc];
+                             (-parcel_cloud.dm_dt[i_pc*num_parcel_species+isp]) * dt * parcel_cloud.num_drop[i_pc];
                   }
                }
             }
@@ -1475,37 +1501,26 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    }
 
    // Update profiling info
-   total_evap_time += CONVERGE_mpi_wtime() - start_time;
+   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
+   total_evap_time += end_time - start_time;
    evap_call_count++;
 
-   // Print profiling info every 100 calls
-   if (evap_call_count % 100 == 0)
-   {
-      CONVERGE_int_t rank;
-      CONVERGE_mpi_comm_rank(&rank);
-      if (rank == 0)
-      {
-         print_evap_profiling();
-      }
+   // Print profiling information periodically
+   if (evap_call_count % 100 == 0) {
+       CONVERGE_int_t rank;
+       CONVERGE_mpi_comm_rank(&rank);
+       if (rank == 0)
+       {
+          print_evap_profiling();
+       }
    }
 
-   free(radius_new);
-   free(moles);
-   free(mol_frac);
-   free(local_species);
-   free(vapor_mass);
-   free(vapor_mass_0);
-   free(parcel_mole_fraction);
-   free(evap_mass_drop_0);           /* initial evaporting droplet mass */
-   free(evap_mass_drop_1);           /* droplet mass after evaporation */
-   free(evap_min_radius);            /* minimum evaporation dropet radius */
-   free(evap_radius);                /* evaporation dropet radius */
-   free(evap_cell_tot_evap_species); /* total evaporation mass for each sepcies in a cell */
-   free(evap_all_flag);
-   free(parcel_species_boil_flag);
-   free(cell_tot_temp_species);
+   // Record evaporation calculation time
+   section_end = CONVERGE_mpi_wtime();
+   evap_time += section_end - section_start;
 
-   if( (parcel_boil_correlation_flag==1 && spray_evap_flag!=0) || (evap_flag_flash_boiling==1) )
+   // Section 4: Source terms
+   section_start = CONVERGE_mpi_wtime();
    {
       free(temp_boil);
    }
