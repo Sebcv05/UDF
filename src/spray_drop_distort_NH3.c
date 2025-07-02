@@ -719,7 +719,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    
    
    // Print profiling information after each cloud
-   print_distort_profiling();// }   
+   // print_distort_profiling();// }   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
