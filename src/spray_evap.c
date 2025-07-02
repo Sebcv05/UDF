@@ -322,11 +322,12 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // Record initialization time
    section_end = CONVERGE_mpi_wtime();
    init_time += section_end - section_start;
-   section_start = section_end;  // Reset section start for next timing section
    
    // Section 2: Boiling calculations
    section_start = CONVERGE_mpi_wtime();
    
+
+
    // Get spray_in variables
 
 
@@ -368,7 +369,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // Record boiling calculation time
    section_end = CONVERGE_mpi_wtime();
    boil_time += section_end - section_start;
-   section_start = section_end;  // Reset section start for next timing section
    
    // Section 3: Evaporation calculations
    section_start = CONVERGE_mpi_wtime();
@@ -1536,6 +1536,26 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    
       // Section 4: Source terms
       section_start = CONVERGE_mpi_wtime();
+      CONVERGE_precision_t total_time =evap_time + source_time + init_time + boil_time;
+
+      CONVERGE_precision_t init_time_frac = init_time / total_time;
+      CONVERGE_precision_t boil_time_frac = boil_time / total_time;
+      CONVERGE_precision_t evap_time_frac = evap_time / total_time;
+      CONVERGE_precision_t source_time_frac = source_time / total_time;
+      
+      
+      
+      
+      ;
+      printf("\n==========================");
+      printf("\n spray_evap.c total time = %e ms\n\n",total_time*1000);
+      printf("\ninit_time_frac = %f \%\n",init_time_frac*100);
+      printf("\nboil_time_frac = %f \%\n",boil_time_frac*100);
+      printf("\nevap_time_frac = %f \%\n",evap_time_frac*100);
+      printf("\nsource_time_frac = %f \%\n",source_time_frac*100);
+      printf("\n==========================");
+
+
    if( (parcel_boil_correlation_flag==1 && spray_evap_flag!=0) || (evap_flag_flash_boiling==1) )
    {
       free(temp_boil);
