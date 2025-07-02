@@ -22,6 +22,14 @@
 
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_cloud_t cloud)
 {
+
+
+    //Timing vars
+    CONVERGE_precision_t init_time = 0.0;
+    CONVERGE_precision_t breakup_calc_time = 0.0;
+    CONVERGE_precision_t child_parcel_time = 0.0;
+    CONVERGE_precision_t zero_time = 0.0;   
+    CONVERGE_precision_t total_breakup_time = 0.0;
     // Start timing the entire function
     CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
     CONVERGE_precision_t section_start;
