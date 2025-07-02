@@ -580,8 +580,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
     
 
     CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
-    CONVERGE_precision_t total_time = end_time - start_time;
-    printf("\nTotal time: %f\n",total_time);
+   //  CONVERGE_precision_t total_time = end_time - start_time;
+   //  printf("\nTotal time: %f\n",total_time);
    
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
