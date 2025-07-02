@@ -378,7 +378,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
                 // printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
                 // printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
                 // old_parcel_cloud->child_index[p_idx] = user_velocity_index;
-                user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
+                // user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
 
                 // Debug: Verify values after storing
                 // printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
