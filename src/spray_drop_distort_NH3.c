@@ -669,10 +669,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       distort_call_count++;
       total_distort_time += CONVERGE_mpi_wtime() - start_time;
       
-      // Print profiling information periodically
-      if (distort_call_count % 1000 == 0) {
-          print_distort_profiling();
-      }
+      // // Print profiling information periodically
+      // if (distort_call_count % 1000 == 0) {
+      //     print_distort_profiling();
+      // }
       
       // Reset start time for next parcel
       start_time = CONVERGE_mpi_wtime();

@@ -1242,7 +1242,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                      // Urea model to be implemented
                      CONVERGE_index_t isp1 = CONVERGE_parcel_evap_species_lookup(isp);
                      enth += CONVERGE_table_lookup(evap_species_sensible_h_table[isp1], temp1) *
-                             (-parcel_cloud.dm_dt[i_pc*num_parcel_species+isp]) * dt * parcel_cloud.num_drop[i_pc];
+                             (-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp]) * dt * parcel_cloud.num_drop[i_pc];
                   }
                }
             }
@@ -1515,12 +1515,29 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
        }
    }
 
-   // Record evaporation calculation time
-   section_end = CONVERGE_mpi_wtime();
-   evap_time += section_end - section_start;
+   free(radius_new);
+   free(moles);
+   free(mol_frac);
+   free(local_species);
+   free(vapor_mass);
+   free(vapor_mass_0);
+   free(parcel_mole_fraction);
+   free(evap_mass_drop_0);           /* initial evaporting droplet mass */
+   free(evap_mass_drop_1);           /* droplet mass after evaporation */
+   free(evap_min_radius);            /* minimum evaporation dropet radius */
+   free(evap_radius);                /* evaporation dropet radius */
+   free(evap_cell_tot_evap_species); /* total evaporation mass for each sepcies in a cell */
+   free(evap_all_flag);
+   free(parcel_species_boil_flag);
+   free(cell_tot_temp_species);
 
-   // Section 4: Source terms
-   section_start = CONVERGE_mpi_wtime();
+      // Record evaporation calculation time
+      section_end = CONVERGE_mpi_wtime();
+      evap_time += section_end - section_start;
+   
+      // Section 4: Source terms
+      section_start = CONVERGE_mpi_wtime();
+   if( (parcel_boil_correlation_flag==1 && spray_evap_flag!=0) || (evap_flag_flash_boiling==1) )
    {
       free(temp_boil);
    }
