@@ -493,9 +493,9 @@ child_parcel_time_frac = child_parcel_time / total_breakup_time;
 zero_time_frac = zero_time / total_breakup_time;
     // Print profiling information periodically
     printf("\nbreakup.c total time = %e ms\n\n",total_breakup_time*1000);
-    printf("\ninit_time_frac = %e \%\n",init_time_frac*100);
-    printf("\nbreakup_calc_time_frac = %e \%\n",breakup_calc_time_frac*100);
-    printf("\nchild_parcel_time_frac = %e \%\n",child_parcel_time_frac*100);
-    printf("\nzero_time_frac = %e \%\n",zero_time_frac*100);
+    printf("\ninit_time_frac = %f \%\n",init_time_frac*100);
+    printf("\nbreakup_calc_time_frac = %f \%\n",breakup_calc_time_frac*100);
+    printf("\nchild_parcel_time_frac = %f \%\n",child_parcel_time_frac*100);
+    printf("\nzero_time_frac = %f \%\n",zero_time_frac*100);
     old_parcel_cloud->tbreak_kh[p_idx] = old_parcel_cloud->thermal_breakup_flag[p_idx];
 }
