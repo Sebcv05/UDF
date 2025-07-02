@@ -323,7 +323,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if(initial_cloud_size >0)
     {
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
-            for(nnn = 0; nnn < num_child_parcels; nnn++)
+            for(nnn = 0; nnn < num_child_parcels+1; nnn++)
             {
                 // Debug: Print memory addresses and values before operations
                 // printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
@@ -399,10 +399,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             load_user_cloud(old_parcel_cloud, cloud);
 
             //Update parent drop's radius
-            old_parcel_cloud->radius[p_idx] = calculated_radius; // Set parent radius to new radius
-            old_parcel_cloud->radius_tm1[p_idx] = calculated_radius;
-            old_parcel_cloud->num_drop[p_idx] = new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
-            old_parcel_cloud->num_drop_tm1[p_idx] = new_parcel_num_drop;
+            old_parcel_cloud->radius[p_idx] = 1.0e-9; // Set parent radius to new radius
+            old_parcel_cloud->radius_tm1[p_idx] = 1.0e-9;
+            old_parcel_cloud->num_drop[p_idx] = 1.0e-9; //new_parcel_num_drop; // Set pare    nt num_drop to new num_drop
+            old_parcel_cloud->num_drop_tm1[p_idx] = 1.0e-9; //new_parcel_num_drop;
 
             //Update Parent velocity 
             CONVERGE_vec3_t new_parent_velocity ;
@@ -414,7 +414,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
             old_parcel_cloud->lifetime[p_idx] = 0;
             old_parcel_cloud->is_child[p_idx] = 1;
             old_parcel_cloud->r_bubble[p_idx] = 0.0;
-            old_parcel_cloud->temp[p_idx] = 250.0;
+            // old_parcel_cloud->temp[p_idx] = 250.0;
             // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parent_parcel_idx]);
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
