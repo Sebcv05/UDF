@@ -73,8 +73,6 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
 
    time_t cl_start,cl_end;
      time(&cl_start);
-
-     CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
    CONVERGE_index_t parcel_counter = 0;
    const CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    global_pressure = pressure;
@@ -118,7 +116,7 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
    CONVERGE_precision_t total_time = end_time - start_time;
 
-      printf("\n Distort Total time: %f\n",total_time);
+     // printf("\nTotal time: %f\n",total_time);
    
 }
 
@@ -560,26 +558,31 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          bc_frac = 100.00 * bc_diff / pbr_diff; 
          geom_frac = 100.00 * geom_diff / pbr_diff;
          dgre_frac = 100.00 * dgre_diff / pbr_diff;
-      //  if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
-      //  {
-      //    printf("\npl_time = %f",pl_diff);
-      //    printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
-      //    printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
-      //   // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
-      //    {
-      //    printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
-      //    printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
-      //    printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
-      //    printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
-      //    printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
-      //    }
-      //    printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
-      //  }
+       if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
+       {
+         printf("\npl_time = %f",pl_diff);
+         printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
+         printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
+        // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
+         {
+         printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
+         printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
+         printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
+         printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
+         printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
+         }
+         printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
+       }
     mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
      // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
       // } //time limieter >0.1ms 
    }    // End of parcel loop
     
+
+    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
+    CONVERGE_precision_t total_time = end_time - start_time;
+    printf("\nTotal time: %f\n",total_time);
+   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
