@@ -42,12 +42,23 @@ static CONVERGE_precision_t geom_time = 0.0;
 static CONVERGE_precision_t breakup_time = 0.0;
 static CONVERGE_precision_t bc_time = 0.0;
 static CONVERGE_precision_t pbr_time = 0.0;
+static CONVERGE_precision_t load_cloud_time = 0.0;
+static CONVERGE_precision_t save_cloud_time = 0.0;
+static CONVERGE_precision_t loop_overhead_time = 0.0;
+static CONVERGE_precision_t other_time = 0.0;
 
 // Function to print profiling information
 static void print_distort_profiling() {
     if (distort_call_count > 0) {  // Only print if we have calls
+        // Calculate total measured time including the new categories
         CONVERGE_precision_t total_measured_time = init_time + tab_time + dgre_time + 
-                                                 geom_time + breakup_time + bc_time + pbr_time;
+                                                 geom_time + breakup_time + bc_time + 
+                                                 pbr_time + load_cloud_time + 
+                                                 save_cloud_time + loop_overhead_time;
+        
+        // Calculate unaccounted time
+        other_time = (total_distort_time > total_measured_time) ? 
+                    (total_distort_time - total_measured_time) : 0.0;
         
         printf("\n=== Spray Distort Profiling (calls: %d) ===\n", distort_call_count);
         printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
@@ -55,20 +66,39 @@ static void print_distort_profiling() {
         printf("Total measured time: %.6f s (%.2f%% of total)\n",
                total_measured_time, (total_measured_time/total_distort_time)*100.0);
         printf("Time distribution (of measured time):\n");
+        printf("  Load Cloud:     %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * load_cloud_time / total_measured_time, 
+               (load_cloud_time/distort_call_count)*1000.0);
         printf("  Initialization: %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * init_time / total_measured_time, (init_time/distort_call_count)*1000.0);
+               100.0 * init_time / total_measured_time, 
+               (init_time/distort_call_count)*1000.0);
         printf("  TAB Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * tab_time / total_measured_time, (tab_time/distort_call_count)*1000.0);
+               100.0 * tab_time / total_measured_time, 
+               (tab_time/distort_call_count)*1000.0);
         printf("  DGRE Calc:      %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * dgre_time / total_measured_time, (dgre_time/distort_call_count)*1000.0);
+               100.0 * dgre_time / total_measured_time, 
+               (dgre_time/distort_call_count)*1000.0);
         printf("  Geometry Calc:  %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * geom_time / total_measured_time, (geom_time/distort_call_count)*1000.0);
+               100.0 * geom_time / total_measured_time, 
+               (geom_time/distort_call_count)*1000.0);
         printf("  Breakup Calc:   %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * breakup_time / total_measured_time, (breakup_time/distort_call_count)*1000.0);
+               100.0 * breakup_time / total_measured_time, 
+               (breakup_time/distort_call_count)*1000.0);
         printf("  BC Calc:        %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * bc_time / total_measured_time, (bc_time/distort_call_count)*1000.0);
+               100.0 * bc_time / total_measured_time, 
+               (bc_time/distort_call_count)*1000.0);
         printf("  PBR Calc:       %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * pbr_time / total_measured_time, (pbr_time/distort_call_count)*1000.0);
+               100.0 * pbr_time / total_measured_time, 
+               (pbr_time/distort_call_count)*1000.0);
+        printf("  Save Cloud:     %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * save_cloud_time / total_measured_time, 
+               (save_cloud_time/distort_call_count)*1000.0);
+        printf("  Loop Overhead:  %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * loop_overhead_time / total_measured_time, 
+               (loop_overhead_time/distort_call_count)*1000.0);
+        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/call)\n", 
+               100.0 * other_time / total_distort_time, 
+               (other_time/distort_call_count)*1000.0);
     }
 }
 
@@ -175,7 +205,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    CONVERGE_size_t num_parcels_in_cloud = CONVERGE_cloud_size(cloud);
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
 
+   // Time load_user_cloud operation
+   CONVERGE_precision_t load_start = CONVERGE_mpi_wtime();
    load_user_cloud(&old_parcel_cloud, cloud);
+   load_cloud_time += CONVERGE_mpi_wtime() - load_start;
 
    CONVERGE_precision_t pre_TAB, post_TAB, pre_DGRE, post_DGRE, pre_Geom, post_Geom, pre_break, post_break, pre_bc, post_bc, pre_pbr, post_pbr, sopl, eopl;
    // printf("\n 0.1");
@@ -646,12 +679,32 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       
    }    // End of parcel loop
     
+   // Time loop overhead
+   CONVERGE_precision_t loop_start = CONVERGE_mpi_wtime();
+   for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
+   {
+      // Start timing for this parcel
+      sopl = CONVERGE_mpi_wtime();
+      
+      // Reset timing for this parcel
+      pre_TAB = pre_DGRE = pre_Geom = pre_break = pre_bc = pre_pbr = 0.0;
+      post_TAB = post_DGRE = post_Geom = post_break = post_bc = post_pbr = 0.0;
+
+      // ... rest of the loop code ...
+   }
+   loop_overhead_time += CONVERGE_mpi_wtime() - loop_start;
+
    // Update total time for this function call
    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
    total_distort_time += end_time - start_time;
    
    // Increment call counter
    distort_call_count++;
+   
+   // Time save_user_cloud operation
+   CONVERGE_precision_t save_start = CONVERGE_mpi_wtime();
+   save_user_cloud(&old_parcel_cloud, cloud);
+   save_cloud_time += CONVERGE_mpi_wtime() - save_start;
    
    // Print profiling information periodically
    if (distort_call_count % 1000 == 0) {
