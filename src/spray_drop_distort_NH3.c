@@ -703,7 +703,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    
    // Time save_user_cloud operation
    CONVERGE_precision_t save_start = CONVERGE_mpi_wtime();
-   save_user_cloud(&old_parcel_cloud, cloud);
    save_cloud_time += CONVERGE_mpi_wtime() - save_start;
    
    // Print profiling information periodically
