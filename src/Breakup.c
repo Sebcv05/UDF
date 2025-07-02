@@ -15,38 +15,10 @@
 #include <Vb.h>
 
 // Profiling variables
-static int breakup_call_count = 0;
-static CONVERGE_precision_t total_breakup_time = 0.0;
-static CONVERGE_precision_t init_time = 0.0;
-static CONVERGE_precision_t vel_calc_time = 0.0;
-static CONVERGE_precision_t breakup_calc_time = 0.0;
-static CONVERGE_precision_t child_parcel_time = 0.0;
-static CONVERGE_precision_t zero_time = 0.0;
 
-static int user_velocity_index = 0;
 
 // Function to print profiling information
-static void print_profiling_info() {
-    if (breakup_call_count % 1000 == 0 && breakup_call_count > 0) {  // Print every 100 calls
-     
-     
-            printf("\n=== Breakup Profiling (calls: %d) ===\n", breakup_call_count);
-            printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
-                   total_breakup_time, (total_breakup_time/breakup_call_count)*1000.0);
-            printf("Time distribution:\n");
-            printf("  Initialization: %.2f%% (%.3f ms/call)\n", 
-                  (init_time/total_breakup_time)*100.0, (init_time/breakup_call_count)*1000.0);
-            printf("  Velocity Calc:  %.2f%% (%.3f ms/call)\n",
-                  (vel_calc_time/total_breakup_time)*100.0, (vel_calc_time/breakup_call_count)*1000.0);
-            printf("  Breakup Calc:   %.2f%% (%.3f ms/call)\n",
-                  (breakup_calc_time/total_breakup_time)*100.0, (breakup_calc_time/breakup_call_count)*1000.0);
-            printf("  Child Parcels:  %.2f%% (%.3f ms/call)\n",
-                  (child_parcel_time/total_breakup_time)*100.0, (child_parcel_time/breakup_call_count)*1000.0);
-            printf("  Zeroing:        %.2f%% (%.3f ms/call)\n",
-                  (zero_time/total_breakup_time)*100.0, (zero_time/breakup_call_count)*1000.0);
-        
-    }
-}
+
 
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_cloud_t cloud)
 {
@@ -124,7 +96,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     CONVERGE_index_t N = 12;
 
     // End of initialization section
-    init_time += CONVERGE_mpi_wtime() - section_start;
+    init_time = CONVERGE_mpi_wtime() - section_start;
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
     {
@@ -329,7 +301,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
 
       
     // End of breakup calculation section
-    breakup_calc_time += CONVERGE_mpi_wtime() - section_start;
+    breakup_calc_time = CONVERGE_mpi_wtime() - section_start;
     
     // Section 4: Child parcel creation
     section_start = CONVERGE_mpi_wtime();
@@ -448,10 +420,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
                 // CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
                 // }
             }
-            child_parcel_time += CONVERGE_mpi_wtime() - section_start;
+            child_parcel_time = CONVERGE_mpi_wtime() - section_start;
 
             section_start = CONVERGE_mpi_wtime();
-            zero_time += CONVERGE_mpi_wtime() - section_start;
+            zero_time = CONVERGE_mpi_wtime() - section_start;
 
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
@@ -505,7 +477,13 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     total_breakup_time += CONVERGE_mpi_wtime() - start_time;
     
     // Print profiling information periodically
-    print_profiling_info();
+    printf("\nbreakup.c timing\n\n");
+    printf("\ninit_time = %e\n",init_time);
+    printf("\nbreakup_calc_time = %e\n",breakup_calc_time);
+    printf("\nchild_parcel_time = %e\n",child_parcel_time);
+    printf("\nzero_time = %e\n",zero_time);
+    printf("\ntotal_breakup_time = %e\n",total_breakup_time);
+
     
     old_parcel_cloud->tbreak_kh[p_idx] = old_parcel_cloud->thermal_breakup_flag[p_idx];
 }
