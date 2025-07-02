@@ -558,21 +558,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          bc_frac = 100.00 * bc_diff / pbr_diff; 
          geom_frac = 100.00 * geom_diff / pbr_diff;
          dgre_frac = 100.00 * dgre_diff / pbr_diff;
-       if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
-       {
-         printf("\npl_time = %f",pl_diff);
-         printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
-         printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
-        // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
-         {
-         printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
-         printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
-         printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
-         printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
-         printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
-         }
-         printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
-       }
+      //  if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
+      //  {
+      //    printf("\npl_time = %f",pl_diff);
+      //    printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
+      //    printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
+      //   // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
+      //    {
+      //    printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
+      //    printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
+      //    printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
+      //    printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
+      //    printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
+      //    }
+      //    printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
+      //  }
     mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
      // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
       // } //time limieter >0.1ms 
