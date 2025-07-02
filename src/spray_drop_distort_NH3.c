@@ -706,10 +706,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    save_cloud_time += CONVERGE_mpi_wtime() - save_start;
    
    // Print profiling information periodically
-   if (distort_call_count % 1000 == 0) {
-       // Print the profiling information
-       print_distort_profiling();
-   }   
+   // if (distort_call_count % 1000 == 0) {
+   //     // Print the profiling information
+   //     print_distort_profiling();
+   // }   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
