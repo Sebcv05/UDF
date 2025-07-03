@@ -267,7 +267,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
 CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4));
-calculated_radius = calculated_radius * 0.1; // Testing decimating the radius further to see if intensifies evap issues
+// calculated_radius = calculated_radius * 0.1; // Testing decimating the radius further to see if intensifies evap issues
     // old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
     if (calculated_radius < 0.0)
     {
