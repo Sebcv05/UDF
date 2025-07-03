@@ -41,7 +41,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\nBreakup.c: Invalid cloud or parcel cloud pointer\n");
         CONVERGE_mpi_abort();
     }
-    CONVERGE_vec3_t user_child_velocity[100];
+    CONVERGE_vec3_t user_child_velocity[13];
 
     // Get cloud size and verify parcel index
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
@@ -101,7 +101,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
-    CONVERGE_index_t N = 101;
+    CONVERGE_index_t N = 13;
 
     // End of initialization section
     init_time = CONVERGE_mpi_wtime() - section_start;
@@ -358,7 +358,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if(initial_cloud_size >0)
     {
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
-            for(nnn = 0; nnn < num_child_parcels+1; nnn++)
+            for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
                 // Debug: Print memory addresses and values before operations
                 // printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
