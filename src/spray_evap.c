@@ -384,8 +384,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
    const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
 
-   const CONVERGE_precision_t min_spray_temp          = 200.0;
-   const CONVERGE_precision_t min_spray_recovery_temp = 270.0;
+   const CONVERGE_precision_t min_spray_temp          = 180.0;
+   const CONVERGE_precision_t min_spray_recovery_temp = 200.0;
 
    // Old table lookup vars
    CONVERGE_precision_t temp1;
