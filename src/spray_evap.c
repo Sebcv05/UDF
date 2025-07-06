@@ -572,9 +572,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
-      CONVERGE_int_t child_flag = 0;
+      CONVERGE_int_t user_child_flag = 0;
       if((parcel_cloud.is_child[i_pc]==1 && parcel_cloud.lifetime[i_pc]<1.0e-5) || parcel_cloud.tbt[i_pc]){
-         child_flag = 1;
+         user_child_flag = 1;
          continue;
       }
       //printf("\n spray_evap_cell: L501, i_pc = %ld\n  ", i_pc);
