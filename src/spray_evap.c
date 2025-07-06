@@ -572,8 +572,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
-
+      CONVERGE_int_t child_flag = 0;
       if((parcel_cloud.is_child[i_pc]==1 && parcel_cloud.lifetime[i_pc]<1.0e-5) || parcel_cloud.tbt[i_pc]){
+         child_flag = 1;
          continue;
       }
       //printf("\n spray_evap_cell: L501, i_pc = %ld\n  ", i_pc);
@@ -1313,7 +1314,10 @@ CONVERGE_precision_t user_radius = 0.0;
    // *********************************************************************************************************** //
 
       //Print final radius change rate
-      printf("\n spray_evap_cell: L1310, radius = %e, temperature = %e, gas temperature = %e, user_drdt = %e\n  ", user_radius, user_parcel_temp, user_gas_temp, user_drdt);
+   if(user_child_flag==0)
+   {
+      printf("\n spray_evap_cell: L1310, radius = %e, temperature = %f, gas temperature = %f, user_drdt = %e\n  ", user_radius, user_parcel_temp, user_gas_temp, user_drdt);
+   }
 
 
    // update parcel radius
