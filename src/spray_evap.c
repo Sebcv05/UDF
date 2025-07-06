@@ -959,6 +959,11 @@ CONVERGE_precision_t user_radius = 0.0;
                   evap_all_flag[isp] = 1;
                }
 
+               //linit to 1.0 
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0;
+               }
+
                //  again don't allow condensation
                if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] >= 0.0)
                {
