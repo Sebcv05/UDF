@@ -620,6 +620,9 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    //******************************************************************************************************//
    const CONVERGE_precision_t local_volume = 1.0 / (1.0 / global_volume[node_index]);   //FIXVOL
 CONVERGE_precision_t user_drdt = 0.0;
+CONVERGE_precision_t user_parcel_temp = 0.0;
+CONVERGE_precision_t user_gas_temp = 0.0;
+CONVERGE_precision_t user_radius = 0.0;
    delta_gas_temp  = 1.0e9;
    temp_gas_iterm1 = 1.0e9;
    int iter_gas    = 0;
@@ -944,6 +947,9 @@ CONVERGE_precision_t user_drdt = 0.0;
             }
             //Monitor radius chnage rate
             user_drdt = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+            user_parcel_temp = parcel_cloud.temp[i_pc];
+            user_gas_temp = temp_gas;
+            user_radius = parcel_cloud.radius[i_pc];
             if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
             {
                parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
@@ -1307,7 +1313,7 @@ CONVERGE_precision_t user_drdt = 0.0;
    // *********************************************************************************************************** //
 
       //Print final radius change rate
-      printf("\n spray_evap_cell: L1310, radius = %e, temperature = %e, gas temperature = %e, user_drdt = %e\n  ", parcel_cloud.radius[i_pc], parcel_cloud.temp[i_pc], temp_gas, user_drdt);
+      printf("\n spray_evap_cell: L1310, radius = %e, temperature = %e, gas temperature = %e, user_drdt = %e\n  ", user_radius, user_parcel_temp, user_gas_temp, user_drdt);
 
 
    // update parcel radius
