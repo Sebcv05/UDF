@@ -1317,7 +1317,7 @@ CONVERGE_precision_t user_radius = 0.0;
       //Print final radius change rate
    if(user_child_flag==0 || user_lifetime >1.0e-4)
    {
-      printf("\n spray_evap_cell: L1310, radius = %e, temperature = %f, gas temperature = %f, user_drdt = %e\n  ", user_radius, user_parcel_temp, user_gas_temp, user_drdt);
+      printf("\n spray_evap_cell: L1310, child? %d radius = %e, temperature = %f, gas temperature = %f, user_drdt = %e\n  ", user_child_flag, user_radius, user_parcel_temp, user_gas_temp, user_drdt);
    }
 
 
