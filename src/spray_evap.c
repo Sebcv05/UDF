@@ -569,7 +569,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t pr_num =
       global_mol_viscosity[node_index] * global_csubp[node_index] / global_mol_cond[node_index];
       CONVERGE_int_t user_child_flag = 0;
-
+      CONVERGE_precision_t user_lifetime = 0.0;
    // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
@@ -951,6 +951,7 @@ CONVERGE_precision_t user_radius = 0.0;
             user_parcel_temp = parcel_cloud.temp[i_pc];
             user_gas_temp = temp_gas;
             user_radius = parcel_cloud.radius[i_pc];
+            user_lifetime = parcel_cloud.lifetime[i_pc];
             if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
             {
                parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
@@ -1314,7 +1315,7 @@ CONVERGE_precision_t user_radius = 0.0;
    // *********************************************************************************************************** //
 
       //Print final radius change rate
-   if(user_child_flag==0)
+   if(user_child_flag==0 || user_lifetime >1.0e-4)
    {
       printf("\n spray_evap_cell: L1310, radius = %e, temperature = %f, gas temperature = %f, user_drdt = %e\n  ", user_radius, user_parcel_temp, user_gas_temp, user_drdt);
    }
