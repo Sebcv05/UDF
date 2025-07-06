@@ -960,8 +960,8 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                //linit to 1.0 
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0;
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-1){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-1;
                }
 
                //  again don't allow condensation
