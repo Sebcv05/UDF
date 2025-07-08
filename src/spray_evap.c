@@ -614,6 +614,33 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
 
+   if(CONVERGE_ncyc()%100 == 0)
+   {
+            // ******************************************************************************************************//
+         // Print  Droplet Data to File
+         CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
+         char *filename1 = "Temp_Tracker.txt";
+         // To this:
+         FILE *fp1 = fopen("Temp_Tracker.bin", "ab");  // Note the 'b' for binary
+         if (fp1 == NULL)
+         {
+            printf("Error opening the file %s", "Temp_Tracker.bin");
+            return;
+         }
+         
+         // Write the data in binary format
+         fwrite(&parcel_cloud.cloud_index[0], sizeof(int), 1, fp1);
+         fwrite(&parcel_cloud.parcel_index[0], sizeof(int), 1, fp1);
+         fwrite(&parcel_cloud.temp[0], sizeof(double), 1, fp1);
+         fwrite(&parcel_cloud.radius[0], sizeof(double), 1, fp1);
+         fwrite(&parcel_cloud.lifetime[0], sizeof(double), 1, fp1);
+         fwrite(&vmag, sizeof(double), 1, fp1);
+         // ******************************************************************************************************//
+
+      }
+
+
+
    //******************************************************************************************************//
    //
    //       Start Implicit Solver (i.e., calculate drop temp and mass evaporated)
@@ -959,9 +986,9 @@ CONVERGE_precision_t user_radius = 0.0;
                   evap_all_flag[isp] = 1;
                }
 
-               //linit to 1.0 
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-1){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-1;
+               //Cap maximum rate of radius change 
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0;
                }
 
                //  again don't allow condensation
