@@ -614,30 +614,54 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
 
-   if(CONVERGE_ncyc()%100 == 0)
-   {
-            // ******************************************************************************************************//
+   // if(CONVERGE_ncyc()%5== 0)
+   // {
+         //    // ******************************************************************************************************//
+         // // Print  Droplet Data to File
+         // CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
+         // char *filename1 = "Temp_Tracker.txt";
+  
+         // // In spray_evap_cell function, replace the file writing section with:
+
+         // FILE *fp1 = fopen("Temp_Tracker.bin", "wb");  // Use "wb" to create new file each time
+         // if (fp1 == NULL) {
+         //    printf("Error opening the file Temp_Tracker.bin\n");
+         //    return;
+         // }
+         
+         // // Write the data in binary format
+         // int write_count = 0;
+         // write_count += fwrite(&parcel_cloud.cloud_index[0], sizeof(CONVERGE_int_t), 1, fp1);
+         // write_count += fwrite(&parcel_cloud.parcel_index[0], sizeof(CONVERGE_int_t), 1, fp1);
+         // write_count += fwrite(&parcel_cloud.temp[0], sizeof(CONVERGE_precision_t), 1, fp1);
+         // write_count += fwrite(&parcel_cloud.radius[0], sizeof(CONVERGE_precision_t), 1, fp1);
+         // write_count += fwrite(&parcel_cloud.lifetime[0], sizeof(CONVERGE_precision_t), 1, fp1);
+         // write_count += fwrite(&vmag, sizeof(CONVERGE_precision_t), 1, fp1);
+         
+         // if (write_count != 6) {
+         //    printf("Error writing to file. Only wrote %d/6 items\n", write_count);
+         // }
+         
+         // fclose(fp1);
+
+               
+         // // ******************************************************************************************************//
+
+               // ******************************************************************************************************//
          // Print  Droplet Data to File
          CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
          char *filename1 = "Temp_Tracker.txt";
-         // To this:
-         FILE *fp1 = fopen("Temp_Tracker.bin", "ab");  // Note the 'b' for binary
+         FILE *fp1 = fopen("Temp_Tracker.txt", "a");
          if (fp1 == NULL)
          {
-            printf("Error opening the file %s", "Temp_Tracker.bin");
-            return;
+            printf("Error opening the file %s", filename1);
          }
-         
-         // Write the data in binary format
-         fwrite(&parcel_cloud.cloud_index[0], sizeof(int), 1, fp1);
-         fwrite(&parcel_cloud.parcel_index[0], sizeof(int), 1, fp1);
-         fwrite(&parcel_cloud.temp[0], sizeof(double), 1, fp1);
-         fwrite(&parcel_cloud.radius[0], sizeof(double), 1, fp1);
-         fwrite(&parcel_cloud.lifetime[0], sizeof(double), 1, fp1);
-         fwrite(&vmag, sizeof(double), 1, fp1);
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag);
+         fclose(fp1);
          // ******************************************************************************************************//
 
-      }
+
+      // }
 
 
 
