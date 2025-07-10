@@ -1578,14 +1578,14 @@ CONVERGE_precision_t user_radius = 0.0;
    evap_call_count++;
 
    // Print profiling information periodically
-   if (evap_call_count % 1000 == 0) {
-       CONVERGE_int_t rank;
-       CONVERGE_mpi_comm_rank(&rank);
-       if (rank == 0)
-       {
-          print_evap_profiling();
-       }
-   }
+   // if (evap_call_count % 1000 == 0) {
+   //     CONVERGE_int_t rank;
+   //     CONVERGE_mpi_comm_rank(&rank);
+   //     if (rank == 0)
+   //     {
+   //        print_evap_profiling();
+   //     }
+   // }
 
    free(radius_new);
    free(moles);
