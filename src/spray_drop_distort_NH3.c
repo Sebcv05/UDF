@@ -334,7 +334,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
 
             }
-            if(old_parcel_cloud.radius[p_idx]> old_parcel_cloud.r_drop_0[p_idx]*1.5)
+            if(old_parcel_cloud.radius[p_idx]> old_parcel_cloud.r_drop_0[p_idx]*2.0)
             {
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 1;
                old_parcel_cloud.tbt[p_idx] = 1;
@@ -386,15 +386,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   //  //  printf("\nVb = 0 after bubble_velocity update");
                   // }
             CONVERGE_precision_t dR = old_parcel_cloud.v_bubble[p_idx] * dt;
-            if (dR >= 0.95* old_parcel_cloud.radius[p_idx])
-            {
-              // printf("\ndR> droplet radius, Vb = %e  dt= %e dR = %e rb = %e rad_before = %e", old_parcel_cloud.v_bubble[p_idx], dt,dR, old_parcel_cloud.r_bubble[p_idx]+dR,rad_before);
-               //printf("Setting TBT and r_bubble = 0.95 * r_drop");
-               old_parcel_cloud.r_bubble[p_idx] = 0.95* old_parcel_cloud.radius[p_idx];
-               old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx]=9;
-               continue;
-            }
+            // if (dR >= 0.95* old_parcel_cloud.radius[p_idx])
+            // {
+            //   // printf("\ndR> droplet radius, Vb = %e  dt= %e dR = %e rb = %e rad_before = %e", old_parcel_cloud.v_bubble[p_idx], dt,dR, old_parcel_cloud.r_bubble[p_idx]+dR,rad_before);
+            //    //printf("Setting TBT and r_bubble = 0.95 * r_drop");
+            //    old_parcel_cloud.r_bubble[p_idx] = 0.95* old_parcel_cloud.radius[p_idx];
+            //    old_parcel_cloud.tbt[p_idx] = 1;
+            //    old_parcel_cloud.thermal_breakup_flag[p_idx]=9;
+            //    continue;
+            // }
             if (dR > 0)
             {
                Rb_temp = dR + Rb;
