@@ -649,6 +649,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
                // ******************************************************************************************************//
          // Print  Droplet Data to File
+         CONVERGE_precision_t user_rand = CONVERGE_random_precision();
+         if(user_rand<0.05){
          CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
          char *filename1 = "Temp_Tracker.txt";
          FILE *fp1 = fopen("Temp_Tracker.txt", "a");
@@ -659,7 +661,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          fprintf(fp1, "%i    %i    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag);
          fclose(fp1);
          // ******************************************************************************************************//
-
+      }
 
       // }
 
@@ -1011,8 +1013,8 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                //Cap maximum rate of radius change 
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0;
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
                }
 
                //  again don't allow condensation
