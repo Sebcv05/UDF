@@ -487,7 +487,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             post_bc = CONVERGE_mpi_wtime();
         
             CONVERGE_precision_t eta, eta_0, eta_tm1, int_omega, omega_tm1;
-            if (kb > 1)
+            if (kb > 1.0)
             {
              
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;
@@ -495,7 +495,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                CONVERGE_int_t rank;
                CONVERGE_mpi_comm_rank(&rank);
-
+               printf("\n Breakup happening due to kb trigger");
                // if (old_parcel_cloud.v_bubble[p_idx]== 0.0)
                // {
                //    printf("\n\nVb 0 at breakup!!!!\n\n");
