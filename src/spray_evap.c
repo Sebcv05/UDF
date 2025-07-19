@@ -956,7 +956,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   }
                }
                //printf("\n spray_evap_cell L815 ");
-               if(parcel_cloud.is_child[i_pc]==2)
+               if(parcel_cloud.is_child[i_pc]==2) // not set to 2 so inactive
                {
                   //printf("\n spray_evap_cell: parcel is child\n");
                   if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
@@ -1013,8 +1013,8 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                //Cap maximum rate of radius change 
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-3){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-3;
                }
 
                //  again don't allow condensation
