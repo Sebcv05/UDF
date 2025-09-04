@@ -1013,8 +1013,8 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                //Cap maximum rate of radius change    
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-5.0e-3){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -5.0e-3;
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
                }
 
                //  again don't allow condensation
