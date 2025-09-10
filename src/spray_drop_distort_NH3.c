@@ -487,7 +487,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             post_bc = CONVERGE_mpi_wtime();
         
             CONVERGE_precision_t eta, eta_0, eta_tm1, int_omega, omega_tm1;
-            if (kb > 5.0)
+            if (kb > 1.0)
             {
              
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;

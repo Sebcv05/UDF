@@ -1012,7 +1012,23 @@ CONVERGE_precision_t user_radius = 0.0;
                   evap_all_flag[isp] = 1;
                }
 
-               //Cap maximum rate of radius change    
+      //                   // Print  Droplet Data to File 5% sample rate to see drdt values 
+      //                   CONVERGE_precision_t user_rand1 = CONVERGE_random_precision();
+      //                   if(user_rand1<0.05){
+      //                   char *filename1 = "Evap_Tracker.txt";
+      //                   FILE *fp1 = fopen("Evap_Tracker.txt", "a");
+      //                   if (fp1 == NULL)
+      //                   {
+      //                      printf("Error opening the file %s", filename1);
+      //                   }
+      //                   fprintf(fp1, "%i    %i    %f    %e    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
+      //                   fclose(fp1);
+      //                   // ******************************************************************************************************//
+      // }
+
+
+
+               //Cap maximum rate of radius change  - disabling to try boiling  model  
                if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
                }
