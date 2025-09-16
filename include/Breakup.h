@@ -9,6 +9,7 @@
 #include <string.h>
 #include <assert.h>
 #include <complex.h>
+#include <globals.h>
 #include "CONVERGE/tools/vec3.h"
 
 #ifndef BREAKUP_H

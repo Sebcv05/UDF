@@ -12,10 +12,14 @@
 #include <Breakup.h>
 #include <spray_break.h>
 #include <PsatNH3.h>
+#include <globals.h>
 #include <Vb.h>
 
-// Profiling variables
-
+// Global variables
+// Global velocity variables
+CONVERGE_precision_t user_child_velocity_x =0.0;
+CONVERGE_precision_t user_child_velocity_y =0.0;
+CONVERGE_precision_t user_child_velocity_z =0.0;
 
 // Function to print profiling information
 
@@ -92,7 +96,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 }
  CONVERGE_precision_t   old_r = old_parcel_cloud->radius[p_idx];
  CONVERGE_precision_t  old_nd = old_parcel_cloud->num_drop[p_idx];
-    breakup_counter++;
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
     {
@@ -101,7 +104,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
-    CONVERGE_index_t N = 13;
+    CONVERGE_index_t num_child_parcels = 20;
+    CONVERGE_index_t N = num_child_parcels;
 
     // End of initialization section
     init_time = CONVERGE_mpi_wtime() - section_start;
@@ -119,6 +123,30 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     CONVERGE_vec3_t parent_velocity,parent_velocity_unit,parent_normal ;
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
+
+            // --- Safety check: clamp parent velocity if unphysical ---
+        CONVERGE_precision_t parent_vel_mag = sqrt(parent_velocity[0]*parent_velocity[0] +
+                                    parent_velocity[1]*parent_velocity[1] +
+                                    parent_velocity[2]*parent_velocity[2]);
+
+        // Define a threshold based on your expected flow speeds
+        // (e.g. 1e3 m/s is likely way too high for sprays)
+        const CONVERGE_precision_t parent_vel_limit = 1.0e3;
+
+        if (parent_vel_mag > parent_vel_limit) {
+            printf("Breakup.c WARNING: Parent velocity too large (%e). "
+                "Clamping to zero.\n", parent_vel_mag);
+
+            for (int i = 0; i < 3; i++) {
+                if(fabs(parent_velocity[i])>parent_vel_limit){
+                    parent_velocity[i] = parent_vel_limit;
+                }
+            }
+        }
+
+
+
+
     CONVERGE_vec3_normalize(parent_velocity_unit);      //Parent Unit velocity vector 
     if(CONVERGE_vec3_length(parent_velocity_unit)<0.99){
         printf("\n Breakup.c\n uu[p_idx] = %e %e %e\nparent_velocity = %e %e %e\nparent_velocity_unit = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2],parent_velocity[0], parent_velocity[1], parent_velocity[2], parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
@@ -162,17 +190,21 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         CONVERGE_mpi_abort();
     }
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 1.0; // Scale factor for velocity
+    CONVERGE_precision_t aa = 10.0; // Scale factor for velocity 
+    //this is a comment
+    // printf("\n aa * rad_vel = %e, parent_vmag = %e, rad_vel*aa/vmag = %e",aa*rad_vel,parent_vmag,rad_vel*aa/parent_vmag);
    
 // 
 //perpendicular vector calculation
 CONVERGE_vec3_t arbitrary;
-if (fabs(parent_velocity_unit[0]) < 0.9) {
+if (fabs(parent_velocity_unit[0]) < 0.9 ) {
     arbitrary[0] = 1.0; arbitrary[1] = 0.0; arbitrary[2] = 0.0;
-} else if (fabs(parent_velocity_unit[1]) < 0.9) {
+} else if (fabs(parent_velocity_unit[1]) < 0.9 ) {
     arbitrary[0] = 0.0; arbitrary[1] = 1.0; arbitrary[2] = 0.0;
-} else {
+} else if (fabs(parent_velocity_unit[2]) < 0.9 ) {
     arbitrary[0] = 0.0; arbitrary[1] = 0.0; arbitrary[2] = 1.0;
+}else{
+    arbitrary[0] = 0.0; arbitrary[1] = 0.6; arbitrary[2] = 0.8;
 }
 
 // Pass address of parent_normal to store the cross product result
@@ -182,11 +214,13 @@ CONVERGE_vec3_cross(parent_velocity_unit, arbitrary, &parent_normal);
 CONVERGE_precision_t normal_length = CONVERGE_vec3_normalize(parent_normal);
 
 // Debug check - should be very close to 1.0
-if (fabs(normal_length - 1.0) > 1.0e-2) {
+if (fabs(normal_length - 1.0) > 1.0e-1) {
     printf("ERROR: parent_normal not properly normalized! Length = %e\n", normal_length);
     printf("parent_normal = [%e, %e, %e]\n", 
            parent_normal[0], parent_normal[1], parent_normal[2]);
-    CONVERGE_mpi_abort();
+           printf("\n parent_velocity_unit = %e %e %e\n ", parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
+           printf("\n arbritrary = %e %e %e\n ", arbitrary[0], arbitrary[1], arbitrary[2]);
+    // CONVERGE_mpi_abort();
 }
     // printf("\nparent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
 
@@ -195,6 +229,8 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
 
     // First child parcel will have radial velocity along normal
     CONVERGE_vec3_dup(parent_normal,&user_child_velocity[0]); // Set first child parcel's velocity to be along the normal
+    CONVERGE_vec3_normalize(user_child_velocity[0]);
+    CONVERGE_vec3_scale(user_child_velocity[0], rad_vel * aa);
     
 
 
@@ -226,7 +262,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
     sin_theta = sin(theta);
     cos_theta = cos(theta);
     //Developed to split parent parcel into N smaller parcels at breakup 
-    for (int jj = 1; jj < N-1; jj++) // For all the other parcels 2:N
+    for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
     {
     CONVERGE_vec3_dup(user_child_velocity[jj-1], a); // Previous child parcel's velocity 
 
@@ -239,7 +275,7 @@ if (fabs(normal_length - 1.0) > 1.0e-2) {
 
     CONVERGE_vec3_add(a,b,&d);
     CONVERGE_vec3_add(d,c, &user_child_velocity[jj]); // Final child velocity vector
-   CONVERGE_vec3_normalize(user_child_velocity[jj]);
+    CONVERGE_vec3_normalize(user_child_velocity[jj]);
     CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * aa);
     
    
@@ -316,26 +352,14 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     section_start = CONVERGE_mpi_wtime();
     
     //--------- Testing Child Parcel Introduction ----------------//
-    // printf("\n Testing Child Parcel Introduction....\n");
-//Check to see if reducing parent's temperature prevents convergence failure
-    // old_parcel_cloud->temp[p_idx] = old_parcel_cloud->temp[p_idx] -10.0;
-
+ 
     // Calculate number of child parcels
     CONVERGE_precision_t old_mass, new_mass;
     CONVERGE_index_t nnn;
     CONVERGE_precision_t growth_rate, wave_length, radius_equil;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
     CONVERGE_vec3_t new_parcel_uu;
-    CONVERGE_index_t num_child_parcels = 13;
-    // Child radius and number of drops
-    // if(calculated_radius< 0.4*old_parcel_cloud->radius[p_idx])
-    // {
-    //     calculated_radius = 0.4*old_parcel_cloud->radius[p_idx];
-    // }
-    // else if(calculated_radius> old_parcel_cloud->radius[p_idx])
-    // {
-    //     calculated_radius = old_parcel_cloud->radius[p_idx];
-    // }   
+
     new_radius = calculated_radius ;
     // new_radius = old_parcel_cloud->radius[p_idx];
     //Calculate new number of droplets to conserve mass 
@@ -358,91 +382,91 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if(initial_cloud_size >0)
     {
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
+
+                    //Zero parent drop's radius - this triggers CONVERGE to remove the parent 
+
+                    old_parcel_cloud->radius[p_idx] = 0.0; 
+                    old_parcel_cloud->radius_tm1[p_idx] = 0.0;
+                    old_parcel_cloud->num_drop[p_idx] = 0.0; 
+                    old_parcel_cloud->num_drop_tm1[p_idx] = 0.0; 
+                    // old_parcel_cloud->xx[p_idx][0] = 1.0; // This put's the parcel outside of the domain, so it will be removed 
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
-                // Debug: Print memory addresses and values before operations
-                // printf("\nBreakup.c: Before operations - p_idx = %d\n", p_idx);
-                // printf("\nBreakup.c: parent_uu = %e %e %e\n ", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
-                // printf("\nBreakup.c: parent_normal = %e %e %e\n", parent_normal[0], parent_normal[1], parent_normal[2]);
-                // printf("\nBreakup.c: rad_vel = %e\n", rad_vel);
-                // printf("\nBreakup.c: child_uu address = %p\n", (void*)&old_parcel_cloud->child_uu[p_idx]);
-                // printf("\nBreakup.c: radius address = %p\n", (void*)&old_parcel_cloud->radius);
-                // Store the radial velocity component in child_uu
-                // The radial velocity is calculated as rad_vel * parent_normal
-                // printf("\nBreakup.c: Storing radial velocity in child_uu\n");
-                // CONVERGE_vec3_scale(parent_normal, rad_vel);  // This modifies parent_normal in place
-                
-                // Copy the modified parent_normal to child_uu
-                // CONVERGE_vec3_dup(user_child_velocity[nnn],&old_parcel_cloud->child_uu[p_idx]);
-                //Manually copy to child_uu since dup isn't working
-             
-                // printf("\nBreakup.c: user_child_velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
-                // printf("\nBreakup.c: child_uu = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                // old_parcel_cloud->child_index[p_idx] = user_velocity_index;
-                // user_velocity_index = (user_velocity_index + 1) % 20;  // Wrap around if needed
-
-                // Debug: Verify values after storing
-                // printf("\nBreakup.c: After storing - child_uu = %e %e %e\n", 
-                //        old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                
-                // Calculate child's final velocity by adding parent velocity to radial component
-                // printf("\nBreakup.c: Calculating final velocity\n");
-                // CONVERGE_vec3_add(old_parcel_cloud->child_uu[p_idx], old_parcel_cloud->uu[p_idx], &new_parcel_uu);
-                CONVERGE_vec3_add(old_parcel_cloud->uu[p_idx], user_child_velocity[nnn], &new_parcel_uu);
-                // Debug: Verify final velocity
-                // printf("\nBreakup.c: Final velocity = %e %e %e\n", 
-                    //    new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
-                
-                // Debug print of radial velocity component stored in child_uu
-                // printf("\nBreakup.c radial velocity = %e %e %e\n", old_parcel_cloud->child_uu[p_idx][0], old_parcel_cloud->child_uu[p_idx][1], old_parcel_cloud->child_uu[p_idx][2]);
-                // printf("\nBreakup.c child velocity = %e %e %e\n", user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2]);
-                // old_parcel_cloud->child_uu[p_idx][0] = c.vx[nnn]; // Store child's velocity direction so child can be displaced
-                // old_parcel_cloud->child_uu[p_idx][1] = c.vy[nnn]; // Store child's velocity direction so child can be displaced
-                // // old_parcel_cloud->child_uu[p_idx][2] = c.vz[nnn]; // Store child's velocity direction so child can be displaced
-                // printf("\nBreakup.c: Before CONVERGE_spray_child_parcel - child_uu = %e %e %e at %p\n",
-                //     old_parcel_cloud->child_uu[p_idx][0],
-                //     old_parcel_cloud->child_uu[p_idx][1],
-                //     old_parcel_cloud->child_uu[p_idx][2],
-                //     (void*)&old_parcel_cloud->child_uu[p_idx]);
+              
+                CONVERGE_vec3_add(parent_velocity, user_child_velocity[nnn], &new_parcel_uu);
+                // printf("\n adding child velocity to parent velocity\n parent velocity = %e %e %e \nchild velocity = %e %e %e, \nnew velocity = %e %e %e\n", old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2], user_child_velocity[nnn][0], user_child_velocity[nnn][1], user_child_velocity[nnn][2], new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
 
 
+
+                // if (CONVERGE_vec3_normalize(new_parcel_uu)>1.0e4){
+
+                //     printf("\nBreakup.c: Child velocity too large = %e %e %e", new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
+                //     printf("\nBreakup.c: Parent velocity = %e %e %e", parent_velocity[0], parent_velocity[1], parent_velocity[2]);
+                //     printf("\n rad_vel = %e, parent_normal = %e %e %e", rad_vel, parent_normal[0], parent_normal[1], parent_normal[2]);
+                //     CONVERGE_vec3_t temp_parent;
+                //     CONVERGE_vec3_dup(parent_velocity, &temp_parent);
+                //     if(fabs(temp_parent[0])>1.0e4 || fabs(temp_parent[1])>1.0e4 || fabs(temp_parent[2])>1.0e4){
+                //         printf("\nBreakup.c: Parent velocity too large = %e %e %e\n", temp_parent[0], temp_parent[1], temp_parent[2]);
+                //         CONVERGE_mpi_abort();
+                //     }
+                //     printf("\n setting child uu to parent velocity\n");
+                //     CONVERGE_vec3_dup(parent_velocity, &new_parcel_uu);
+                // }
+                // if(fabs(new_parcel_uu[0])>1.0e4 || fabs(new_parcel_uu[1])>1.0e4 || fabs(new_parcel_uu[2])>1.0e4){
+
+                //     printf("\nBreakup.c: Child velocity too large 1 = %e %e %e", new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
+                //     printf("\nBreakup.c: Parent velocity = %e %e %e", parent_velocity[0], parent_velocity[1], parent_velocity[2]);
+                //     printf("\n rad_vel = %e, parent_normal = %e %e %e", rad_vel, parent_normal[0], parent_normal[1], parent_normal[2]);
+                //     CONVERGE_vec3_t temp_parent;
+                //     CONVERGE_vec3_dup(parent_velocity, &temp_parent);
+                //     if(fabs(temp_parent[0])>1.0e4 || fabs(temp_parent[1])>1.0e4 || fabs(temp_parent[2])>1.0e4){
+                //         printf("\nBreakup.c: Parent velocity too large = %e %e %e", temp_parent[0], temp_parent[1], temp_parent[2]);
+                //         CONVERGE_mpi_abort();
+                //     }
+                //     printf("\n setting child uu to parent velocity\n");
+                //     CONVERGE_vec3_dup(parent_velocity, &new_parcel_uu);
+                // }
+
+                // if (isnan(new_parcel_uu[0]) || isnan(new_parcel_uu[1]) || isnan(new_parcel_uu[2])){
+
+                //     printf("\nBreakup.c: Child velocity is nan= %e %e %e", new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
+                //     printf("\nBreakup.c: Parent velocity = %e %e %e", parent_velocity[0], parent_velocity[1], parent_velocity[2]);
+                //     printf("\n rad_vel = %e, parent_normal = %e %e %e", rad_vel, parent_normal[0], parent_normal[1], parent_normal[2]);
+                //     printf("\n setting child uu to parent velocity\n");
+                //     CONVERGE_vec3_dup(parent_velocity, &new_parcel_uu);
+                // }
+
+                int rank;
+	            CONVERGE_mpi_comm_rank(&rank);
+      
+                user_child_velocity_x = new_parcel_uu[0];
+                user_child_velocity_y = new_parcel_uu[1];
+                user_child_velocity_z = new_parcel_uu[2];
+        
+
+                    // printf("\n Breakup Line 458, new_parcel_uu = %e %e %e, rank = %i",new_parcel_uu[0],new_parcel_uu[1],new_parcel_uu[2],rank);   
+                    // printf("\n Breakup Line 459, new_radius = %e, new_num_drop = %e, rank = %i",new_radius,new_parcel_num_drop,rank);   
+                    // printf("\n Breakup Line 460, p_idx = %i, rank = %i",p_idx,rank);
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                             growth_rate,
                                             wave_length,
-                                            new_radius,
+                                            new_radius, 
                                             new_parcel_num_drop,
                                             p_idx,
                                             cloud);
-                //Update position of child Parcel
+                // printf("\n Breakup Line 465 after spray_child_parcel, rank = %i",rank);
 
-                // CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
-                // printf("\nBreakup.c: initial_cloud_size = %i, new_cloud_size = %i\n", initial_cloud_size, new_cloud_size);
-                // printf("\nBreakup.c: nnn = %i\n", nnn);
-                // CONVERGE_index_t child_idx = initial_cloud_size+nnn;
 
-                // if(child_idx < new_cloud_size) {
-                //     CONVERGE_vec3_t child_displacement,old_position;
-                //     CONVERGE_vec3_dup(user_child_velocity[nnn], &child_displacement);
-                //     CONVERGE_vec3_normalize(child_displacement);
-                //     CONVERGE_vec3_scale(child_displacement, parent_radius);
-                //     CONVERGE_vec3_dup(old_parcel_cloud->xx[child_idx], &old_position);
-                // CONVERGE_vec3_add(old_position, child_displacement, &old_parcel_cloud->xx[child_idx]);
-                // }
+            // reload after adding parcels
+            load_user_cloud(old_parcel_cloud, cloud);
             }
             child_parcel_time = CONVERGE_mpi_wtime() - section_start;
 
             section_start = CONVERGE_mpi_wtime();
             
 
-            // reload after adding parcels
-            load_user_cloud(old_parcel_cloud, cloud);
 
-            //Zero parent drop's radius - this triggers CONVERGE to remove the parent 
 
-            old_parcel_cloud->radius[p_idx] = 0.0; 
-            old_parcel_cloud->radius_tm1[p_idx] = 0.0;
-            old_parcel_cloud->num_drop[p_idx] = 0.0; 
-            old_parcel_cloud->num_drop_tm1[p_idx] = 0.0; 
 
             CONVERGE_index_t new_cloud_size = CONVERGE_cloud_size(cloud);
             // printf("\nNew cloud size = %i\n\n",new_cloud_size);

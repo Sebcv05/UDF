@@ -11,6 +11,7 @@
 #include "lagrangian/env.h"
 #include <counter.h>
 #include <CONVERGE/udf.h>
+#include <pthread.h>
 //Global variables to index parcels and clouds - need to initialize here
  user_parcel_counter = 0; //First index
  user_cloud_counter = 0; //First index
@@ -19,6 +20,7 @@
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
 {
+   
    // Register a simple double data parcel field
    CONVERGE_variable_register("user_lag_var", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);

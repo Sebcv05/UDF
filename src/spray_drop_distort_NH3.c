@@ -31,6 +31,8 @@
 //#include <mpi.h>
 //#include <DestroyTables.h>
 #include <Vb.h>
+#include <globals.h>
+
 
 /// @brief UDF Thermal Breakup Model with all thermal properties for ammonia
 /// @param mesh 
@@ -43,6 +45,7 @@
 /// @param parcel_counter 
 /// @param sp 
 static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index, const CONVERGE_precision_t *global_density, const CONVERGE_precision_t *global_viscosity, CONVERGE_index_t parcel_counter,CONVERGE_species_t sp);
+static void sync_child_velocity(CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index);
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
 /**********************************************************************/
@@ -64,7 +67,6 @@ static void destroy_tables(CONVERGE_species_t species);
 /*     Geometry.c, DGRE.c, BreakupCriterion.c, Breakaup.c             */
 /**********************************************************************/
 static CONVERGE_table_t *hvap_table = NULL;
-
 
 
 
@@ -588,6 +590,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    // printf("end of spray break cell\n");
 
+
+
+
    if(mass_after>mass_before)
    {
       CONVERGE_precision_t increase = mass_after-mass_before;
@@ -599,6 +604,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    }
 }
+
 
 void init_tables(CONVERGE_species_t species)
 {
@@ -650,4 +656,34 @@ static void destroy_tables(CONVERGE_species_t species)
 
    CONVERGE_iterator_destroy(&parcel_species_it);
    CONVERGE_iterator_destroy(&gas_species_it);
+}
+
+
+
+CONVERGE_BEFORE_TRANSPORT(sync_child_velocity,
+    IN(VALUE(CONVERGE_mesh_t, mesh)),
+    OUT(CONVERGE_VOID))
+{
+    CONVERGE_int_t rank;
+    CONVERGE_mpi_comm_rank(&rank);
+
+    // For safety: only rank 0 keeps its computed values,
+    // all other ranks clear them before broadcast.
+    if (rank != 0) {
+        user_child_velocity_x = 0.0;
+        user_child_velocity_y = 0.0;
+        user_child_velocity_z = 0.0;
+    }
+
+    // Broadcast from rank 0 to all other ranks
+    CONVERGE_mpi_bcast(&user_child_velocity_x, 1, CONVERGE_PRECISION, 0);
+    CONVERGE_mpi_bcast(&user_child_velocity_y, 1, CONVERGE_PRECISION, 0);
+    CONVERGE_mpi_bcast(&user_child_velocity_z, 1, CONVERGE_PRECISION, 0);
+
+    if (rank == 0) {
+      //   printf("BEFORE_TRANSPORT: broadcasted child velocity = %e %e %e\n",
+               user_child_velocity_x,
+               user_child_velocity_y,
+               user_child_velocity_z;
+    }
 }

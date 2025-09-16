@@ -1029,8 +1029,8 @@ CONVERGE_precision_t user_radius = 0.0;
 
 
                //Cap maximum rate of radius change  - disabling to try boiling  model  
-               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
+               if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-1){
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-1;
                }
 
                //  again don't allow condensation

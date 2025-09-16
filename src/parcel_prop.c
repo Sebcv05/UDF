@@ -18,6 +18,7 @@
 #include <counter.h>
 #include <PsatNH3.h>
 #include <user_header.h>
+#include <globals.h>
 #include "Breakup.h"
 
 /**********************************************************************/
@@ -38,6 +39,10 @@ CONVERGE_UDF(parcel_inject,
              IN(VALUE(CONVERGE_index_t, passed_parcel_idx), VALUE(CONVERGE_cloud_t, passed_spray_cloud)),
              OUT(CONVERGE_VOID))
 {
+   
+   // const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(passed_spray_cloud);
+   // CONVERGE_precision_t ambient_pres = pressure[node_index];
+
    // printf("\n START OF PARCEL_PROP.C \n");
    struct ParcelCloud parcel_cloud;
 
@@ -53,6 +58,7 @@ CONVERGE_UDF(parcel_inject,
 
    // printf("\n ambient_pres = %f \n",ambient_pres);
    // printf("\n r_bubble old = %f \n", parcel_cloud.r_bubble[passed_parcel_idx]);
+   CONVERGE_precision_t ambient_pres = 2.0e5;
 
    parcel_cloud.r_bubble[passed_parcel_idx] = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
    if (parcel_cloud.r_bubble[passed_parcel_idx] < 0.0)
@@ -201,7 +207,46 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.tbt[passed_child_parcel_idx] = 0;
    parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;   
    parcel_cloud.temp[passed_child_parcel_idx] = parcel_cloud.temp[passed_parent_parcel_idx];
+
    parcel_cloud.temp_tm1[passed_child_parcel_idx] = parcel_cloud.temp_tm1[passed_parent_parcel_idx];
+   int rank;
+   CONVERGE_mpi_comm_rank(&rank);
+   // printf("\nParcel Child, radius = %e, num_drop = %e, rank = %i\n",parcel_cloud.radius[passed_child_parcel_idx],parcel_cloud.num_drop[passed_child_parcel_idx],rank);
+   // printf("\nParcel Child p_idx_child = %i, p_idx_parent = %i, rank = %i\n",passed_child_parcel_idx,passed_parent_parcel_idx,rank);
+   // printf("\n Parcel Child - uu before update = %e %e %e, rank = %i\n",parcel_cloud.uu[passed_child_parcel_idx][0],parcel_cloud.uu[passed_child_parcel_idx][1],parcel_cloud.uu[passed_child_parcel_idx][2],rank);
+
+      parcel_cloud.uu[passed_child_parcel_idx][0] = user_child_velocity_x;
+      parcel_cloud.uu[passed_child_parcel_idx][1] = user_child_velocity_y;
+      parcel_cloud.uu[passed_child_parcel_idx][2] = user_child_velocity_z;
+      
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][0] = user_child_velocity_x;
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][1] = user_child_velocity_y;
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][2] = user_child_velocity_z;
+
+      // Update positions based on the velocity
+      parcel_cloud.xx[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_parent_parcel_idx][0] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_x;
+      parcel_cloud.xx[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_parent_parcel_idx][1] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_y;
+      parcel_cloud.xx[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_parent_parcel_idx][2] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_z;
+      parcel_cloud.xx_tm1[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_child_parcel_idx][0];
+      parcel_cloud.xx_tm1[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_child_parcel_idx][1];
+      parcel_cloud.xx_tm1[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_child_parcel_idx][2];
+
+
+   // CONVERGE_vec3_t debug_vel;
+   // debug_vel[0] = 0.0;
+   // debug_vel[1] = 100.0;
+   // debug_vel[2] = 0.0; 
+   // printf("\n Parcel Child - uu after update = %e %e %e, rank = %i\n",parcel_cloud.uu[passed_child_parcel_idx][0],parcel_cloud.uu[passed_child_parcel_idx][1],parcel_cloud.uu[passed_child_parcel_idx][2],rank);
+
+   // parcel_cloud.uu[passed_child_parcel_idx][0] = debug_vel[0];
+   // parcel_cloud.uu[passed_child_parcel_idx][1] = debug_vel[1];
+   // parcel_cloud.uu[passed_child_parcel_idx][2] = debug_vel[2];
+   // // parcel_cloud.uu_tm1[passed_child_parcel_idx][0] = debug_vel[0];
+   // // parcel_cloud.uu_tm1[passed_child_parcel_idx][1] = debug_vel[1];
+   // // parcel_cloud.uu_tm1[passed_child_parcel_idx][2] = debug_vel[2];
+   // parcel_cloud.uprime[passed_child_parcel_idx][0] = debug_vel[0];
+   // parcel_cloud.uprime[passed_child_parcel_idx][1] = debug_vel[1];
+   // parcel_cloud.uprime[passed_child_parcel_idx][2] = debug_vel[2];
       // CONVERGE_vec3_t rel_vel;
       // // CONVERGE_vec3_dup(parcel_cloud.child_uu[passed_parent_parcel_idx], &rel_vel);
       // printf("\nparcel_child: rel_vel = %e %e %e at %p\n",
