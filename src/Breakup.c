@@ -104,7 +104,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
-    CONVERGE_index_t num_child_parcels = 20;
+    CONVERGE_index_t num_child_parcels =20;
     CONVERGE_index_t N = num_child_parcels;
 
     // End of initialization section
@@ -190,7 +190,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         CONVERGE_mpi_abort();
     }
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 10.0; // Scale factor for velocity 
+    CONVERGE_precision_t aa = 1.0; // Scale factor for velocity 
     //this is a comment
     // printf("\n aa * rad_vel = %e, parent_vmag = %e, rad_vel*aa/vmag = %e",aa*rad_vel,parent_vmag,rad_vel*aa/parent_vmag);
    
