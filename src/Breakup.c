@@ -45,7 +45,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\nBreakup.c: Invalid cloud or parcel cloud pointer\n");
         CONVERGE_mpi_abort();
     }
-    CONVERGE_vec3_t user_child_velocity[13];
+    CONVERGE_vec3_t user_child_velocity[20];
 
     // Get cloud size and verify parcel index
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
