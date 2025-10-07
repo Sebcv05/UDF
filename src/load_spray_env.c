@@ -38,6 +38,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("child_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    CONVERGE_variable_register("eta_drop", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("eta_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("thermal_breakup_flag", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    // Register a simple int data parcel field
@@ -99,6 +100,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    OMEGA_TM1    = CONVERGE_lagrangian_field_id("omega_tm1");
    INT_OMEGA    = CONVERGE_lagrangian_field_id("int_omega");
    ETA      = CONVERGE_lagrangian_field_id("eta_drop");   
+   ETA_0    = CONVERGE_lagrangian_field_id("eta_drop_0");
    USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
    THERMAL_BREAKUP_FLAG = CONVERGE_lagrangian_field_id("thermal_breakup_flag");
    TBT      = CONVERGE_lagrangian_field_id("tbt");
@@ -439,6 +441,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->m0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,M0);
 
    parcel_cloud_loc->eta_drop  = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, ETA);
+   parcel_cloud_loc->eta_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, ETA_0);
 
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->tbt              = (int *)CONVERGE_cloud_get_field_data(c,TBT);

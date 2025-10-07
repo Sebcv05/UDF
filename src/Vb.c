@@ -33,5 +33,5 @@ void Bubble_Velocity(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx
                }
             }
             
-            old_parcel_cloud->v_bubble[p_idx] = Vb_temp;
+            old_parcel_cloud->v_bubble[p_idx] = Vb_temp ;
 }

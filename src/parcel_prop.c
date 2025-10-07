@@ -85,6 +85,32 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.int_omega[passed_parcel_idx] = 0;
    parcel_cloud.omega[passed_parcel_idx] = parcel_cloud.omega_tm1[passed_parcel_idx] = 0;
    parcel_cloud.eta_drop[passed_parcel_idx] = 0;
+
+   //Initialze eta_0 according to log-normal distribution
+      // mean target for eta_0
+      CONVERGE_precision_t m = 0.05; 
+
+      // choose spread
+      CONVERGE_precision_t sigma = 1.0; // adjust 0.1–0.5 as needed
+
+      // convert to log-space parameters
+      CONVERGE_precision_t mu = log(m) - 0.5 * sigma * sigma;
+
+      // generate two uniforms
+      CONVERGE_precision_t u1 = CONVERGE_random_precision();
+      CONVERGE_precision_t u2 = CONVERGE_random_precision();
+
+      // transform to normal(0,1)
+      CONVERGE_precision_t z = sqrt(-2.0*log(u1)) * cos(2.0*M_PI*u2);
+
+      // scale/shift to normal(mu, sigma^2)
+      CONVERGE_precision_t y = mu + sigma * z;
+
+      // exponentiate to get lognormal
+      parcel_cloud.eta_drop_0[passed_parcel_idx] = exp(y) * parcel_cloud.radius[passed_parcel_idx];
+      // printf("\n eta_drop_0 = %e\n",parcel_cloud.eta_drop_0[passed_parcel_idx]);
+
+
    parcel_cloud.dgre_cycle_count[passed_parcel_idx] = 0;
    parcel_cloud.tbt[passed_parcel_idx] = 0;
    parcel_cloud.pbt[passed_parcel_idx] = 1;
@@ -95,6 +121,7 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.cloud_index[passed_parcel_idx] = -1;
    user_parcel_counter ++;
    
+
 
    char *filename = "DGRE.txt";
    char *filename1 = "Temp_Tracker.txt";

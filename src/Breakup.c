@@ -21,24 +21,26 @@ CONVERGE_precision_t user_child_velocity_x =0.0;
 CONVERGE_precision_t user_child_velocity_y =0.0;
 CONVERGE_precision_t user_child_velocity_z =0.0;
 
+
+// Profiling accumulators
+static double prof_calcs = 0.0;
+static double prof_loop = 0.0;
+static double prof_child_parcel = 0.0;
+static double prof_property_copy = 0.0;
+static double prof_velocity_calc = 0.0;
+static double prof_insert_cloud = 0.0;
+static int last_cycle = -1;
 // Function to print profiling information
 
 
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_cloud_t cloud)
 {
 
+    // printf("\n Breakup Triggered, r_bubble = %2e, v_bubble = %2e, radius = %2e, breakup_flag = %i\n", old_parcel_cloud->r_bubble[p_idx], old_parcel_cloud->v_bubble[p_idx], old_parcel_cloud->radius[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx]);
 
     //Timing vars
-    CONVERGE_precision_t init_time = 0.0;
-    CONVERGE_precision_t breakup_calc_time = 0.0;
-    CONVERGE_precision_t child_parcel_time = 0.0;
-    CONVERGE_precision_t zero_time = 0.0;   
-    CONVERGE_precision_t total_breakup_time = 0.0;
-    // Start timing the entire function
-    CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
-    CONVERGE_precision_t section_start;
+    CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
     // Section 1: Initialization and validation
-    section_start = CONVERGE_mpi_wtime();
     
     // Check if cloud and parcel cloud are valid
     if (!cloud || !old_parcel_cloud) {
@@ -104,18 +106,16 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
-    CONVERGE_index_t num_child_parcels =20;
+    CONVERGE_index_t num_child_parcels =12;
     CONVERGE_index_t N = num_child_parcels;
 
     // End of initialization section
-    init_time = CONVERGE_mpi_wtime() - section_start;
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
     {
         old_parcel_cloud->r_bubble[p_idx] = 0.95 * old_parcel_cloud->radius[p_idx];
     }
     // Section 2: Velocity calculations
-    section_start = CONVERGE_mpi_wtime();
     
     // Create velocity vectors for all child parcels
     // Get parent parcel's velocity - v = vx i + vy j + vz k
@@ -166,16 +166,16 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     CONVERGE_precision_t rad_vel = 3.0 * old_parcel_cloud->v_bubble[p_idx] * CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]) * (old_parcel_cloud->radius[p_idx] - old_parcel_cloud->r_bubble[p_idx]) / (CONVERGE_cube(old_parcel_cloud->radius[p_idx]) - CONVERGE_cube(old_parcel_cloud->r_bubble[p_idx]));
     if (rad_vel > parent_vmag)
     {
-        printf("\nLarge rad vel ---- parent vel magnitude = %e, child_rad_vel = %e", parent_vmag, rad_vel);
-        printf("\n p_idx = %i",p_idx);
-        printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
-        printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
-        printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
-        printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
-        printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
-        printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
-        printf("\n parent velocity = %e %e %e",old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
-        // rad_vel = 0.0;           //Tried this to fix probllem with YNH3 field but it didn't work
+        // printf("\nLarge rad vel ---- parent vel magnitude = %e, child_rad_vel = %e", parent_vmag, rad_vel);
+        // printf("\n p_idx = %i",p_idx);
+        // printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
+        // printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
+        // printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
+        // printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
+        // printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
+        // printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
+        // printf("\n parent velocity = %e %e %e",old_parcel_cloud->uu[p_idx][0], old_parcel_cloud->uu[p_idx][1], old_parcel_cloud->uu[p_idx][2]);
+        // // rad_vel = 0.0;           //Tried this to fix probllem with YNH3 field but it didn't work
     
     }
     else if(fabs(rad_vel)<1.0e-9){
@@ -189,8 +189,18 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
         CONVERGE_mpi_abort();
     }
+
+// --- TEMPORARY CONSTANT TEST VALUES ---
+// old_parcel_cloud->r_bubble[p_idx] = 50.0e-6;    // fixed bubble radius [m]
+// old_parcel_cloud->v_bubble[p_idx] = 10.0;      // fixed bubble growth velocity [m/s]
+// -------------------------------------
+// Get values for r_bubble and v_bubble by printing 
+// printf("\n r_bubble = %2e, v_bubble = %2e, r_drop = %2e, tbf = %i",old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->radius[p_idx],old_parcel_cloud->thermal_breakup_flag[p_idx]);
+
+
+
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 1.0; // Scale factor for velocity 
+    CONVERGE_precision_t aa = 10.0; // Scale factor for velocity 
     //this is a comment
     // printf("\n aa * rad_vel = %e, parent_vmag = %e, rad_vel*aa/vmag = %e",aa*rad_vel,parent_vmag,rad_vel*aa/parent_vmag);
    
@@ -281,7 +291,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
    
     } // end of jj loop
 
-
+  
 
     //----------------------------Calculate post breakup radius and number of drops for each child parcel----------------------------
 
@@ -344,12 +354,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
 
 
 
-      
-    // End of breakup calculation section
-    breakup_calc_time = CONVERGE_mpi_wtime() - section_start;
-    
-    // Section 4: Child parcel creation
-    section_start = CONVERGE_mpi_wtime();
+    prof_calcs += CONVERGE_mpi_wtime() - t0;
     
     //--------- Testing Child Parcel Introduction ----------------//
  
@@ -373,7 +378,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     // old_parcel_cloud->temp[p_idx] = 252.0;
 
 
-
+    t0 = CONVERGE_mpi_wtime();
     growth_rate = 0.0;
     wave_length = 0.0;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
@@ -447,6 +452,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
                     // printf("\n Breakup Line 458, new_parcel_uu = %e %e %e, rank = %i",new_parcel_uu[0],new_parcel_uu[1],new_parcel_uu[2],rank);   
                     // printf("\n Breakup Line 459, new_radius = %e, new_num_drop = %e, rank = %i",new_radius,new_parcel_num_drop,rank);   
                     // printf("\n Breakup Line 460, p_idx = %i, rank = %i",p_idx,rank);
+                    CONVERGE_precision_t t1 = CONVERGE_mpi_wtime();
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                             growth_rate,
                                             wave_length,
@@ -454,15 +460,14 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
                                             new_parcel_num_drop,
                                             p_idx,
                                             cloud);
+                prof_child_parcel += CONVERGE_mpi_wtime() - t1;
                 // printf("\n Breakup Line 465 after spray_child_parcel, rank = %i",rank);
 
 
             // reload after adding parcels
             load_user_cloud(old_parcel_cloud, cloud);
             }
-            child_parcel_time = CONVERGE_mpi_wtime() - section_start;
 
-            section_start = CONVERGE_mpi_wtime();
             
 
 
@@ -478,12 +483,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
         }
             // --------- End of Testing Child Parcel Introduction ----------------//
 
-        // if (old_parcel_cloud->radius[p_idx] < parent_radius )
-        // {
-        //     printf("radius decreased by thermal breakup ");
-        // }
-
-    // printf("\nN = %i",N);
+            prof_loop += CONVERGE_mpi_wtime() - t0;
 
     // old_parcel_cloud->num_drop[p_idx] = old_parcel_cloud->num_drop[p_idx] * CONVERGE_cube(parent_radius / old_parcel_cloud->radius[p_idx]);
     CONVERGE_precision_t mnew = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
@@ -505,26 +505,24 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     }
     // End of child parcel section
     
-    // Update profiling information
-   zero_time = CONVERGE_mpi_wtime() - section_start;
-    
-    total_breakup_time = CONVERGE_mpi_wtime() - start_time;
-    
-//Timing Fractions
-CONVERGE_precision_t init_time_frac,breakup_calc_time_frac,child_parcel_time_frac,zero_time_frac,sum_time_frac;
-init_time_frac = init_time / total_breakup_time;
-breakup_calc_time_frac = breakup_calc_time / total_breakup_time;
-child_parcel_time_frac = child_parcel_time / total_breakup_time;
-zero_time_frac = zero_time / total_breakup_time;
-sum_time_frac = init_time_frac + breakup_calc_time_frac + child_parcel_time_frac + zero_time_frac;
-    // Print profiling information periodically
-    // printf("\n==========================");
-    // printf("\nbreakup.c total time = %e ms\n\n",total_breakup_time*1000);
-    // printf("\ninit_time_frac = %f \%\n",init_time_frac*100);
-    // printf("\nbreakup_calc_time_frac = %f \%\n",breakup_calc_time_frac*100);
-    // printf("\nchild_parcel_time_frac = %f \%\n",child_parcel_time_frac*100);
-    // printf("\nzero_time_frac = %f \%\n",zero_time_frac*100);
-    // printf("\nsum_time_frac = %f \%\n",sum_time_frac*100);
-    // printf("\n==========================");
-    // old_parcel_cloud->tbreak_kh[p_idx] = old_parcel_cloud->thermal_breakup_flag[p_idx];
+
+
+
+    int ncyc = CONVERGE_ncyc();
+    if (ncyc != last_cycle) {
+    int rank;
+    CONVERGE_mpi_comm_rank(&rank);
+    // printf("Rank %d, Cycle %d Breakup profiling (s): calc=%f, child_parcel=%f, loop=%f\n",
+        //    rank, ncyc, prof_loop, prof_child_parcel, prof_calcs);
+
+    double total = prof_loop + prof_calcs;
+    // printf("Rank %d, Cycle %d Breakup profiling (%%): calc=%f, child_parcel=%f, loop=%f\n",
+        //    rank, ncyc,
+        //    100.0*prof_calcs/total,
+        //    100.0*prof_child_parcel/total,
+        //    100.0*prof_loop/total);
+
+    prof_loop = prof_child_parcel = prof_calcs = 0.0;
+    last_cycle = ncyc;
+}
 }

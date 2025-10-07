@@ -26,8 +26,8 @@ CONVERGE_precision_t BreakupCriterion(struct ParcelCloud* old_parcel_cloud,CONVE
             int_omega = int_omega + trap;               //Update Omega
 
             //printf("\ntrap %e omega_tm1 %e",trap,omega_tm1);
-            eta_0 = 0.05 * old_parcel_cloud->r_drop_0[p_idx];                        // Eta_0 set to a fraction of the initial drop radius
-
+            // eta_0 = 0.05 * old_parcel_cloud->r_drop_0[p_idx];                        // Eta_0 set to a fraction of the initial drop radius
+            eta_0 = old_parcel_cloud->eta_drop_0[p_idx];
             // Update
             CONVERGE_precision_t e = 2.71828182845904523536;
             eta = eta_0 * pow(e,int_omega); // Current instability amplitude 

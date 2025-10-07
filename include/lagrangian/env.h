@@ -20,6 +20,7 @@ CONVERGE_id_t OMEGA;				//DGRE root
 CONVERGE_id_t OMEGA_TM1;
 CONVERGE_id_t INT_OMEGA;
 CONVERGE_id_t ETA;				//Integral of omega - breakup criterion
+CONVERGE_id_t ETA_0;				//Integral of omega - breakup criterion
 CONVERGE_id_t USER_LAG_VARi;
 CONVERGE_id_t DGRE_COUNT;
 CONVERGE_id_t PARCEL_INDEX;             // Parcel Index
@@ -352,6 +353,7 @@ struct ParcelCloud
    CONVERGE_precision_t* omega_tm1;
    CONVERGE_precision_t* int_omega;
    CONVERGE_precision_t * eta_drop;
+   CONVERGE_precision_t * eta_drop_0;
    CONVERGE_precision_t * r_bubble_tm1;
    CONVERGE_precision_t * m0;
    CONVERGE_int_t* parcel_index;

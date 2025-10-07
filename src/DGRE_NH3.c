@@ -49,7 +49,7 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             CONVERGE_precision_t dgre_alpha, dgre_beta, dgre_gamma, dgre_delta, dgre_epsilon;
             dgre_alpha = Delta - Delta_sq - psi_o * Delta;
             dgre_beta = CONVERGE_sqrt(We_o) * ((Delta_sq*Delta_sq) + psi_o - 1.0);
-            dgre_gamma = 2.0 * inv_Delta*inv_Delta;
+            dgre_gamma = 2.0 * (inv_Delta*inv_Delta + Delta_sq);
             Delta_over_Ma_i = Delta/Ma_i;
             dgre_delta = 3.0 * psi_i * We_i * Delta_over_Ma_i * Delta_over_Ma_i;
             dgre_epsilon = 3.0 * CONVERGE_sqrt(We_i);
