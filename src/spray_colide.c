@@ -209,8 +209,8 @@ static void spray_collide_cell(CONVERGE_int_t cloud_size,
 	    spray_cloud.parent = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(cvg_cloud, LAGRANGIAN_PARENT);
 		
 		// Skip parcels with lfetime < 1mus 
-		// spray_cloud.lifetime = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(cvg_cloud, LAGRANGIAN_LIFETIME);
-		// if (spray_cloud.lifetime[p_idx] < 1.0e-6){
+		spray_cloud.lifetime = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(cvg_cloud, LAGRANGIAN_LIFETIME);
+		// if (spray_cloud.lifetime[p_idx] < 1.0e-3 && spray_cloud.is_child[p_idx] == 1){
 		//    continue;
 		// }
 	    CONVERGE_injector_t injector = CONVERGE_get_injector_with_id(spray_cloud.from_injector[p_idx]);

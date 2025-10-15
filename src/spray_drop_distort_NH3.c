@@ -49,6 +49,17 @@ static void sync_child_velocity(CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t sp
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
 
+// static void init_tables(CONVERGE_species_t species);
+// static void destroy_tables(CONVERGE_species_t species);
+static CONVERGE_table_t *pvap_table = NULL;
+static CONVERGE_table_t *visc_table = NULL;
+static CONVERGE_table_t *cond_table = NULL;
+static CONVERGE_table_t *cp_table   = NULL;
+static CONVERGE_table_t *rho_table  = NULL;
+static CONVERGE_table_t *h_table    = NULL;
+static CONVERGE_table_t *evap_species_h_table;
+static CONVERGE_table_t *evap_species_sensible_h_table;
+
 // Profiling accumulators
 static double prof_geom=0.0, prof_dgre=0.0, prof_bc=0.0, prof_break=0.0, prof_bubble=0.0;
 static int last_cycle = -1;
@@ -89,13 +100,13 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
    CONVERGE_iterator_t cl_it;
    CONVERGE_species_t sp = CONVERGE_mesh_species(mesh);
    CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
-
+   init_tables(sp);
    for (CONVERGE_index_t i_pc = CONVERGE_iterator_first(cl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(cl_it))
    {
       cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
       const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
       // printf("\ninitializing tables");
-      init_tables(sp);
+     
       // printf("\n spray_distort_cell...");
     
    
@@ -105,10 +116,10 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
      
      // printf("\ndiff = %es",sdc_diff);
     //  printf("\n destroying tables...");
-      destroy_tables(sp);
+      
 
    }
-
+   destroy_tables(sp);
   
    //Get rank 
    // CONVERGE_int_t rank;

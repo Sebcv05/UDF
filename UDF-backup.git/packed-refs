@@ -1,0 +1,9 @@
+# pack-refs with: peeled fully-peeled sorted 
+32d396b647b35e1a226c2d62f228f604993be4a7 refs/heads/Price
+ed49780e27f9cfa15035e4a127a32cd003ff0ea1 refs/heads/codex/remove-duplicate-src-and-include-directories
+115c317db16ee43c5be6d03f03b6c5ee7de59921 refs/heads/geometry_relax
+1e5367cc294f45425a7cef54862dc869bb2748a8 refs/heads/main
+cb5f1cee3eae4b01c6304db9eb9455e40c42fb95 refs/heads/master
+5fa7b2d337692f895b19d3abeae3d42b33f8b08e refs/heads/v3.1.12
+54cd5d1770db5d7db86f53d4e3fe032ca7b49379 refs/heads/v4
+ed49780e27f9cfa15035e4a127a32cd003ff0ea1 refs/pull/1/head

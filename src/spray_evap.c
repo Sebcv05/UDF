@@ -17,50 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Profiling variables
-static int evap_call_count = 0;
-static CONVERGE_precision_t total_evap_time = 0.0;
-static CONVERGE_precision_t init_time = 0.0;
-static CONVERGE_precision_t boil_time = 0.0;
-static CONVERGE_precision_t evap_time = 0.0;
-static CONVERGE_precision_t source_time = 0.0;
-static CONVERGE_precision_t other_time = 0.0;  // Track unaccounted time
-
-// Function to print profiling information
-static void print_evap_profiling() {
- 
-    
 
 
-    
-    // Calculate unaccounted time
-    CONVERGE_precision_t measured_time = init_time + boil_time + evap_time + source_time;
-    other_time = (total_evap_time > measured_time) ? (total_evap_time - measured_time) : 0.0;
-    
-    printf("\n=== Spray Evaporation Profiling ===\n");
-    printf("Total calls: %d\n", evap_call_count);
-    printf("Total time: %.6f s (avg: %.6f ms/call)\n", 
-           total_evap_time, (total_evap_time/(evap_call_count > 0 ? evap_call_count : 1))*1000.0);
-    printf("Measured time: %.6f s (%.1f%% of total)\n", 
-           measured_time, (measured_time/total_evap_time)*100.0);
-    
-    printf("\nTime distribution (of measured time):\n");
-    printf("  Initialization: %8.2f%% (avg: %9.6f ms/call)\n", 
-           100.0 * init_time / measured_time, (init_time/evap_call_count)*1000.0);
-    printf("  Boiling calcs:  %8.2f%% (avg: %9.6f ms/call)\n", 
-           100.0 * boil_time / measured_time, (boil_time/evap_call_count)*1000.0);
-    printf("  Evaporation:    %8.2f%% (avg: %9.6f ms/call)\n", 
-           100.0 * evap_time / measured_time, (evap_time/evap_call_count)*1000.0);
-    printf("  Source terms:   %8.2f%% (avg: %9.6f ms/call)\n", 
-           100.0 * source_time / measured_time, (source_time/evap_call_count)*1000.0);
-    
-    if (other_time > 0.0) {
-        printf("  Unaccounted:    %8.2f%% (avg: %9.6f ms/call)\n", 
-               100.0 * other_time / total_evap_time, (other_time/evap_call_count)*1000.0);
-    }
-    printf("=== End Profiling ===\n\n");
-    fflush(stdout);  // Ensure output is flushed immediately
-}
 
 static void spray_evap_cell(CONVERGE_cloud_t cloud);
 static void reset_parcel_temp_mfrac(const CONVERGE_index_t parcel_idx,
@@ -246,7 +204,7 @@ CONVERGE_UDF(spray_evap,
    global_region_index              = region_index;
 
    // Get Simulation Meta data
-   CONVERGE_precision_t dt = CONVERGE_simulation_dt();
+   // CONVERGE_precision_t dt = CONVERGE_simulation_dt();
 
    CONVERGE_cloud_t cloud;
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(scl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(scl_it))
@@ -278,11 +236,7 @@ CONVERGE_UDF(spray_evap,
 void spray_evap_cell(CONVERGE_cloud_t cloud)
 {
    // Start timing the entire function
-   CONVERGE_precision_t start_time = CONVERGE_mpi_wtime();
-   CONVERGE_precision_t section_start, section_end;
-   
-   // Section 1: Initialization
-   section_start = CONVERGE_mpi_wtime();
+
    
    // Setup parcel species counts and iterator
    CONVERGE_iterator_t psp_it;
@@ -319,12 +273,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    int *parcel_species_boil_flag                    = SAFE_calloc(num_parcel_species, int);
 
 
-   // Record initialization time
-   section_end = CONVERGE_mpi_wtime();
-   init_time += section_end - section_start;
    
-   // Section 2: Boiling calculations
-   section_start = CONVERGE_mpi_wtime();
    
 
 
@@ -366,12 +315,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t pre_coeff_flshblg_g25 = CONVERGE_get_double("lagrangian.pre_coeff_flshblg_g25");
    CONVERGE_precision_t expnt_flshblg_g25 = CONVERGE_get_double("lagrangian.expnt_flshblg_g25");
    
-   // Record boiling calculation time
-   section_end = CONVERGE_mpi_wtime();
-   boil_time += section_end - section_start;
-   
-   // Section 3: Evaporation calculations
-   section_start = CONVERGE_mpi_wtime();
+
    // This section timing will be updated at the end of the section
    
    /////////////////////////////////////////////////////////////////////
@@ -384,7 +328,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
    const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
 
-   const CONVERGE_precision_t min_spray_temp          = 160.0;
+   const CONVERGE_precision_t min_spray_temp          = 180.0;
    const CONVERGE_precision_t min_spray_recovery_temp = 200.0;
 
    // Old table lookup vars
@@ -565,14 +509,29 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    // implicit drop temperature solver
    CONVERGE_precision_t temp_gas = global_temperature[node_index];
 
+   // UDF-level check for non-physical gas temperature
+   if (isnan(temp_gas) || isinf(temp_gas) || temp_gas < 100.0) {
+       CONVERGE_logger_err(
+           "spray_evap.c: Invalid gas temperature (%.2f) in cell %ld at ncyc %ld. Skipping evaporation for all parcels in this cell.",
+           temp_gas, node_index, CONVERGE_ncyc()
+       );
+       return; // Exit the function, skipping evap for this entire cloud/cell
+   }
+
    // calculate prandtl number followed by reynolds number, nusselt number and sherwood number
    CONVERGE_precision_t pr_num =
       global_mol_viscosity[node_index] * global_csubp[node_index] / global_mol_cond[node_index];
-      CONVERGE_int_t user_child_flag = 0;
       CONVERGE_precision_t user_lifetime = 0.0;
-   // loop over all parcels in cell
    for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
    {
+      // UDF-level check to prevent crash from non-physical parcel temperatures
+      if (isnan(parcel_cloud.temp[i_pc]) || isinf(parcel_cloud.temp[i_pc]) || parcel_cloud.temp[i_pc] < 100.0) {
+          CONVERGE_logger_warn(
+              "spray_evap.c: Parcel %ld (cloud %ld) has invalid temperature (%.2f) at ncyc %ld before main evap loop. Skipping parcel's contribution to evap this step.",
+              i_pc, parcel_cloud.cloud_index[i_pc], parcel_cloud.temp[i_pc], CONVERGE_ncyc()
+          );
+          continue; // Skip to the next parcel
+      }
       // if((parcel_cloud.is_child[i_pc]==1 && parcel_cloud.lifetime[i_pc]<1.0e-5) || parcel_cloud.tbt[i_pc]){
       //    user_child_flag = 1;
       //    // continue;
@@ -583,6 +542,14 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       mol_visc = 0.0;
       for(int isp = 0; isp < num_gas_species; isp++)
       {
+         if (visc_table == NULL) {
+             CONVERGE_logger_fatal("UDF Error in spray_evap.c: The entire 'visc_table' is NULL at ncyc %ld. Table loading failed.", CONVERGE_ncyc());
+             return;
+         }
+         if (visc_table[isp] == NULL) {
+             CONVERGE_logger_err("UDF Error in spray_evap.c: 'visc_table' for species index %d is NULL at ncyc %ld. Skipping viscosity calculation for this species.", isp, CONVERGE_ncyc());
+             continue;
+         }
          mol_visc +=
             CONVERGE_table_lookup(visc_table[isp], tg) * global_species_massfrac[node_index * num_total_species + isp];
       }
@@ -599,10 +566,15 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       sc_num       = mol_visc / ro_mass_diff;
 
       parcel_cloud.temp_starm1[i_pc]      = parcel_cloud.temp[i_pc];
-      parcel_cloud.rey_num[i_pc]          = 2.0 * parcel_cloud.radius[i_pc] * global_density[node_index] *
+      //Cap max rel_velocity for heat transfer correlations
+      if(parcel_cloud.rel_vel_mag[i_pc] > 1.0e2)
+      {
+         parcel_cloud.rel_vel_mag[i_pc] = 1.0e2;
+      }
+
+      parcel_cloud.rey_num[i_pc] = 2.0 * parcel_cloud.radius[i_pc] * global_density[node_index] *
                                       parcel_cloud.rel_vel_mag[i_pc] / (mol_visc + 1.0e-20) +
                                    1.0e-10;
-
       parcel_cloud.v_nu[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(pr_num));
       if(hidden_multi_component_diffusion_flag==1)
       {
@@ -621,7 +593,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          // CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
          // char *filename1 = "Temp_Tracker.txt";
   
-         // // In spray_evap_cell function, replace the file writing section with:
 
          // FILE *fp1 = fopen("Temp_Tracker.bin", "wb");  // Use "wb" to create new file each time
          // if (fp1 == NULL) {
@@ -689,6 +660,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
+     
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
          CONVERGE_precision_t inner_iter_tol = 1.0;
@@ -761,13 +733,33 @@ CONVERGE_precision_t user_radius = 0.0;
             temp1 = tdrop;
             temp2 = (2.0 * tdrop + temp_gas) / 3.0;
 
+            // UDF-level check to prevent crash from non-physical temperatures during solver recovery
+            if (isnan(temp1) || isinf(temp1) || temp1 < 100.0 || isnan(temp2) || isinf(temp2) || temp2 < 100.0) {
+                CONVERGE_logger_err(
+                    "spray_evap.c: Invalid temperature in solver for parcel %ld (cloud %ld) at ncyc %ld. T_drop=%.2f, T_gas=%.2f. Breaking inner loop.",
+                    i_pc, parcel_cloud.cloud_index[i_pc], CONVERGE_ncyc(), tdrop, temp_gas
+                );
+                // Reset parcel temp to a safe value from previous timestep and exit this parcel's evap calculation for this step
+                parcel_cloud.temp[i_pc] = parcel_cloud.temp_tm1[i_pc];
+                tdrop = parcel_cloud.temp_tm1[i_pc];
+                break; // Exit the 'while' loop for this parcel
+            }
+
             CONVERGE_precision_t thermal_cond_gas = 0.0;
             mol_visc                              = 0.0;
             for(int isp = 0; isp < num_gas_species; isp++)
             {
+               if (cond_table == NULL || cond_table[isp] == NULL) {
+                   CONVERGE_logger_fatal("FATAL ERROR in spray_evap.c: cond_table for species index %d is NULL at ncyc %ld. Table loading likely failed.", isp, CONVERGE_ncyc());
+                   CONVERGE_mpi_abort();
+               }
                thermal_cond_gas += global_species_massfrac[node_index * num_total_species + isp] *
                                    CONVERGE_table_lookup(cond_table[isp], temp2);
 
+               if (visc_table == NULL || visc_table[isp] == NULL) {
+                   CONVERGE_logger_fatal("FATAL ERROR in spray_evap.c: visc_table for species index %d is NULL at ncyc %ld. Table loading likely failed.", isp, CONVERGE_ncyc());
+                   CONVERGE_mpi_abort();
+               }
                mol_visc += global_species_massfrac[node_index * num_total_species + isp] *
                            CONVERGE_table_lookup(visc_table[isp], temp2);
             }
@@ -916,6 +908,13 @@ CONVERGE_precision_t user_radius = 0.0;
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
                         -mass_trans_coeff * (y1_star - y1) * (bsub_d / (pow((1.0 + bsub_d), 0.568)));
                   }
+                  
+
+
+
+
+
+
                }
                //printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
                if( evap_flag_flash_boiling==1 )
@@ -956,6 +955,13 @@ CONVERGE_precision_t user_radius = 0.0;
                   }
                }
                //printf("\n spray_evap_cell L815 ");
+               //Zero for first 1e-6 s of child's lifetime to improve stability 
+               if(parcel_cloud.is_child[i_pc]==1 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
+               {
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-7;
+               }
+
+
                if(parcel_cloud.is_child[i_pc]==2) // not set to 2 so inactive
                {
                   //printf("\n spray_evap_cell: parcel is child\n");
@@ -1031,8 +1037,8 @@ CONVERGE_precision_t user_radius = 0.0;
                //Cap maximum rate of radius change  - user routine
             
 
-               // if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-1){
-               //    parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-1;
+               // if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] <-1.0e-2){
+               //    parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-2;
                // }
 
                //  again don't allow condensation
@@ -1154,17 +1160,7 @@ CONVERGE_precision_t user_radius = 0.0;
                }
             }
             //Turn of spalding number correlation for children after breakup 
-            if(parcel_cloud.is_child[i_pc])
-            {
-               if(parcel_cloud.lifetime[i_pc] < 1.0e-4)
-               {
-                  // cond_term1 = dt * drop_area * heat_trans_coeff;
-                  cond_term1 = 0.0; //Zero
-                  // if(i_pc%100==0){
-                  // // printf(" setting cond_term1 to zero for child %ld\n", i_pc);
-                  // }
-               }
-            }
+           
 
             CONVERGE_precision_t denom = cond_term1 + (csubp_liquid * mass_drop_new);
 
@@ -1592,20 +1588,8 @@ CONVERGE_precision_t user_radius = 0.0;
       CONVERGE_set_dt_recover(CONVERGE_get_dt_max() * 10.0);
    }
 
-   // Update profiling info
-   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
-   total_evap_time += end_time - start_time;
-   evap_call_count++;
 
-   // Print profiling information periodically
-  // if (evap_call_count % 1000 == 0) {
-   //     CONVERGE_int_t rank;
-   //     CONVERGE_mpi_comm_rank(&rank);
-   //     if (rank == 0)
-   //     {
-   //        print_evap_profiling();
-   //     }
-   // }
+
 
    free(radius_new);
    free(moles);
@@ -1623,19 +1607,6 @@ CONVERGE_precision_t user_radius = 0.0;
    free(parcel_species_boil_flag);
    free(cell_tot_temp_species);
 
-      // Record evaporation calculation time
-      section_end = CONVERGE_mpi_wtime();
-      evap_time += section_end - section_start;
-   
-      // Section 4: Source terms
-      section_start = CONVERGE_mpi_wtime();
-      CONVERGE_precision_t total_time =evap_time + source_time + init_time + boil_time;
-
-      CONVERGE_precision_t init_time_frac = init_time / total_time;
-      CONVERGE_precision_t boil_time_frac = boil_time / total_time;
-      CONVERGE_precision_t evap_time_frac = evap_time / total_time;
-      CONVERGE_precision_t source_time_frac = source_time / total_time;
-      
       
       
       

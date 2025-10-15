@@ -31,7 +31,7 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
       old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
       return;
    }
-   if (old_parcel_cloud->r_therm[p_idx] + dRd > 0 && dRd < old_parcel_cloud->r_therm[p_idx])
+   if (old_parcel_cloud->r_therm[p_idx] + dRd > 0 && dRd < old_parcel_cloud->radius[p_idx])
    {
       // printf("\nupdating r_therm (less than double)");
       //  old_parcel_cloud->r_therm[p_idx]
