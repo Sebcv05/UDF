@@ -319,6 +319,8 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
         CONVERGE_mpi_abort();
     }
 
+    //this is a comment 
+
     rad_denom = 0.5 * (1.0 / denom);
     rad_term1 = (CONVERGE_square(old_parcel_cloud->radius[p_idx]) + CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]));
     rad_term2 = 3.0 * CONVERGE_square(old_parcel_cloud->v_bubble[p_idx]) * (r_bubble_cube - (r_bubble_cube*old_parcel_cloud->r_bubble[p_idx]) * (1 /parent_radius));
