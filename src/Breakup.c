@@ -102,7 +102,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // Verify child_uu exists for this parcel
     if (!old_parcel_cloud->child_uu[p_idx]) {
-        printf("\nBreakup.c: child_uu at p_idx %d is NULL\n", p_idx);
+        printf("\nBreakup.c: child_uu at p_idx %ld is NULL\n", p_idx);
         CONVERGE_mpi_abort();
     }
     if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
@@ -193,13 +193,13 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     }
     else if(fabs(rad_vel)<1.0e-9){
         printf("\n rad_vel = %e",rad_vel);
-        printf("\n p_idx = %i",p_idx);
+        printf("\n p_idx = %li",p_idx);
         printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
         printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
         printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
         printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
         printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
-        printf("\n pbt = %e",old_parcel_cloud->pbt[p_idx]);
+        printf("\n pbt = %i",old_parcel_cloud->pbt[p_idx]);
         CONVERGE_mpi_abort();
     }
 
@@ -228,7 +228,7 @@ CONVERGE_precision_t normal_length = CONVERGE_vec3_length(parent_normal);
 // Debug check - should be very close to 1.0
 if (fabs(normal_length - 1.0) > 1.0e-1) {
     printf("ERROR: parent_normal not properly normalized! Length = %e\n", normal_length);
-    printf("parent_normal = [%%e, %%e, %%e]\n", 
+    printf("parent_normal = [%e, %e, %e]\n", 
            parent_normal[0], parent_normal[1], parent_normal[2]);
            printf("\n parent_velocity_unit = %e %e %e\n ", parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
            printf("\n arbritrary = %e %e %e\n ", arbitrary[0], arbitrary[1], arbitrary[2]);
