@@ -78,7 +78,7 @@ static int last_cycle = -1;
 /*                                                                    */
 /* Variables passed back: none                                        */
 /*                                                                    */
-/* Subroutines called: TABDistort.c, BubbleDensity.c, Psat.c, Tsat.c  */
+/* Subroutines called: BubbleDensity.c, Psat.c, Tsat.c  */
 /*     Geometry.c, DGRE.c, BreakupCriterion.c, Breakaup.c             */
 /**********************************************************************/
 static CONVERGE_table_t *hvap_table = NULL;
