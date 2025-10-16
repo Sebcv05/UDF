@@ -147,7 +147,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         const CONVERGE_precision_t parent_vel_limit = 1.0e3;
 
         if (parent_vel_mag > parent_vel_limit) {
-            printf("Breakup.c WARNING: Parent velocity too large (%e). "
+            printf("Breakup.c WARNING: Parent velocity too large (%%e). "
                 "Clamping to zero.\n", parent_vel_mag);
 
             for (int i = 0; i < 3; i++) {
@@ -228,7 +228,7 @@ CONVERGE_precision_t normal_length = CONVERGE_vec3_length(parent_normal);
 // Debug check - should be very close to 1.0
 if (fabs(normal_length - 1.0) > 1.0e-1) {
     printf("ERROR: parent_normal not properly normalized! Length = %e\n", normal_length);
-    printf("parent_normal = [%e, %e, %e]\n", 
+    printf("parent_normal = [%%e, %%e, %%e]\n", 
            parent_normal[0], parent_normal[1], parent_normal[2]);
            printf("\n parent_velocity_unit = %e %e %e\n ", parent_velocity_unit[0], parent_velocity_unit[1], parent_velocity_unit[2]);
            printf("\n arbritrary = %e %e %e\n ", arbitrary[0], arbitrary[1], arbitrary[2]);
@@ -324,12 +324,21 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     rad_denom = 0.5 * (1.0 / denom);
     rad_term1 = (CONVERGE_square(old_parcel_cloud->radius[p_idx]) + CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]));
     rad_term2 = 3.0 * CONVERGE_square(old_parcel_cloud->v_bubble[p_idx]) * (r_bubble_cube - (r_bubble_cube*old_parcel_cloud->r_bubble[p_idx]) * (1 /parent_radius));
+    if (fabs(old_parcel_cloud->surf_ten[p_idx]) < 1.0e-12) {
+        printf("\nBreakup.c: Error: Surface tension is close to zero (%%e) for parcel %d. Aborting.\n", old_parcel_cloud->surf_ten[p_idx], p_idx);
+        CONVERGE_mpi_abort();
+    }
     rad_term3 = old_parcel_cloud->density[p_idx] / (3.0 * old_parcel_cloud->surf_ten[p_idx]);
 
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
-CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4));
+CONVERGE_precision_t radius_denominator = 2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
+if (fabs(radius_denominator) < 1.0e-20) {
+    printf("\nBreakup.c: Error: Denominator for calculated_radius is close to zero (%%e) for parcel %d. Aborting.\n", radius_denominator, p_idx);
+    CONVERGE_mpi_abort();
+}
+CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
 // calculated_radius = calculated_radius * 0.1; // Testing decimating the radius further to see if intensifies evap issues
     // old_parcel_cloud->radius_tm1[p_idx] = old_parcel_cloud->radius[p_idx];
     if (calculated_radius < 0.0)
@@ -485,11 +494,11 @@ CONVERGE_precision_t calculated_radius = 1.0 / (2.0 * rad_denom * rad_term1 + ra
     if (ncyc != last_cycle) {
     int rank;
     CONVERGE_mpi_comm_rank(&rank);
-    // printf("Rank %d, Cycle %d Breakup profiling (s): calc=%f, child_parcel=%f, loop=%f\n",
+    // printf("Rank %d, Cycle %d Breakup profiling (s): calc=%%f, child_parcel=%%f, loop=%%f\n",
         //    rank, ncyc, prof_loop, prof_child_parcel, prof_calcs);
 
     double total = prof_loop + prof_calcs;
-    // printf("Rank %d, Cycle %d Breakup profiling (%%): calc=%f, child_parcel=%f, loop=%f\n",
+    // printf("Rank %d, Cycle %d Breakup profiling (%%): calc=%%f, child_parcel=%%f, loop=%%f\n",
         //    rank, ncyc,
         //    100.0*prof_calcs/total,
         //    100.0*prof_child_parcel/total,
