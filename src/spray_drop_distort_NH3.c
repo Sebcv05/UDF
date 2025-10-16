@@ -272,8 +272,25 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
       if(Td > 300.0){
-      printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %li, tbt = %i, pbt = %i, thermal_breakup_flag = %i",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
-}
+         printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %li, tbt = %i, pbt = %i, thermal_breakup_flag = %i",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
+         printf("\nRemoving Parcel\n");
+         old_parcel_cloud.num_drop[p_idx] = 0.0;
+         old_parcel_cloud.radius[p_idx] = 0.0;
+         old_parcel_cloud.r_bubble[p_idx] = 0;
+         old_parcel_cloud.r_bubble_0[p_idx] = 0;
+         old_parcel_cloud.v_bubble_tm1[p_idx] = 0;
+         old_parcel_cloud.lifetime[p_idx] = 0;
+         old_parcel_cloud.tbt[p_idx] = 0;
+         old_parcel_cloud.pbt[p_idx] = 0;
+         old_parcel_cloud.thermal_breakup_flag[p_idx] = 0;
+         old_parcel_cloud.int_omega[p_idx] = 0;
+         old_parcel_cloud.int_omega[p_idx] = 0;
+         old_parcel_cloud.m0[p_idx] = 0;
+         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
+         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
+         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
+         continue;
+      }
       Saturation_PressureNH3(Td, &P_sat);
       // Unit tests for saturation pressure function
       CONVERGE_precision_t Psattest1, Psattest2, Psattest3, Ttest1, Ttest2, Ttest3;
