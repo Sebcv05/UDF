@@ -335,7 +335,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
 CONVERGE_precision_t radius_denominator = 2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
 if (fabs(radius_denominator) < 1.0e-20) {
-    printf("\nBreakup.c: Error: Denominator for calculated_radius is close to zero (%%e) for parcel %d. Aborting.\n", radius_denominator, p_idx);
+    printf("\nBreakup.c: Error: Denominator for calculated_radius is close to zero (%e) for parcel %li. Aborting.\n", radius_denominator, p_idx);
     CONVERGE_mpi_abort();
 }
 CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
