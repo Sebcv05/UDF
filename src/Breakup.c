@@ -147,7 +147,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         const CONVERGE_precision_t parent_vel_limit = 1.0e3;
 
         if (parent_vel_mag > parent_vel_limit) {
-            printf("Breakup.c WARNING: Parent velocity too large (%%e). "
+            printf("Breakup.c WARNING: Parent velocity too large (%e). "
                 "Clamping to zero.\n", parent_vel_mag);
 
             for (int i = 0; i < 3; i++) {
@@ -325,7 +325,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     rad_term1 = (CONVERGE_square(old_parcel_cloud->radius[p_idx]) + CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]));
     rad_term2 = 3.0 * CONVERGE_square(old_parcel_cloud->v_bubble[p_idx]) * (r_bubble_cube - (r_bubble_cube*old_parcel_cloud->r_bubble[p_idx]) * (1 /parent_radius));
     if (fabs(old_parcel_cloud->surf_ten[p_idx]) < 1.0e-12) {
-        printf("\nBreakup.c: Error: Surface tension is close to zero (%%e) for parcel %d. Aborting.\n", old_parcel_cloud->surf_ten[p_idx], p_idx);
+        printf("\nBreakup.c: Error: Surface tension is close to zero (%e) for parcel %li. Aborting.\n", old_parcel_cloud->surf_ten[p_idx], p_idx);
         CONVERGE_mpi_abort();
     }
     rad_term3 = old_parcel_cloud->density[p_idx] / (3.0 * old_parcel_cloud->surf_ten[p_idx]);
