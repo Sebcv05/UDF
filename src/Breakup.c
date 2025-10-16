@@ -66,7 +66,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
     // printf("\nBreakup.c: Cloud size = %d, p_idx = %d\n", cloud_size, p_idx);
     if (p_idx >= cloud_size) {
-        printf("\nBreakup.c: Invalid parcel index %d (cloud size = %d)\n", p_idx, cloud_size);
+        printf("\nBreakup.c: Invalid parcel index %ld (cloud size = %ld)\n", p_idx, cloud_size);
         CONVERGE_mpi_abort();
     }
 
@@ -94,7 +94,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // Verify parent velocity exists
     if (!old_parcel_cloud->uu[p_idx]) {
-        printf("\nBreakup.c: Parent velocity at p_idx %d is NULL\n", p_idx);
+        printf("\nBreakup.c: Parent velocity at p_idx %ld is NULL\n", p_idx);
         CONVERGE_mpi_abort();
     }
     // printf("\nBreakup.c: Parent velocity = %e %e %e\n", 
@@ -134,8 +134,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     // Get parent parcel's velocity - v = vx i + vy j + vz k
     CONVERGE_precision_t parent_vx, parent_vy, parent_vz;
     CONVERGE_vec3_t parent_velocity,parent_velocity_unit,parent_normal ;
-    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity);
-    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], parent_velocity_unit); // Parent velocity vector
+    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &parent_velocity);
+    CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &parent_velocity_unit); // Parent velocity vector
 
             // --- Safety check: clamp parent velocity if unphysical ---
         CONVERGE_precision_t parent_vel_mag = sqrt(parent_velocity[0]*parent_velocity[0] +
@@ -240,7 +240,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
    //-----------------------------Calculate child parcel velocities------------------------------------------------
 
     // First child parcel will have radial velocity along normal
-    CONVERGE_vec3_dup(parent_normal,user_child_velocity[0]); // Set first child parcel's velocity to be along the normal
+    CONVERGE_vec3_dup(parent_normal,&user_child_velocity[0]); // Set first child parcel's velocity to be along the normal
     CONVERGE_vec3_normalize(user_child_velocity[0]);
     CONVERGE_vec3_scale(user_child_velocity[0], rad_vel * aa);
     
@@ -257,10 +257,10 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     // child velocity[i] = user_child_velocity[i-1]*cos(psi) + parent_velocity_normal_x_user_child_velocity[i-1] * sin(psi) + parent_velocity_x_parent_velocity_x_user_child_velocity[i-1] * (1 - cos(psi))
     CONVERGE_vec3_t a,b,c,d;
 
-    CONVERGE_vec3_dup(user_child_velocity[0], a); // Previous child parcel's velocity 
+    CONVERGE_vec3_dup(user_child_velocity[0], &a); // Previous child parcel's velocity 
 
     CONVERGE_vec3_cross(parent_velocity_unit, user_child_velocity[0],&b); 
-    CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
+    CONVERGE_vec3_dup(parent_velocity_unit, &c); // Parent velocity unit vector
     
     CONVERGE_vec3_scale(a, cos_psi) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_psi); // Term 2 
@@ -276,10 +276,10 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     //Developed to split parent parcel into N smaller parcels at breakup 
     for (int jj = 1; jj < N; jj++) // For all the other parcels 2:N
     {
-    CONVERGE_vec3_dup(user_child_velocity[jj-1], a); // Previous child parcel's velocity 
+    CONVERGE_vec3_dup(user_child_velocity[jj-1], &a); // Previous child parcel's velocity 
 
     CONVERGE_vec3_cross(parent_velocity_unit, user_child_velocity[jj-1],&b); 
-    CONVERGE_vec3_dup(parent_velocity_unit, c); // Parent velocity unit vector
+    CONVERGE_vec3_dup(parent_velocity_unit, &c); // Parent velocity unit vector
     
     CONVERGE_vec3_scale(a, cos_theta) ; //Term 1 
     CONVERGE_vec3_scale(b, sin_theta); // Term 2 
@@ -429,7 +429,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
 
                 if (CONVERGE_vec3_length(new_parcel_uu) > 1.0e3) {
                     printf("\nBreakup.c: Child velocity too large = %e %e %e. Capping to parent velocity.", new_parcel_uu[0], new_parcel_uu[1], new_parcel_uu[2]);
-                    CONVERGE_vec3_dup(parent_velocity, new_parcel_uu);
+                    CONVERGE_vec3_dup(parent_velocity, &new_parcel_uu);
                 }
 
                 int rank;
