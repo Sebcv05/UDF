@@ -356,7 +356,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         CONVERGE_int_t rankb;
         CONVERGE_mpi_comm_rank(&rankb);
         printf("\n Thermal Breakup has increased radius");
-        printf("\n rank = %i p_idx = %i",rankb,p_idx);
+        printf("\n rank = %i p_idx = %li",rankb,p_idx);
         printf("\nr_old = %e r_new = %e rb = %e vb = %e", parent_radius, old_parcel_cloud->radius[p_idx], old_parcel_cloud->r_bubble[p_idx], old_parcel_cloud->v_bubble[p_idx]);
        
         printf("\nrad_term1 = %e rt2 = %e rt3 = %e rt4 = %e rd = %e", rad_term1, rad_term2, rad_term3, rad_term4, rad_denom);
