@@ -193,7 +193,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    }
 
    // printf("\n0.3");
-   CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(&sp);
+   CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);
 
 //   printf("\n1"); 
 
@@ -272,7 +272,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
       if(Td > 300.0){
-         printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %li, tbt = %i, pbt = %i, thermal_breakup_flag = %i",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
+         printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %li, tbt = %i, pbt = %i, thermal_breakup_flag = %d",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
          printf("\nRemoving Parcel\n");
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
@@ -438,7 +438,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
                //Load Rb
                Rb = old_parcel_cloud.r_bubble[p_idx];
-
+               Rb_temp = Rb;
 
             CONVERGE_precision_t dR = old_parcel_cloud.v_bubble[p_idx] * dt_sub;
             if (dR >= 0.95* old_parcel_cloud.radius[p_idx])
