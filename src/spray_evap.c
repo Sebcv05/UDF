@@ -1204,6 +1204,8 @@ CONVERGE_precision_t user_radius = 0.0;
             // This is to correct omega if new solution goes out of bounds.
             if(do_recovery)
             {
+               CONVERGE_logger_warn("spray_evap.c: RECOVERY in inner loop for parcel %ld, cloud %ld at ncyc %ld. tdrop=%.2f, temp_gas=%.2f, tbf=%d, is_child=%d, radius=%e",
+                                       i_pc, parcel_cloud.cloud_index[i_pc], CONVERGE_ncyc(), tdrop, temp_gas, parcel_cloud.thermal_breakup_flag[i_pc], parcel_cloud.is_child[i_pc], parcel_cloud.radius[i_pc]);
                recovery_flag   = 1;
                inner_iter_flag = 1;
                recovery_counter += 1;
@@ -1580,6 +1582,8 @@ CONVERGE_precision_t user_radius = 0.0;
 
    if(temp_new < 0.9 * global_temperature[node_index] || temp_new < min_spray_temp)
    {
+      CONVERGE_logger_warn("spray_evap.c: RECOVERY at end of cell for node %ld at ncyc %ld. temp_new=%.2f, temp_gas=%.2f",
+                                       node_index, CONVERGE_ncyc(), temp_new, global_temperature[node_index]);
       temp_new = fmax(min_spray_temp, 0.9 * global_temperature[node_index]);
 
       local_sensible_sie =
