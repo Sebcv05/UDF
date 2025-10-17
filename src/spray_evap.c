@@ -1050,7 +1050,7 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                // User safeguard to prevent excessive cooling
-               if ( (parcel_cloud.temp[i_pc] - temp1) > 10.0 ) {
+               if ( fabs(parcel_cloud.temp[i_pc] - temp1) > 10.0 ) {
                    parcel_cloud.drdt[i_pc * num_parcel_species + isp] *= 0.5;
                }
 
