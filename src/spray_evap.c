@@ -1049,6 +1049,11 @@ CONVERGE_precision_t user_radius = 0.0;
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                }
 
+               // User safeguard to prevent excessive cooling
+               if ( (parcel_cloud.temp[i_pc] - temp1) > 10.0 ) {
+                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] *= 0.5;
+               }
+
                // temperature can't be above critical temp
                const CONVERGE_precision_t isp_tcrit = CONVERGE_species_tcrit(sp, isp1);
                if(tdrop >= (isp_tcrit - 1.0e-6))   // make the species disappear
@@ -1206,10 +1211,10 @@ CONVERGE_precision_t user_radius = 0.0;
             // This is to correct omega if new solution goes out of bounds.
             if(do_recovery)
             {
-               CONVERGE_logger_warn("spray_evap.c: RECOVERY in inner loop for parcel %ld, cloud %ld at ncyc %ld. tdrop=%.2f, temp_gas=%.2f, tbf=%d, is_child=%d, radius=%e",
-                                       i_pc, parcel_cloud.cloud_index[i_pc], CONVERGE_ncyc(), tdrop, temp_gas, parcel_cloud.thermal_breakup_flag[i_pc], parcel_cloud.is_child[i_pc], parcel_cloud.radius[i_pc]);
-               CONVERGE_logger_warn("spray_evap.c: RECOVERY diagnostics: tdrop_starm1=%.4f, omega=%.4f, csubp_liquid=%.4e, mass_drop_new=%.4e, vaporization_term=%.4e, cond_term1=%.4e, denom=%.4e",
-                                       tdrop_starm1, omega, csubp_liquid, mass_drop_new, vaporization_term, cond_term1, denom);
+               CONVERGE_logger_warn("spray_evap.c: RECOVERY in inner loop for parcel %ld, cloud %ld at ncyc %ld. tdrop=%.2f, temp_gas=%.2f, tbf=%d, is_child=%d, radius=%e, radius_tm1=%e",
+                                       i_pc, parcel_cloud.cloud_index[i_pc], CONVERGE_ncyc(), tdrop, temp_gas, parcel_cloud.thermal_breakup_flag[i_pc], parcel_cloud.is_child[i_pc], parcel_cloud.radius[i_pc], parcel_cloud.radius_tm1[i_pc]);
+               CONVERGE_logger_warn("spray_evap.c: RECOVERY diagnostics: tdrop_starm1=%.4f, omega=%.4f, csubp_liquid=%.4e, mass_drop_new=%.4e, mass_drop_tm1=%.4e, vaporization_term=%.4e, cond_term1=%.4e, denom=%.4e",
+                                       tdrop_starm1, omega, csubp_liquid, mass_drop_new,mass_drop_tm1, vaporization_term, cond_term1, denom);
                recovery_flag   = 1;
                inner_iter_flag = 1;
                recovery_counter += 1;
