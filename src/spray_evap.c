@@ -87,6 +87,8 @@ static CONVERGE_precision_t dt;
 
 static struct ParcelCloud parcel_cloud;
 
+static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 10.0;
+
 CONVERGE_UDF(spray_evap,
              IN(
                 /*VELOCITY,*/
@@ -271,6 +273,8 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    CONVERGE_precision_t *cell_tot_temp_species      = SAFE_calloc(num_parcel_species, CONVERGE_precision_t);
    int *evap_all_flag                               = SAFE_calloc(num_parcel_species, int);
    int *parcel_species_boil_flag                    = SAFE_calloc(num_parcel_species, int);
+   CONVERGE_precision_t *latent_heat                = SAFE_calloc(num_parcel_species, CONVERGE_precision_t);
+   CONVERGE_precision_t *drdt_base                  = SAFE_calloc(num_parcel_species, CONVERGE_precision_t);
 
 
    
@@ -331,7 +335,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
 
    //These must not be below the minimum temperature of NH3 in therm.dat (currently 200 K)
    const CONVERGE_precision_t min_spray_temp          = 201.0;
-   const CONVERGE_precision_t min_spray_recovery_temp = 210.0;
+   const CONVERGE_precision_t min_spray_recovery_temp = 204.0;
 
    // Old table lookup vars
    CONVERGE_precision_t temp1;
@@ -669,6 +673,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
          CONVERGE_precision_t tdrop        = parcel_cloud.temp[i_pc];
          CONVERGE_precision_t tdrop_starm1 = parcel_cloud.temp[i_pc];
+         const CONVERGE_precision_t temp_prev_timestep = parcel_cloud.temp_tm1[i_pc];
 
          int max_inner_iter = 10;
          int min_inner_iter = 1;
@@ -820,13 +825,15 @@ CONVERGE_precision_t user_radius = 0.0;
             {
                evap_all_flag[isp] = 0;
                if(parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp] <= 0.0)
-               {
-                  parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
-                  evap_mass_drop_0[isp]                               = 0.0;
-                  continue;
-               }
+            {
+               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
+               evap_mass_drop_0[isp]                               = 0.0;
+               latent_heat[isp]                                    = 0.0;
+               drdt_base[isp]                                      = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+               continue;
+            }
 
-               evap_mass_drop_0[isp] = mass_drop_tm1 * parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp];
+            evap_mass_drop_0[isp] = mass_drop_tm1 * parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp];
 
                evap_min_radius[isp] =
                   (3.0 / 4.0) * (mass_drop_tm1 - evap_mass_drop_0[isp]) / (PI * parcel_cloud.density[i_pc]);
@@ -843,11 +850,13 @@ CONVERGE_precision_t user_radius = 0.0;
 
                //skip the evap calc.need some variables above, such as csubp_liquid, to do the following calculation even if evap_flag==0
                if(spray_evap_flag == 0)
-               {
-                  parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
-                  evap_mass_drop_0[isp]                               = 0.0;
-                  continue;
-               }
+            {
+               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
+               evap_mass_drop_0[isp]                               = 0.0;
+               latent_heat[isp]                                    = 0.0;
+               drdt_base[isp]                                      = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+               continue;
+            }
 
                CONVERGE_precision_t y1_star = 0.0;
                if(spray_evap_flag > 0)
@@ -1049,11 +1058,6 @@ CONVERGE_precision_t user_radius = 0.0;
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                }
 
-               // User safeguard to prevent excessive cooling
-               if ( fabs(parcel_cloud.temp[i_pc] - temp1) > 10.0 ) {
-                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] *= 0.5;
-               }
-
                // temperature can't be above critical temp
                const CONVERGE_precision_t isp_tcrit = CONVERGE_species_tcrit(sp, isp1);
                if(tdrop >= (isp_tcrit - 1.0e-6))   // make the species disappear
@@ -1073,8 +1077,10 @@ CONVERGE_precision_t user_radius = 0.0;
                {
                   parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt;
                }
-               vaporization_term =
-                  vaporization_term + (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) * hvap;
+            drdt_base[isp] = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+            latent_heat[isp] = hvap;
+            vaporization_term =
+               vaporization_term + (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) * hvap;
             }
 
             mass_drop_new = mass_drop_tm1;
@@ -1177,6 +1183,155 @@ CONVERGE_precision_t user_radius = 0.0;
                                         denom;
 
             tdrop = omega * (tdrop - tdrop_starm1) + tdrop_starm1;
+
+            const CONVERGE_precision_t delta_temp_candidate = tdrop - temp_prev_timestep;
+            if(fabs(delta_temp_candidate) > MAX_PARCEL_TEMP_DELTA)
+            {
+               CONVERGE_precision_t clamp_ratio =
+                  MAX_PARCEL_TEMP_DELTA / (fabs(delta_temp_candidate) + 1.0e-16);
+               clamp_ratio = (clamp_ratio < 0.0) ? 0.0 : clamp_ratio;
+               clamp_ratio = (clamp_ratio > 1.0) ? 1.0 : clamp_ratio;
+
+               if(clamp_ratio < 1.0)
+               {
+                  const CONVERGE_precision_t clamp_sign = (delta_temp_candidate >= 0.0) ? 1.0 : -1.0;
+
+                  // reset parcel composition to previous timestep before recomputing with scaled dr/dt
+                  CONVERGE_precision_t *local_mfrac =
+                     parcel_cloud.mfrac + i_pc * num_parcel_species;
+                  const CONVERGE_precision_t *prev_mfrac =
+                     parcel_cloud.mfrac_tm1 + i_pc * num_parcel_species;
+                  for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                  {
+                     local_mfrac[isp] = prev_mfrac[isp];
+                  }
+
+                  vaporization_term = 0.0;
+                  mass_drop_new     = mass_drop_tm1;
+
+                  for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                  {
+                     parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
+                        drdt_base[isp] * clamp_ratio;
+
+                     if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] >= 0.0)
+                     {
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+                     }
+
+                     if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
+                     {
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
+                           -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
+                        evap_all_flag[isp] = 1;
+                     }
+
+                     evap_radius[isp] = parcel_cloud.radius[i_pc] +
+                                        (parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt);
+                     if(evap_radius[isp] < 0.0)
+                     {
+                        evap_radius[isp] = 0.0;
+                     }
+
+                     evap_mass_drop_1[isp] =
+                        (4.0 / 3.0) * PI * parcel_cloud.density[i_pc] * (CONVERGE_cube(evap_radius[isp]));
+                     parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] =
+                        (evap_mass_drop_1[isp] - mass_drop_tm1) / dt;
+
+                     if((-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) > evap_mass_drop_0[isp])
+                     {
+                        parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt;
+                     }
+
+                     vaporization_term +=
+                        (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) * latent_heat[isp];
+                  }
+
+                  mass_drop_new = mass_drop_tm1;
+                  for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                  {
+                     mass_drop_new += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt;
+                  }
+
+                  if(mass_drop_new > 1.0e-36) /* normal update */
+                  {
+                     for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                     {
+                        local_mfrac[isp] =
+                           (evap_mass_drop_0[isp] + parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) /
+                           (mass_drop_new);
+                        if(local_mfrac[isp] < 0.0 || evap_all_flag[isp] == 1)
+                        {
+                           local_mfrac[isp] = 0.0;
+                        }
+                     }
+                  }
+                  else /* if mass drop less than 1.0e-36 use old mass fractions */
+                  {
+                     mass_drop_new = 1.0e-36;
+                     for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                     {
+                        local_mfrac[isp] = prev_mfrac[isp];
+                     }
+                  }
+
+                  sum = 0.0;
+                  for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                  {
+                     sum += local_mfrac[isp];
+                  }
+                  if(sum > 0.1) /* normalize */
+                  {
+                     for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                     {
+                        local_mfrac[isp] = local_mfrac[isp] / sum;
+                     }
+                  }
+                  else /* all species evaporated */
+                  {
+                     for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                     {
+                        local_mfrac[isp] = prev_mfrac[isp];
+                     }
+                  }
+
+                  radius_new[i_pc] =
+                     (3.0 / 4.0) * mass_drop_new / (PI * parcel_cloud.density[i_pc]);
+                  radius_new[i_pc] = (radius_new[i_pc] > 0.0) ? CONVERGE_cbrt(radius_new[i_pc]) : 0.0;
+                  radius_new[i_pc] =
+                     fmin(radius_new[i_pc], parcel_cloud.radius[i_pc]);
+
+                  const CONVERGE_precision_t denom =
+                     cond_term1 + (csubp_liquid * mass_drop_new);
+
+                  CONVERGE_precision_t tdrop_local = tdrop_starm1;
+                  if(denom != 0.0)
+                  {
+                     tdrop_local = ((csubp_liquid * mass_drop_new * parcel_cloud.temp[i_pc]) + vaporization_term +
+                                    (cond_term1 * temp_gas) + spray_wall_heat_source) /
+                                   denom;
+                  }
+
+                  tdrop = omega * (tdrop_local - tdrop_starm1) + tdrop_starm1;
+
+                  const CONVERGE_precision_t clamp_target =
+                     temp_prev_timestep + clamp_sign * MAX_PARCEL_TEMP_DELTA;
+                  if(clamp_sign > 0.0)
+                  {
+                     if(tdrop > clamp_target)
+                     {
+                        tdrop = clamp_target;
+                     }
+                  }
+                  else
+                  {
+                     if(tdrop < clamp_target)
+                     {
+                        tdrop = clamp_target;
+                     }
+                  }
+               }
+            }
 
             if((tdrop < min_spray_recovery_temp))
             {
@@ -1619,6 +1774,8 @@ CONVERGE_precision_t user_radius = 0.0;
    free(evap_all_flag);
    free(parcel_species_boil_flag);
    free(cell_tot_temp_species);
+   free(latent_heat);
+   free(drdt_base);
 
       
       

@@ -206,7 +206,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
 ////Start of old child velocity _________________
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 5.0; // Scale factor for velocity 
+    CONVERGE_precision_t aa = 1.0; // Scale factor for velocity 
  
 //perpendicular vector calculation
 CONVERGE_vec3_t arbitrary;
