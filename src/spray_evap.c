@@ -673,7 +673,26 @@ CONVERGE_precision_t user_radius = 0.0;
 
          CONVERGE_precision_t tdrop        = parcel_cloud.temp[i_pc];
          CONVERGE_precision_t tdrop_starm1 = parcel_cloud.temp[i_pc];
-         const CONVERGE_precision_t temp_prev_timestep = parcel_cloud.temp_tm1[i_pc];
+
+         CONVERGE_precision_t temp_prev_timestep = parcel_cloud.temp_tm1[i_pc];
+         if(temp_prev_timestep < min_spray_temp || temp_prev_timestep > max_critical_temperature)
+         {
+            CONVERGE_logger_warn(
+               "spray_evap.c: Previous timestep temperature reset for parcel %ld (cloud %ld) at ncyc %ld. "
+               "temp_tm1=%.3e outside [%g, %g]",
+               i_pc,
+               parcel_cloud.cloud_index[i_pc],
+               CONVERGE_ncyc(),
+               temp_prev_timestep,
+               min_spray_temp,
+               max_critical_temperature);
+
+            temp_prev_timestep            = fmin(fmax(temp_prev_timestep, min_spray_temp), max_critical_temperature);
+            parcel_cloud.temp_tm1[i_pc]   = temp_prev_timestep;
+            parcel_cloud.temp_starm1[i_pc] = temp_prev_timestep;
+            tdrop                        = temp_prev_timestep;
+            tdrop_starm1                 = temp_prev_timestep;
+         }
 
          int max_inner_iter = 10;
          int min_inner_iter = 1;
