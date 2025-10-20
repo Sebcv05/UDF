@@ -206,7 +206,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
 ////Start of old child velocity _________________
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 1.0; // Scale factor for velocity 
+    CONVERGE_precision_t aa = 5.0; // Scale factor for velocity 
  
 //perpendicular vector calculation
 CONVERGE_vec3_t arbitrary;
@@ -333,7 +333,8 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
-CONVERGE_precision_t radius_denominator = 2.0 * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
+    CONVERGE_precision_t B = 1.0;           //Constant determining radius of children at breakup (1.0 is default)
+CONVERGE_precision_t radius_denominator = 2.0 * B * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
 if (fabs(radius_denominator) < 1.0e-20) {
     printf("\nBreakup.c: Error: Denominator for calculated_radius is close to zero (%e) for parcel %li. Aborting.\n", radius_denominator, p_idx);
     CONVERGE_mpi_abort();
