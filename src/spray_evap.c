@@ -88,6 +88,7 @@ static CONVERGE_precision_t dt;
 static struct ParcelCloud parcel_cloud;
 
 static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 10.0;
+static long last_temp_clamp_warn_cycle = -1;
 
 CONVERGE_UDF(spray_evap,
              IN(
@@ -1239,15 +1240,20 @@ CONVERGE_precision_t user_radius = 0.0;
                // mark recovery so outer loop can relax
                do_recovery     = 1;
                inner_iter_flag = 1;
-               CONVERGE_logger_warn(
-                  "spray_evap.c: Temperature clamp applied for parcel %ld (cloud %ld) at ncyc %ld. "
-                  "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f",
-                  i_pc,
-                  parcel_cloud.cloud_index[i_pc],
-                  CONVERGE_ncyc(),
-                  delta_temp_candidate,
-                  target_delta,
-                  clamp_ratio);
+               const long current_cycle = CONVERGE_ncyc();
+               if(last_temp_clamp_warn_cycle != current_cycle)
+               {
+                  last_temp_clamp_warn_cycle = current_cycle;
+                  CONVERGE_logger_warn(
+                     "spray_evap.c: Temperature clamp applied for parcel %ld (cloud %ld) at ncyc %ld. "
+                     "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f",
+                     i_pc,
+                     parcel_cloud.cloud_index[i_pc],
+                     current_cycle,
+                     delta_temp_candidate,
+                     target_delta,
+                     clamp_ratio);
+               }
 
                CONVERGE_precision_t *local_mfrac =
                   parcel_cloud.mfrac + i_pc * num_parcel_species;
