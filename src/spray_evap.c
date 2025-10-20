@@ -1257,13 +1257,17 @@ CONVERGE_precision_t user_radius = 0.0;
                   last_temp_clamp_warn_cycle = current_cycle;
                   CONVERGE_logger_warn(
                      "spray_evap.c: Temperature clamp applied for parcel %ld (cloud %ld) at ncyc %ld. "
-                     "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f",
+                     "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f, temp = %.2f K, temp_tm1 = %.2f K, radius = %.2e, is_child = %d",
                      i_pc,
                      parcel_cloud.cloud_index[i_pc],
                      current_cycle,
                      delta_temp_candidate,
                      target_delta,
-                     clamp_ratio);
+                     clamp_ratio,
+                     parcel_cloud.temp[i_pc],
+                     parcel_cloud.temp_tm1[i_pc],
+                     parcel_cloud.radius[i_pc],
+                     parcel_cloud.is_child[i_pc]);
                }
 
                CONVERGE_precision_t *local_mfrac =
