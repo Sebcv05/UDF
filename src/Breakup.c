@@ -40,11 +40,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     {
         CONVERGE_int_t rank;
         CONVERGE_mpi_comm_rank(&rank);
-        if(rank == 0)
-        {
-            printf("Breakup.c: breakup_velocity_scale = %.3f\n", breakup_velocity_scale);
-            fflush(stdout);
-        }
+        printf("Breakup.c: rank %d breakup_velocity_scale = %.6f\n", (int)rank, breakup_velocity_scale);
+        fflush(stdout);
         breakup_scale_logged = 1;
     }
 
