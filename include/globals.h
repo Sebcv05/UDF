@@ -8,5 +8,7 @@ extern CONVERGE_precision_t user_child_velocity_x;
 extern CONVERGE_precision_t user_child_velocity_y;
 extern CONVERGE_precision_t user_child_velocity_z ;
 
-#endif
+// Breakup tuning parameter (default set in Breakup.c, overwritten by user input)
+extern CONVERGE_precision_t breakup_velocity_scale;
 
+#endif

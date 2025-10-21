@@ -20,6 +20,7 @@
 CONVERGE_precision_t user_child_velocity_x =0.0;
 CONVERGE_precision_t user_child_velocity_y =0.0;
 CONVERGE_precision_t user_child_velocity_z =0.0;
+CONVERGE_precision_t breakup_velocity_scale = 5.0;
 
 
 // Profiling accumulators
@@ -206,8 +207,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
 ////Start of old child velocity _________________
     // printf("rad _vel =  %e, vmag = %e",rad_vel,parent_vmag);
-    CONVERGE_precision_t aa = 5.0; // Scale factor for velocity 
- 
 //perpendicular vector calculation
 CONVERGE_vec3_t arbitrary;
 do {
@@ -242,7 +241,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     // First child parcel will have radial velocity along normal
     CONVERGE_vec3_dup(parent_normal,&user_child_velocity[0]); // Set first child parcel's velocity to be along the normal
     CONVERGE_vec3_normalize(user_child_velocity[0]);
-    CONVERGE_vec3_scale(user_child_velocity[0], rad_vel * aa);
+    CONVERGE_vec3_scale(user_child_velocity[0], rad_vel * breakup_velocity_scale);
     
 
 
@@ -288,10 +287,10 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     CONVERGE_vec3_add(a,b,&d);
     CONVERGE_vec3_add(d,c, &user_child_velocity[jj]); // Final child velocity vector
     CONVERGE_vec3_normalize(user_child_velocity[jj]);
-    if(rad_vel * aa > 100.0){
-    //  printf("|Vc| = %f",rad_vel * aa);   
+    if(rad_vel * breakup_velocity_scale > 100.0){
+    //  printf("|Vc| = %f",rad_vel * breakup_velocity_scale);   
     }
-    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * aa);
+    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * breakup_velocity_scale);
     
     for (int k = 0; k < 3; k++)
     user_child_velocity[jj][k] *= (1.0 + 0.1 * (CONVERGE_random_precision() - 0.5));
