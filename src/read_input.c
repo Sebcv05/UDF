@@ -8,6 +8,8 @@
 struct UserInputs
 {
    double breakup_velocity_scale;
+   double breakup_radius_scale;
+   double kb_threshold;
 };
 
 /**********************************************************************************************************/
@@ -49,6 +51,8 @@ CONVERGE_INPUT(read_user,
    {
       user_inputs = (struct UserInputs*)CONVERGE_mesh_set_user_data(mesh, "user_inputs", malloc(sizeof(struct UserInputs)));
       user_inputs->breakup_velocity_scale = NAN;
+      user_inputs->breakup_radius_scale = NAN;
+      user_inputs->kb_threshold = NAN;
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -96,12 +100,30 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->breakup_velocity_scale = atof(vtoken);
       }
+      else if(strcmp(ktoken, "breakup_radius_scale") == 0 || strcmp(ktoken, "B") == 0)
+      {
+         user_inputs->breakup_radius_scale = atof(vtoken);
+      }
+      else if(strcmp(ktoken, "kb_threshold") == 0 || strcmp(ktoken, "kb") == 0)
+      {
+         user_inputs->kb_threshold = atof(vtoken);
+      }
    }
 
    CONVERGE_bool_t error = CONVERGE_FALSE;
    if(isnan(user_inputs->breakup_velocity_scale))
    {
       CONVERGE_logger_err("user_inputs.in: breakup_velocity_scale missing or invalid");
+      error = CONVERGE_TRUE;
+   }
+   if(isnan(user_inputs->breakup_radius_scale))
+   {
+      CONVERGE_logger_err("user_inputs.in: breakup_radius_scale missing or invalid");
+      error = CONVERGE_TRUE;
+   }
+   if(isnan(user_inputs->kb_threshold))
+   {
+      CONVERGE_logger_err("user_inputs.in: kb_threshold missing or invalid");
       error = CONVERGE_TRUE;
    }
 
@@ -111,12 +133,18 @@ CONVERGE_INPUT(read_user,
    }
 
    breakup_velocity_scale = (CONVERGE_precision_t)user_inputs->breakup_velocity_scale;
+   breakup_radius_scale = (CONVERGE_precision_t)user_inputs->breakup_radius_scale;
+   kb_threshold = (CONVERGE_precision_t)user_inputs->kb_threshold;
    CONVERGE_logger_verbose("user_inputs->breakup_velocity_scale: %f", user_inputs->breakup_velocity_scale);
+   CONVERGE_logger_verbose("user_inputs->breakup_radius_scale: %f", user_inputs->breakup_radius_scale);
+   CONVERGE_logger_verbose("user_inputs->kb_threshold: %f", user_inputs->kb_threshold);
 
    // Write the echo file
    if(rank == 0)
    {
       CONVERGE_file_write(echo, "%-10.4f breakup_velocity_scale\n", user_inputs->breakup_velocity_scale);
+      CONVERGE_file_write(echo, "%-10.4f breakup_radius_scale\n", user_inputs->breakup_radius_scale);
+      CONVERGE_file_write(echo, "%-10.4f kb_threshold\n", user_inputs->kb_threshold);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);
    }

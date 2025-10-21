@@ -63,6 +63,7 @@ static CONVERGE_table_t *evap_species_sensible_h_table;
 // Profiling accumulators
 static double prof_geom=0.0, prof_dgre=0.0, prof_bc=0.0, prof_break=0.0, prof_bubble=0.0;
 static int last_cycle = -1;
+static int spray_params_logged = 0;
 /**********************************************************************/
 /*                                                                    */
 /* Name: user_drop_distort, user_drop_distort_cell                    */
@@ -532,13 +533,32 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             //  printf("calling BreakupCriterion\n");
             t0 = CONVERGE_mpi_wtime();
             CONVERGE_precision_t kb = BreakupCriterion(&old_parcel_cloud, p_idx, dt_sub);
+            if(!spray_params_logged)
+            {
+               CONVERGE_int_t rank_debug;
+               CONVERGE_mpi_comm_rank(&rank_debug);
+               printf("spray_drop_distort_NH3.c: rank %d kb_threshold = %.6f (kb current = %.6f)\n",
+                      (int)rank_debug,
+                      kb_threshold,
+                      kb);
+               fflush(stdout);
+               spray_params_logged = 1;
+            }
             prof_bc += CONVERGE_mpi_wtime() - t0;
          
 
    
    
-            if (kb > 1.0)
+            if (kb > kb_threshold)
             {
+               CONVERGE_int_t rank_debug;
+               CONVERGE_mpi_comm_rank(&rank_debug);
+               printf("spray_drop_distort_NH3.c: rank %d kb %.6f exceeded threshold %.6f for parcel %ld\n",
+                      (int)rank_debug,
+                      kb,
+                      kb_threshold,
+                      p_idx);
+               fflush(stdout);
                // printf("\n Breakup happening due to kb > 1.0, kb = %e, rb = %e, r_drop = %e, vb = %e\n",kb,Rb,old_parcel_cloud.radius[p_idx],old_parcel_cloud.v_bubble[p_idx]);
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
                old_parcel_cloud.tbt[p_idx] = 1;

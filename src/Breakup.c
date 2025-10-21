@@ -18,10 +18,12 @@
 // Global variables
 // Global velocity variables
 CONVERGE_precision_t user_child_velocity_x =0.0;
-CONVERGE_precision_t user_child_velocity_y =0.0;
-CONVERGE_precision_t user_child_velocity_z =0.0;
+CONVERGE_precision_t user_child_velocity_y = 0.0;
+CONVERGE_precision_t user_child_velocity_z = 0.0;
 CONVERGE_precision_t breakup_velocity_scale = 5.0;
-static int breakup_scale_logged;
+CONVERGE_precision_t breakup_radius_scale = 1.0;
+CONVERGE_precision_t kb_threshold = 1.0;
+static int breakup_scale_logged = 0;
 
 // Profiling accumulators
 static double prof_calcs = 0.0;
@@ -40,7 +42,11 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     {
         CONVERGE_int_t rank;
         CONVERGE_mpi_comm_rank(&rank);
-        printf("Breakup.c: rank %d breakup_velocity_scale = %.6f\n", (int)rank, breakup_velocity_scale);
+        printf("Breakup.c: rank %d breakup_velocity_scale = %.6f B_scale = %.6f kb_threshold = %.6f\n",
+               (int)rank,
+               breakup_velocity_scale,
+               breakup_radius_scale,
+               kb_threshold);
         fflush(stdout);
         breakup_scale_logged = 1;
     }
@@ -341,7 +347,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
     rad_term4 = CONVERGE_square(rad_vel) / 2.0;
-    CONVERGE_precision_t B = 1.0;           //Constant determining radius of children at breakup (1.0 is default)
+    CONVERGE_precision_t B = breakup_radius_scale;           //Constant determining radius of children at breakup (1.0 is default)
 CONVERGE_precision_t radius_denominator = 2.0 * B * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
 if (fabs(radius_denominator) < 1.0e-20) {
     printf("\nBreakup.c: Error: Denominator for calculated_radius is close to zero (%e) for parcel %li. Aborting.\n", radius_denominator, p_idx);
