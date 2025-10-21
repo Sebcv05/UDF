@@ -20,7 +20,7 @@
 CONVERGE_precision_t user_child_velocity_x =0.0;
 CONVERGE_precision_t user_child_velocity_y =0.0;
 CONVERGE_precision_t user_child_velocity_z =0.0;
-CONVERGE_precision_t breakup_velocity_scale;
+CONVERGE_precision_t breakup_velocity_scale = 0.0;
 
 printf("\nBreakup.c breakup_velocity_scale = %2e\n",breakup_velocity_scale);
 
