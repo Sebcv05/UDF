@@ -20,9 +20,10 @@
 CONVERGE_precision_t user_child_velocity_x =0.0;
 CONVERGE_precision_t user_child_velocity_y =0.0;
 CONVERGE_precision_t user_child_velocity_z =0.0;
-CONVERGE_precision_t breakup_velocity_scale = 0.0;
+CONVERGE_precision_t breakup_velocity_scale = 5.0;
+static CONVERGE_bool_t breakup_scale_logged = CONVERGE_FALSE;
 
-printf("\nBreakup.c breakup_velocity_scale = %2e\n",breakup_velocity_scale);
+printf("\nBreakup.c breakup_velocity_scale = %2e\n",);
 
 // Profiling accumulators
 static double prof_calcs = 0.0;
@@ -37,6 +38,17 @@ static int last_cycle = -1;
 
 void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_cloud_t cloud)
 {
+    if(!breakup_scale_logged)
+    {
+        CONVERGE_int_t rank;
+        CONVERGE_mpi_comm_rank(&rank);
+        if(rank == 0)
+        {
+            CONVERGE_logger_info("Breakup.c: breakup_velocity_scale = %.3f", breakup_velocity_scale);
+        }
+        breakup_scale_logged = CONVERGE_TRUE;
+    }
+
     // UDF-level check to prevent creating child parcels from a parent with non-physical properties
     if (isnan(old_parcel_cloud->temp[p_idx]) || isinf(old_parcel_cloud->temp[p_idx]) || old_parcel_cloud->temp[p_idx] < 100.0) {
         CONVERGE_logger_warn("Breakup.c: Parent parcel %d (cloud %d) has invalid temperature (%.2f) at ncyc %ld. Skipping breakup for this parcel.",
