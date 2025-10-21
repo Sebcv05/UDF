@@ -21,9 +21,7 @@ CONVERGE_precision_t user_child_velocity_x =0.0;
 CONVERGE_precision_t user_child_velocity_y =0.0;
 CONVERGE_precision_t user_child_velocity_z =0.0;
 CONVERGE_precision_t breakup_velocity_scale = 5.0;
-static CONVERGE_bool_t breakup_scale_logged = CONVERGE_FALSE;
-
-printf("\nBreakup.c breakup_velocity_scale = %2e\n",);
+static int breakup_scale_logged;
 
 // Profiling accumulators
 static double prof_calcs = 0.0;
@@ -44,9 +42,9 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         CONVERGE_mpi_comm_rank(&rank);
         if(rank == 0)
         {
-            CONVERGE_logger_info("Breakup.c: breakup_velocity_scale = %.3f", breakup_velocity_scale);
+            CONVERGE_logger_concise("Breakup.c: breakup_velocity_scale = %.3f", breakup_velocity_scale);
         }
-        breakup_scale_logged = CONVERGE_TRUE;
+        breakup_scale_logged = 1;
     }
 
     // UDF-level check to prevent creating child parcels from a parent with non-physical properties
