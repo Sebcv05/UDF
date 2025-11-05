@@ -40,14 +40,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 {
     if(!breakup_scale_logged)
     {
-        CONVERGE_int_t rank;
-        CONVERGE_mpi_comm_rank(&rank);
-        printf("Breakup.c: rank %d breakup_velocity_scale = %.6f B_scale = %.6f kb_threshold = %.6f\n",
-               (int)rank,
-               breakup_velocity_scale,
-               breakup_radius_scale,
-               kb_threshold);
-        fflush(stdout);
         breakup_scale_logged = 1;
     }
 
@@ -366,7 +358,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     {
         printf("\nbubble radius larger than droplet's original radius");
     }
-    if (calculated_radius > parent_radius )
+    if (calculated_radius > parent_radius *1.01)
     {
         CONVERGE_int_t rankb;
         CONVERGE_mpi_comm_rank(&rankb);
