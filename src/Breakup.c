@@ -57,7 +57,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         return;
     }
 
-    // printf("\n Breakup Triggered, r_bubble = %2e, v_bubble = %2e, radius = %2e, breakup_flag = %i\n", old_parcel_cloud->r_bubble[p_idx], old_parcel_cloud->v_bubble[p_idx], old_parcel_cloud->radius[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx]);
 
     //Timing vars
     CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
