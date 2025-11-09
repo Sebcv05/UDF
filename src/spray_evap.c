@@ -667,28 +667,8 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
-         // Skip evaporation for parent parcels (pre-breakup droplets)
-         // is_child = 0 means original injected parcel, not yet broken up
-         // Thermal breakup is much faster than evaporation, takes precedence
-         if(parcel_cloud.is_child[i_pc] == 0)
-         {
-            // Zero out evaporation rate for all species
-            for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
-            {
-               parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
-               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
-            }
-            
-            // Diagnostic: Confirm skip is working
-            static int evap_skip_confirm = 0;
-            if (evap_skip_confirm < 3) {
-               printf("[EVAP_SKIP_CONFIRM] p_idx=%ld, is_child=0, SKIPPING evaporation, radius=%.6e m\n",
-                      i_pc, parcel_cloud.radius[i_pc]);
-               evap_skip_confirm++;
-            }
-            
-            continue;  // Skip to next parcel
-         }
+         // Note: For parent parcels (is_child==0), we let the routine run but set drdt=0 in the loop
+         // This prevents excessive cooling while allowing normal evaporation logic for child parcels
      
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
@@ -1107,6 +1087,13 @@ CONVERGE_precision_t user_radius = 0.0;
 
                //  again don't allow condensation
                if(parcel_cloud.drdt[i_pc * num_parcel_species + isp] >= 0.0)
+               {
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+               }
+               
+               // Prevent evaporation for parent parcels (pre-breakup)
+               // Thermal breakup takes precedence over evaporation
+               if(parcel_cloud.is_child[i_pc] == 0)
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
                }
