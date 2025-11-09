@@ -667,6 +667,27 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
+         // Skip evaporation for parcels undergoing thermal breakup
+         // Thermal breakup takes precedence - bubble growth is faster than evap cooling
+         if(parcel_cloud.pbt[i_pc] == 1)
+         {
+            // Zero out evaporation rate for all species
+            for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+            {
+               parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
+            }
+            
+            // Diagnostic: Report first time we skip evaporation
+            static int first_evap_skip = 1;
+            if(first_evap_skip)
+            {
+               printf("[EVAP_SKIP] Evaporation disabled for parcels in thermal breakup (pbt=1)\n");
+               first_evap_skip = 0;
+            }
+            
+            continue;  // Skip to next parcel
+         }
      
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;

@@ -224,6 +224,16 @@ void RPE_euler_solver(
     // Euler step
     euler_step(&state, &derivs, dt_sub);
     
+    // Check if droplet has cooled below saturation temperature
+    CONVERGE_precision_t T_sat_check = T_satNH3(P_amb);
+    if (state.T_drop < T_sat_check) {
+        // Droplet subcooled - stop bubble growth
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->pbt[p_idx] = 0;
+        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        return;
+    }
+    
     // Enforce constraint: R <= Ro
     if (state.R > params.Ro) {
         state.R = 0.95 * params.Ro;
