@@ -667,6 +667,8 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
+         // TEMPORARILY DISABLE evaporation skip to test if it's causing radius issues
+         /*
          // Skip evaporation for parent parcels (pre-breakup droplets)
          // is_child = 0 means original injected parcel, not yet broken up
          // Thermal breakup is much faster than evaporation, takes precedence
@@ -693,6 +695,7 @@ CONVERGE_precision_t user_radius = 0.0;
             
             continue;  // Skip to next parcel
          }
+         */
      
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
