@@ -62,13 +62,34 @@ void compute_thermal_mass_transfer(
     CONVERGE_precision_t Nu_uncapped = 2.0 + 0.6 * safe_sqrt(Re) * pow(Pr, 1.0/3.0);
     CONVERGE_precision_t Nu = (Nu_uncapped < params->max_Nu) ? Nu_uncapped : params->max_Nu;
     
-    // Heat transfer coefficient and rate
-    CONVERGE_precision_t h_conv = Nu * params->k_l / L_char;
+    // Surface area
     CONVERGE_precision_t A_bubble = 4.0 * PI * R * R;
-    CONVERGE_precision_t Q_conv = h_conv * A_bubble * dT;
+    
+    // ========== DUAL GEOMETRY: Semi-infinite vs Film ==========
+    // Match Python euler_explicit.py: evaluate both, use max
+    
+    // Semi-infinite formulation
+    CONVERGE_precision_t h_conv_si = Nu * params->k_l / L_char;
+    CONVERGE_precision_t Q_si = h_conv_si * A_bubble * dT;
+    
+    // Film formulation
+    CONVERGE_precision_t film_thickness = params->Ro - R;
+    CONVERGE_precision_t h_conv_film, Q_film;
+    
+    if (film_thickness > 1e-12) {
+        h_conv_film = Nu * params->k_l / film_thickness;
+        Q_film = h_conv_film * A_bubble * dT;
+    } else {
+        h_conv_film = 1e20;
+        Q_film = 0.0;
+    }
+    
+    // Use maximum (least restrictive) for heat transfer
+    CONVERGE_precision_t Q_conv = (Q_film > Q_si) ? Q_film : Q_si;
     
     // Mass transfer rate (thermal limiting)
     CONVERGE_precision_t mdot = safe_divide(Q_conv, params->L_v, 0.0);
+    if (mdot < 0.0) mdot = 0.0;  // Evaporation only
     
     // Output
     *Nu_out = Nu;
