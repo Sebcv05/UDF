@@ -679,20 +679,17 @@ CONVERGE_precision_t user_radius = 0.0;
                parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
             }
             
-            // Diagnostic: Count skipped parcels per cycle
-            static int evap_skip_count = 0;
-            static int last_reported_cycle = -1;
-            int current_cycle = CONVERGE_ncyc();
-            
-            evap_skip_count++;
-            
-            if(current_cycle != last_reported_cycle && evap_skip_count > 0)
-            {
-               printf("[EVAP_SKIP] Cycle %d: Skipped evap for %d parent parcels (is_child=0)\n", 
-                      current_cycle, evap_skip_count);
-               last_reported_cycle = current_cycle;
-               evap_skip_count = 0;
-            }
+            // Diagnostic disabled - too verbose
+            // static int evap_skip_count = 0;
+            // static int last_reported_cycle = -1;
+            // int current_cycle = CONVERGE_ncyc();
+            // evap_skip_count++;
+            // if(current_cycle != last_reported_cycle && evap_skip_count > 0) {
+            //    printf("[EVAP_SKIP] Cycle %d: Skipped evap for %d parent parcels (is_child=0)\n", 
+            //           current_cycle, evap_skip_count);
+            //    last_reported_cycle = current_cycle;
+            //    evap_skip_count = 0;
+            // }
             
             continue;  // Skip to next parcel
          }
