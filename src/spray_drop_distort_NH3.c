@@ -424,8 +424,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             // Start of sub cycle loop
             //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
               // target physical substep size (s)
-              // Use 1e-12 s to match python unit test timestep for numerical stability at bubble nucleation
-               const CONVERGE_precision_t dt_sub_target = 1.0e-12;
+              // Reduced from 1e-10 to 1e-12 during debugging - now safe_divide bug is fixed, can restore
+               const CONVERGE_precision_t dt_sub_target = 1.0e-10;
 
                // current CFD timestep
                CONVERGE_precision_t dt_global = CONVERGE_simulation_dt();
