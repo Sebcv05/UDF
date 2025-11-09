@@ -180,6 +180,20 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
+    // CRITICAL CHECK: Skip if num_drop is too small (parcel destroyed/evaporated)
+    if (old_parcel_cloud->num_drop[p_idx] < 0.1) {
+        static int low_numdrop_count = 0;
+        if (low_numdrop_count < 3) {
+            printf("[RPE_SKIP] num_drop=%.3e < 0.1, parcel nearly gone, skipping RPE\n",
+                   old_parcel_cloud->num_drop[p_idx]);
+            low_numdrop_count++;
+        }
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->pbt[p_idx] = 0;
+        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        return;
+    }
+    
     // Initialize parameters structure
     RPE_Params params;
     
