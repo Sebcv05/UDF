@@ -156,7 +156,11 @@ CONVERGE_UDF(parcel_inject,
    // printf("\n r_bubble old = %f \n", parcel_cloud.r_bubble[passed_parcel_idx]);
    CONVERGE_precision_t ambient_pres = 2.0e5;
 
-   parcel_cloud.r_bubble[passed_parcel_idx] = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
+   // Calculate critical radius Rc = 2*sigma / DeltaP
+   CONVERGE_precision_t Rc = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
+   // Initialize bubble at 1.1 * Rc (10% above critical radius for stable growth)
+   parcel_cloud.r_bubble[passed_parcel_idx] = 1.1 * Rc;
+   
    if (parcel_cloud.r_bubble[passed_parcel_idx] < 0.0)
    {
       parcel_cloud.r_bubble[passed_parcel_idx] = 0.0;
