@@ -14,6 +14,11 @@
 #define PI 3.14159265358979323846
 #define R_SPEC_NH3 488.2  // J/(kg·K) - Specific gas constant for ammonia
 
+// Debug logging configuration
+#define RPE_DEBUG_LOGGING 1        // Set to 0 to disable
+#define LOG_INTERVAL 50            // Log every Nth call
+#define LOG_FILE_NAME "rpe_parcel_debug.csv"
+
 // Utility functions
 CONVERGE_precision_t safe_sqrt(CONVERGE_precision_t x) {
     return (x > 0.0) ? CONVERGE_sqrt(x) : 0.0;
@@ -237,4 +242,53 @@ void RPE_euler_solver(
     old_parcel_cloud->r_bubble[p_idx] = state.R;
     old_parcel_cloud->v_bubble[p_idx] = state.Rdot;
     old_parcel_cloud->temp[p_idx] = state.T_drop;
+    
+#if RPE_DEBUG_LOGGING
+    // Lifetime-based tracking: log the oldest parcel in thermal breakup
+    static FILE* rpe_debug_file = NULL;
+    static CONVERGE_precision_t max_lifetime_seen = 0.0;
+    static int log_call_counter = 0;
+    static int first_log = 1;
+    
+    CONVERGE_precision_t lifetime = old_parcel_cloud->lifetime[p_idx];
+    int in_thermal_breakup = (old_parcel_cloud->pbt[p_idx] == 1);
+    
+    // Initialize file and track oldest parcel
+    if (in_thermal_breakup && lifetime > max_lifetime_seen) {
+        if (rpe_debug_file == NULL) {
+            rpe_debug_file = fopen(LOG_FILE_NAME, "w");
+            if (rpe_debug_file != NULL) {
+                fprintf(rpe_debug_file, "time,lifetime,R,Rdot,T_drop,m_b,Nu,Q_conv,mdot,Pb,P_sat,P_amb,Ro,dRdt,dRdotdt,dTdt,dmbdt,rho_l,mu_l,sigma,k_l,cp_l,L_v\n");
+                printf("\n[RPE_DEBUG] Opened log file: %s\n", LOG_FILE_NAME);
+            }
+        }
+        max_lifetime_seen = lifetime;
+        if (first_log) {
+            printf("[RPE_DEBUG] Tracking parcel with lifetime = %.6e s\n", lifetime);
+            first_log = 0;
+        }
+    }
+    
+    // Log if this is the oldest parcel and it's time to log
+    if (in_thermal_breakup && lifetime >= max_lifetime_seen && 
+        log_call_counter % LOG_INTERVAL == 0 && rpe_debug_file != NULL) {
+        
+        CONVERGE_precision_t time = CONVERGE_simulation_time();
+        
+        // Calculate Pb for logging
+        CONVERGE_precision_t Vb_log = (4.0/3.0) * PI * state.R * state.R * state.R;
+        CONVERGE_precision_t rho_v_log = safe_divide(state.m_b, Vb_log, 1e-6);
+        if (rho_v_log < 1e-6) rho_v_log = 1e-6;
+        CONVERGE_precision_t Pb_log = rho_v_log * params.R_spec * state.T_drop;
+        
+        fprintf(rpe_debug_file, 
+            "%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e,%.12e\n",
+            time, lifetime, state.R, state.Rdot, state.T_drop, state.m_b,
+            Nu, Q_conv, mdot, Pb_log, P_sat, params.P_amb, params.Ro,
+            derivs.dRdt, derivs.dRdotdt, derivs.dTdt, derivs.dmbdt,
+            params.rho_l, params.mu_l, params.sigma, params.k_l, params.cp_l, params.L_v);
+        fflush(rpe_debug_file);
+    }
+    log_call_counter++;
+#endif
 }
