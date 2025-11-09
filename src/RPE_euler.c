@@ -120,6 +120,16 @@ void compute_derivatives(
     CONVERGE_precision_t T_drop_safe = (T_drop > 1e-3) ? T_drop : 1e-3;
     CONVERGE_precision_t Pb = rho_v * params->R_spec * T_drop_safe;
     
+    // DIAGNOSTIC: Check bubble pressure calculation (first few calls)
+    static int pb_diagnostic_count = 0;
+    if (pb_diagnostic_count < 3 && R < 1e-7) {
+        printf("[RPE_PB_DIAG] R=%.3e m, m_b=%.3e kg, Vb=%.3e m³, rho_v=%.3e kg/m³\n",
+               R, m_b, Vb, rho_v);
+        printf("              Pb=%.3e Pa, P_amb=%.3e Pa, DeltaP=%.3e Pa\n",
+               Pb, params->P_amb, Pb - params->P_amb);
+        pb_diagnostic_count++;
+    }
+    
     // 1. dR/dt = Rdot
     derivs->dRdt = Rdot;
     
