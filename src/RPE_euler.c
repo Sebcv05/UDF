@@ -206,6 +206,29 @@ void RPE_euler_solver(
     CONVERGE_precision_t Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
     state.m_b = rho_b * Vb;
     
+    // Diagnostic: Track RPE solver calls for parent parcels
+    static int rpe_call_count = 0;
+    static int last_diagnostic_cycle = -1;
+    static CONVERGE_precision_t max_R_seen = 0.0;
+    static CONVERGE_precision_t max_Rdot_seen = 0.0;
+    int current_cycle = CONVERGE_ncyc();
+    CONVERGE_precision_t sim_time = CONVERGE_simulation_time();
+    
+    rpe_call_count++;
+    if (state.R > max_R_seen) max_R_seen = state.R;
+    if (state.Rdot > max_Rdot_seen) max_Rdot_seen = state.Rdot;
+    
+    // Report every 100 cycles
+    if (current_cycle > 0 && current_cycle % 100 == 0 && current_cycle != last_diagnostic_cycle) {
+        CONVERGE_precision_t T_sat_at_P_amb = T_satNH3(P_amb);
+        printf("[RPE_STATUS] Cycle %d, Time %.6e s: %d RPE calls, Max R=%.3e µm, Max Rdot=%.3f m/s, T_drop=%.2f K, T_sat=%.2f K, P_sat=%.2e Pa\n",
+               current_cycle, sim_time, rpe_call_count, max_R_seen*1e6, max_Rdot_seen, Td, T_sat_at_P_amb, P_sat);
+        last_diagnostic_cycle = current_cycle;
+        rpe_call_count = 0;
+        max_R_seen = 0.0;
+        max_Rdot_seen = 0.0;
+    }
+    
     // Check for negative pressure difference
     if ((P_sat - P_amb) < 0.0) {
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
@@ -221,13 +244,31 @@ void RPE_euler_solver(
                                    &params, &Nu, &Q_conv, &mdot);
     compute_derivatives(&state, &params, &derivs, mdot);
     
+    // Store before state for diagnostics
+    CONVERGE_precision_t R_before = state.R;
+    CONVERGE_precision_t Rdot_before = state.Rdot;
+    
     // Euler step
     euler_step(&state, &derivs, dt_sub);
+    
+    // Diagnostic: Check if bubble is actually growing
+    static int growth_check_count = 0;
+    if (growth_check_count < 5 && state.R > R_before) {
+        printf("[RPE_GROWTH] R: %.6e -> %.6e (+%.3e), Rdot: %.6e -> %.6e, dRdt=%.3e, dt_sub=%.3e\n",
+               R_before, state.R, state.R-R_before, Rdot_before, state.Rdot, derivs.dRdt, dt_sub);
+        growth_check_count++;
+    }
     
     // Check if droplet has cooled below saturation temperature
     CONVERGE_precision_t T_sat_check = T_satNH3(P_amb);
     if (state.T_drop < T_sat_check) {
         // Droplet subcooled - stop bubble growth
+        static int subcool_count = 0;
+        if (subcool_count < 3) {
+            printf("[RPE_STOP] Subcooled: T_drop=%.2f K < T_sat=%.2f K, stopping bubble growth\n",
+                   state.T_drop, T_sat_check);
+            subcool_count++;
+        }
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->pbt[p_idx] = 0;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
@@ -236,12 +277,24 @@ void RPE_euler_solver(
     
     // Enforce constraint: R <= Ro
     if (state.R > params.Ro) {
+        static int R_limit_count = 0;
+        if (R_limit_count < 3) {
+            printf("[RPE_STOP] Bubble hit droplet edge: R=%.3e >= Ro=%.3e, capping growth\n",
+                   state.R, params.Ro);
+            R_limit_count++;
+        }
         state.R = 0.95 * params.Ro;
         state.Rdot = 0.0;  // Stop growth at droplet edge
     }
     
     // Check for very small velocity
     if (state.Rdot < 1.0e-10) {
+        static int small_vel_count = 0;
+        if (small_vel_count < 3) {
+            printf("[RPE_STOP] Bubble velocity too small: Rdot=%.3e < 1e-10, stopping\n",
+                   state.Rdot);
+            small_vel_count++;
+        }
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->pbt[p_idx] = 0;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
