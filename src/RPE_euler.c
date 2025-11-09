@@ -285,13 +285,14 @@ void RPE_euler_solver(
     if (state.Rdot < 0.0) {
         static int negative_rdot_count = 0;
         if (negative_rdot_count < 3) {
-            CONVERGE_precision_t P_sat_calc = Saturation_PressureNH3(state.T_drop);
+            CONVERGE_precision_t P_sat_calc;
+            Saturation_PressureNH3(state.T_drop, &P_sat_calc);
             CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
             printf("[RPE_STOP] Negative Rdot=%.3e, stopping growth (bubble collapsing)\n", state.Rdot);
             printf("           T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
                    state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
-            printf("           R=%.3e m, Ro=%.3e m, Nu=%.3f, dRdt=%.3e m/s\n",
-                   state.R, params.Ro, derivs.Nu, derivs.dRdt);
+            printf("           R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
+                   state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
             negative_rdot_count++;
         }
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
