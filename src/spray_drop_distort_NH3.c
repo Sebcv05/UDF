@@ -31,6 +31,7 @@
 //#include <mpi.h>
 //#include <DestroyTables.h>
 #include <Vb.h>
+#include <RPE_euler.h>
 #include <globals.h>
 
 
@@ -395,22 +396,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             //printf("\nH = %e cp = %e cp/H = %e dT = %e Ja = %f",H,csubp_l,csubp_l/H,dT,Ja);
             // printf("\n H = %e	T = %e	csubp_l = %e",average_hvap,Td,csubp_l);
                */
-                  //VB function 
-                  CONVERGE_precision_t rad_before= old_parcel_cloud.radius[p_idx];
-                  CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
-                  Bubble_Velocity(&old_parcel_cloud,p_idx,P_sat,P_amb);
-                  prof_bubble += CONVERGE_mpi_wtime() - t0;
-                  if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
-                  {//printf("\n v_bubble  = %e, P_sat - P_amb = %e ",old_parcel_cloud.v_bubble[p_idx],P_sat-P_amb);
-                  old_parcel_cloud.pbt[p_idx] = 0;
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
-                  continue;
-                  }
-                  // if(old_parcel_cloud.v_bubble[p_idx]==0.0)
-                  // {
-                  //  //  printf("\nVb = 0 after bubble_velocity update");
-                  // }
-
 
             // --- Synchronize bubble and droplet size in case of KH-RT or other breakup shrinkage ---
             if (old_parcel_cloud.r_bubble[p_idx] > old_parcel_cloud.radius[p_idx]) {
@@ -437,62 +422,42 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                CONVERGE_precision_t dt_sub = dt_global / (CONVERGE_precision_t)n_sub;
                for (int sub = 0; sub < n_sub; ++sub) {
 
+               //RPE Euler solver - updates v_bubble, r_bubble, temp
+               CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
+               RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
+                                hvap_table, cp_table, num_parcel_species);
+               prof_bubble += CONVERGE_mpi_wtime() - t0;
+               
+               // Check if bubble growth stopped
+               if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
+               {
+                  old_parcel_cloud.pbt[p_idx] = 0;
+                  old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+                  break;
+               }
+
                //Load Rb
                Rb = old_parcel_cloud.r_bubble[p_idx];
                Rb_temp = Rb;
 
-            CONVERGE_precision_t dR = old_parcel_cloud.v_bubble[p_idx] * dt_sub;
-            if (dR >= 0.95* old_parcel_cloud.radius[p_idx])
-            {
-               old_parcel_cloud.r_bubble[p_idx] = 0.95* old_parcel_cloud.radius[p_idx];
-               old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx]=9;
-               break;
-            }
-            if (dR > 0)
-            {
-               Rb_temp = dR + Rb;
-            }
-            else
-            {
-               printf("dR negative");
+            // RPE_euler already updated r_bubble, just do safety checks
+            Rb = old_parcel_cloud.r_bubble[p_idx];
             
+            if (isnan(Rb))
+            {
+               printf("\nRb is NaN after RPE solver\n");
                CONVERGE_mpi_abort();
             }
-            if(Rb_temp > old_parcel_cloud.radius[p_idx])
-            {
-               printf("\n Aborting because Rb_temp > r_drop");
-               printf("\nrdrop = %e,\n Rb_old = %e,\ndR = %e,\n Rb_temp = %e\n Vb = %e,\n dt_sub = %e,\nnsub = %i\n",old_parcel_cloud.radius[p_idx], Rb, dR, Rb_temp, old_parcel_cloud.v_bubble[p_idx],dt_sub,sub);
-               printf("\ntbt = %i, tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.tbt[p_idx]);
-               CONVERGE_mpi_abort();
-            }
-            // printf("\n Rb = %e	tau = %e		B = %e		A = %e",Rb_temp,tau,B,A);
-            //	printf("\n el  %el		e %e	f %f	fl %fl",Rb_temp,Rb_temp,Rb_temp,Rb_temp);
-            if (isnan(Rb_temp))
-            {
-               // CONVERGE_logger_verbose("Rb = NaN, B = %e, A = %e", A, B);
-               printf("\nRb_temp is NaN\n");
-               CONVERGE_mpi_abort();
-            }
-            // printf("Vb = %e   Rb = %e  Rd = %e\n",Vb,Rb,old_parcel_cloud.radius[p_idx]);
-   
-
-            // UPDATE BUBBLE AND PARCEL RADII
-            if (Rb_temp > 0.0)
-            {
-               Rb = Rb_temp;
-               old_parcel_cloud.r_bubble[p_idx] = Rb;
-            }
-            else
+            
+            if (Rb < 0.0)
             {
                Rb = 0.0;
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
                old_parcel_cloud.r_bubble[p_idx] = Rb;
-               printf("aborting on L378 because Rb is negative\n");
-               printf("Vb %e", old_parcel_cloud.v_bubble[p_idx]);
+               printf("Rb negative after RPE solver\n");
                CONVERGE_mpi_abort();
             }
-            // commenting this out to see what happnes if we let bubble ad droplet radii grow nnnnn
+            
             if (Rb > old_parcel_cloud.radius[p_idx])
                {
                   old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;
