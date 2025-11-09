@@ -114,8 +114,8 @@ void compute_derivatives(
     
     // Calculate bubble pressure
     CONVERGE_precision_t Vb = (4.0/3.0) * PI * R*R*R;
-    CONVERGE_precision_t rho_v = safe_divide(m_b, Vb, 1e-6);
-    if (rho_v < 1e-6) rho_v = 1e-6;
+    CONVERGE_precision_t rho_v = m_b / Vb;  // Direct calculation - Vb cannot be zero if R > 0
+    if (rho_v < 1e-6) rho_v = 1e-6;  // Minimum density floor
     
     CONVERGE_precision_t T_drop_safe = (T_drop > 1e-3) ? T_drop : 1e-3;
     CONVERGE_precision_t Pb = rho_v * params->R_spec * T_drop_safe;
