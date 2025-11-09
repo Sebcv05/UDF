@@ -103,9 +103,9 @@ def plot_rpe_unit_test(csv_file='rpe_unit_test.csv'):
     ax.axhline(0, color='k', linestyle='--', alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('rpe_unit_test.png', dpi=150, bbox_inches='tight')
+    plt.savefig('rpe_unit_test.pdf', dpi=150, bbox_inches='tight')
     print(f"\nPlot saved to: rpe_unit_test.png")
-    plt.show()
+    # plt.show()
     
     # Summary statistics
     print("\n" + "="*70)

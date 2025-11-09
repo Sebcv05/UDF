@@ -165,7 +165,7 @@ def plot_rpe_debug(csv_file='rpe_parcel_debug.csv'):
     print(f"\nPlot saved to: {output_file}")
     
     # Show plot
-    plt.show()
+    # plt.show()
     
     # Print summary statistics
     print("\n" + "="*60)
