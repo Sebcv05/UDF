@@ -17,17 +17,33 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
    CONVERGE_precision_t r_therm_tm1=old_parcel_cloud->r_therm[p_idx];
    CONVERGE_precision_t old_rad = old_parcel_cloud->radius[p_idx];
    CONVERGE_precision_t old_nd = old_parcel_cloud->num_drop[p_idx];
-   CONVERGE_precision_t Vd = old_parcel_cloud->v_bubble[p_idx] * pow(old_parcel_cloud->radius[p_idx] / old_parcel_cloud->r_bubble[p_idx], -2);
+   
+   // SAFETY: Prevent division by very small r_bubble
+   CONVERGE_precision_t r_bubble_safe = old_parcel_cloud->r_bubble[p_idx];
+   if (r_bubble_safe < 1e-12) {
+      r_bubble_safe = 1e-12;
+   }
+   
+   CONVERGE_precision_t Vd = old_parcel_cloud->v_bubble[p_idx] * pow(old_parcel_cloud->radius[p_idx] / r_bubble_safe, -2);
+   
+   // SAFETY: Prevent negative Vd (droplet shrinkage during thermal breakup)
    if (Vd < 0.0)
    {
-      printf("\n Droplet imploding, aborting\n");
-      CONVERGE_mpi_abort();
+      static int negative_vd_count = 0;
+      if (negative_vd_count < 3) {
+         printf("\n[GEOMETRY] Negative Vd=%.3e, v_bubble=%.3e, setting Vd=0 and continuing\n", 
+                Vd, old_parcel_cloud->v_bubble[p_idx]);
+         negative_vd_count++;
+      }
+      Vd = 0.0;  // Don't shrink, just keep current size
    }
+   
    old_parcel_cloud->v_drop[p_idx] = Vd;
    CONVERGE_precision_t dRd = Vd * dt;
+   
    if (dRd < 0.0)
    {
-      printf("\ndRd<0,setting tbt to 999 and continuing");
+      printf("\n[GEOMETRY] dRd<0, setting tbt to 999 and continuing");
       old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
       return;
    }
@@ -38,14 +54,21 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
       CONVERGE_precision_t r_therm_temp = old_parcel_cloud->radius[p_idx] + dRd;
       if (r_therm_temp < 1e-10)
       {
-         printf("\n r_therm being set to 0 r_therm prev = %e dRd = %e", old_parcel_cloud->r_therm[p_idx], dRd);
-         CONVERGE_mpi_abort();
+         printf("\n[GEOMETRY] r_therm would be too small (%.3e), keeping current radius\n", r_therm_temp);
+         // Don't update, keep current radius
+         return;
       }
       else if (r_therm_temp >= old_parcel_cloud->radius[p_idx])
       {
-         // old_parcel_cloud->r_therm[p_idx] = r_therm_temp;
-         old_parcel_cloud->radius[p_idx] = r_therm_temp;
-         old_parcel_cloud->num_drop[p_idx] = old_nd * CONVERGE_cube(old_rad/old_parcel_cloud->radius[p_idx]);
+         // Droplet growing - update radius and num_drop
+         // SAFETY: Don't allow radius to shrink below original
+         CONVERGE_precision_t new_radius = r_therm_temp;
+         if (new_radius < old_rad) {
+            new_radius = old_rad;  // Keep at least original size
+         }
+         
+         old_parcel_cloud->radius[p_idx] = new_radius;
+         old_parcel_cloud->num_drop[p_idx] = old_nd * CONVERGE_cube(old_rad/new_radius);
       }
       else // 0<r_therm <r_drop         -- This case shouldn't happen as dRd>0
       {

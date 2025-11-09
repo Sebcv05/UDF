@@ -290,6 +290,19 @@ void RPE_euler_solver(
     // Euler step
     euler_step(&state, &derivs, dt_sub);
     
+    // SAFETY: Prevent negative Rdot (bubble collapse)
+    if (state.Rdot < 0.0) {
+        static int negative_rdot_count = 0;
+        if (negative_rdot_count < 3) {
+            printf("[RPE_STOP] Negative Rdot=%.3e, stopping growth (bubble collapsing)\n", state.Rdot);
+            negative_rdot_count++;
+        }
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->pbt[p_idx] = 0;
+        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        return;
+    }
+    
     // Diagnostic: Check if bubble is actually growing
     static int growth_check_count = 0;
     if (growth_check_count < 5 && state.R > R_before) {
