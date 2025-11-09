@@ -679,6 +679,10 @@ CONVERGE_precision_t user_radius = 0.0;
                parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
             }
             
+            // CRITICAL: Set radius_new to current radius (no evaporation)
+            // Without this, radius_new stays at 0 (from calloc) and gets clamped to 1e-18!
+            radius_new[i_pc] = parcel_cloud.radius[i_pc];
+            
             // Diagnostic: Confirm skip is working
             static int evap_skip_confirm = 0;
             if (evap_skip_confirm < 3) {
