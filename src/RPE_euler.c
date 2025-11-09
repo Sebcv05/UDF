@@ -43,8 +43,7 @@ void compute_thermal_mass_transfer(
     CONVERGE_precision_t Pb = rho_v * params->R_spec * T_drop_safe;
     
     // Interface temperature from bubble pressure
-    CONVERGE_precision_t T_int;
-    Saturation_TemperatureNH3(Pb, &T_int);
+    CONVERGE_precision_t T_int = T_satNH3(Pb);
     
     // Temperature difference for heat transfer
     CONVERGE_precision_t dT = T_drop - T_int;
