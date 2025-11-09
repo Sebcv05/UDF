@@ -169,6 +169,24 @@ void RPE_euler_solver(
     params.P_amb = P_amb;
     params.Ro = old_parcel_cloud->radius[p_idx];
     
+    // Diagnostic: Check if droplet radius is valid
+    static int radius_check_count = 0;
+    if (radius_check_count < 5) {
+        printf("[RPE_RADIUS] p_idx=%ld, Ro=%.6e m (%.3f µm), num_drop=%.3e, is_child=%d, lifetime=%.6e s\n",
+               p_idx, params.Ro, params.Ro*1e6, old_parcel_cloud->num_drop[p_idx], 
+               old_parcel_cloud->is_child[p_idx], old_parcel_cloud->lifetime[p_idx]);
+        radius_check_count++;
+    }
+    
+    // Safety check: If droplet radius is too small, don't run RPE
+    if (params.Ro < 1.0e-9) {
+        printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m, skipping RPE solver\n", params.Ro);
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->pbt[p_idx] = 0;
+        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        return;
+    }
+    
     // Calculate droplet mass
     params.m_drop = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro * params.rho_l;
     
