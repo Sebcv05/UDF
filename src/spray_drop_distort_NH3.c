@@ -276,6 +276,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       t_parcel = old_parcel_cloud.lifetime[p_idx];
       CONVERGE_precision_t g_den = rho_v;
       CONVERGE_precision_t g_pressure = P_amb;
+      
+      // DIAGNOSTIC: Check radius at very start of loop
+      static int radius_diag_count = 0;
+      if (radius_diag_count < 5 && old_parcel_cloud.is_child[p_idx] == 0) {
+         printf("[DISTORT_START] p_idx=%d, radius=%.6e m, lifetime=%.6e s, Td=%.2f K, is_child=%d\n",
+                p_idx, old_parcel_cloud.radius[p_idx], old_parcel_cloud.lifetime[p_idx], 
+                Td, old_parcel_cloud.is_child[p_idx]);
+         radius_diag_count++;
+      }
+      
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
       if(Td > 300.0){
