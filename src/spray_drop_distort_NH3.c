@@ -157,6 +157,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    //MB chck
    CONVERGE_precision_t mass_before, mass_after;
+   
+   // Breakup event counter
+   static int total_breakups = 0;
+   static int last_reported_cycle = -1;
+   int breakups_this_call = 0;
 
 
 
@@ -538,7 +543,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          post_pbr = CONVERGE_mpi_wtime();
          if (old_parcel_cloud.tbt[p_idx] && old_parcel_cloud.thermal_breakup_flag[p_idx]!=4)
          {
-
+              breakups_this_call++;  // Count breakup event
+              
               // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
                
                pre_break = CONVERGE_mpi_wtime();
@@ -602,7 +608,20 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
      // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
       // } //time limieter >0.1ms 
    }    // End of parcel loop
+   
+   // Report breakup events
    int ncyc = CONVERGE_ncyc();
+   total_breakups += breakups_this_call;
+   
+   if (ncyc != last_reported_cycle && breakups_this_call > 0) {
+      int rank;
+      CONVERGE_mpi_comm_rank(&rank);
+      CONVERGE_precision_t sim_time = CONVERGE_simulation_time();
+      printf("[BREAKUP] Cycle %d, Rank %d, Time %.6e s: %d breakups this cloud (Total: %d)\n",
+             ncyc, rank, sim_time, breakups_this_call, total_breakups);
+      last_reported_cycle = ncyc;
+   }
+   
    if (ncyc != last_cycle) {
     int rank;
     CONVERGE_mpi_comm_rank(&rank);
