@@ -679,17 +679,13 @@ CONVERGE_precision_t user_radius = 0.0;
                parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
             }
             
-            // Diagnostic disabled - too verbose
-            // static int evap_skip_count = 0;
-            // static int last_reported_cycle = -1;
-            // int current_cycle = CONVERGE_ncyc();
-            // evap_skip_count++;
-            // if(current_cycle != last_reported_cycle && evap_skip_count > 0) {
-            //    printf("[EVAP_SKIP] Cycle %d: Skipped evap for %d parent parcels (is_child=0)\n", 
-            //           current_cycle, evap_skip_count);
-            //    last_reported_cycle = current_cycle;
-            //    evap_skip_count = 0;
-            // }
+            // Diagnostic: Confirm skip is working
+            static int evap_skip_confirm = 0;
+            if (evap_skip_confirm < 3) {
+               printf("[EVAP_SKIP_CONFIRM] p_idx=%ld, is_child=0, SKIPPING evaporation, radius=%.6e m\n",
+                      i_pc, parcel_cloud.radius[i_pc]);
+               evap_skip_confirm++;
+            }
             
             continue;  // Skip to next parcel
          }
@@ -1778,7 +1774,15 @@ CONVERGE_precision_t user_radius = 0.0;
       }
 
       // update parcel radius
-      radius_new[i_pc] = (radius_new[i_pc] < 1.0e-18) ? (1.0e-18) : (radius_new[i_pc]);
+      if (radius_new[i_pc] < 1.0e-18) {
+         static int clamp_count = 0;
+         if (clamp_count < 5) {
+            printf("[EVAP_CLAMP] p_idx=%ld, radius_new=%.3e < 1e-18, clamping to 1e-18, is_child=%d\n",
+                   i_pc, radius_new[i_pc], parcel_cloud.is_child[i_pc]);
+            clamp_count++;
+         }
+         radius_new[i_pc] = 1.0e-18;
+      }
 
       parcel_cloud.radius[i_pc] = radius_new[i_pc];
    }
