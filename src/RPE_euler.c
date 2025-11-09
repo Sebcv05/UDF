@@ -180,23 +180,6 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
-    // CRITICAL CHECK: Skip if num_drop is too small (parcel destroyed/evaporated)
-    // At injection, num_drop should be ≈ 1.0
-    if (old_parcel_cloud->num_drop[p_idx] < 0.1) {
-        static int low_numdrop_count = 0;
-        if (low_numdrop_count < 3) {
-            printf("[RPE_SKIP] p_idx=%ld, num_drop=%.3e < 0.1, lifetime=%.3e s, radius=%.3e m, is_child=%d\n",
-                   p_idx, old_parcel_cloud->num_drop[p_idx], old_parcel_cloud->lifetime[p_idx],
-                   old_parcel_cloud->radius[p_idx], old_parcel_cloud->is_child[p_idx]);
-            printf("           Parcel nearly gone - likely destroyed before thermal breakup\n");
-            low_numdrop_count++;
-        }
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
-        return;
-    }
-    
     // Initialize parameters structure
     RPE_Params params;
     
@@ -206,15 +189,6 @@ void RPE_euler_solver(
     params.sigma = old_parcel_cloud->surf_ten[p_idx];
     params.P_amb = P_amb;
     params.Ro = old_parcel_cloud->radius[p_idx];
-    
-    // Diagnostic: Check if droplet radius is valid
-    static int radius_check_count = 0;
-    if (radius_check_count < 5) {
-        printf("[RPE_RADIUS] p_idx=%ld, Ro=%.6e m (%.3f µm), num_drop=%.3e, is_child=%d, lifetime=%.6e s\n",
-               p_idx, params.Ro, params.Ro*1e6, old_parcel_cloud->num_drop[p_idx], 
-               old_parcel_cloud->is_child[p_idx], old_parcel_cloud->lifetime[p_idx]);
-        radius_check_count++;
-    }
     
     // Safety check: If droplet radius is too small, don't run RPE
     if (params.Ro < 1.0e-9) {
