@@ -302,25 +302,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          }
       }
       
-      // Log tracked parcel data at every timestep
-      if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
-         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
-         CONVERGE_precision_t Pb_track;
-         Saturation_PressureNH3(Td, &Pb_track);
-         fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
-                 sim_time,
-                 t_parcel,
-                 p_idx,
-                 old_parcel_cloud.radius[p_idx],
-                 Rb,
-                 old_parcel_cloud.v_bubble[p_idx],
-                 Td,
-                 Pb_track,
-                 P_amb,
-                 old_parcel_cloud.thermal_breakup_flag[p_idx],
-                 0.0);  // kb will be updated later in the loop
-         fflush(parcel_track_file);
-      }
+      // Note: Detailed logging happens later after kb is calculated
       
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
