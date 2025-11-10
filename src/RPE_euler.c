@@ -279,8 +279,10 @@ void RPE_euler_solver(
     // Report every 100 cycles
     if (current_cycle > 0 && current_cycle % 100 == 0 && current_cycle != last_diagnostic_cycle) {
         CONVERGE_precision_t T_sat_at_P_amb = T_satNH3(P_amb);
+        CONVERGE_precision_t P_sat_at_Td;
+        Saturation_PressureNH3(Td, &P_sat_at_Td);
         printf("[RPE_STATUS] Cycle %d, Time %.6e s: %d RPE calls, Max R=%.3e µm, Max Rdot=%.3f m/s, T_drop=%.2f K, T_sat=%.2f K, P_sat=%.2e Pa\n",
-               current_cycle, sim_time, rpe_call_count, max_R_seen*1e6, max_Rdot_seen, Td, T_sat_at_P_amb, P_sat);
+               current_cycle, sim_time, rpe_call_count, max_R_seen*1e6, max_Rdot_seen, Td, T_sat_at_P_amb, P_sat_at_Td);
         last_diagnostic_cycle = current_cycle;
         rpe_call_count = 0;
         max_R_seen = 0.0;
@@ -288,6 +290,8 @@ void RPE_euler_solver(
     }
     
     // Check for negative pressure difference
+    CONVERGE_precision_t P_sat;
+    Saturation_PressureNH3(Td, &P_sat);
     if ((P_sat - P_amb) < 0.0) {
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->pbt[p_idx] = 0;
