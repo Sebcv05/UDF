@@ -302,7 +302,26 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          }
       }
       
-      // Note: Detailed logging happens later after kb is calculated
+      // Log tracked parcel data at every CFD timestep (before thermal breakup loop)
+      if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+         CONVERGE_precision_t Pb_track;
+         Saturation_PressureNH3(Td, &Pb_track);
+         // kb not yet calculated, so set to -1
+         fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
+                 sim_time,
+                 t_parcel,
+                 p_idx,
+                 old_parcel_cloud.radius[p_idx],
+                 Rb,
+                 old_parcel_cloud.v_bubble[p_idx],
+                 Td,
+                 Pb_track,
+                 P_amb,
+                 old_parcel_cloud.thermal_breakup_flag[p_idx],
+                 -1.0);  // kb not yet calculated
+         fflush(parcel_track_file);
+      }
       
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
@@ -538,26 +557,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             }
             prof_bc += CONVERGE_mpi_wtime() - t0;
             
-            // Log kb for tracked parcel
-            if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
-               CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
-               CONVERGE_precision_t Pb_track;
-               Saturation_PressureNH3(Td, &Pb_track);
-               fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
-                       sim_time,
-                       t_parcel,
-                       p_idx,
-                       old_parcel_cloud.radius[p_idx],
-                       Rb,
-                       old_parcel_cloud.v_bubble[p_idx],
-                       Td,
-                       Pb_track,
-                       P_amb,
-                       old_parcel_cloud.thermal_breakup_flag[p_idx],
-                       kb);
-               fflush(parcel_track_file);
-            }
-         
+            // kb calculated - note: parcel data already logged at start of timestep
+          
 
    
    
@@ -609,10 +610,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
               CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
               
-              // Get final kb value (stored in eta_drop)
+              // Get final kb value (stored in eta_drop if triggered by kb threshold)
+              // If eta_drop is 0, recalculate kb for diagnostic
               CONVERGE_precision_t kb_final = old_parcel_cloud.eta_drop[p_idx];
+              if (kb_final < 1e-10) {
+                  // Recalculate kb if not already stored
+                  kb_final = BreakupCriterion(&old_parcel_cloud, p_idx, dt);
+              }
+              CONVERGE_int_t breakup_flag = old_parcel_cloud.thermal_breakup_flag[p_idx];
               
-              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
                      p_idx,
                      old_parcel_cloud.lifetime[p_idx],
                      old_parcel_cloud.v_bubble[p_idx],
@@ -622,6 +629,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      R_final,
                      R_drop_final,
                      kb_final,
+                     breakup_flag,
                      m_b_final,
                      rho_v_final);
               
