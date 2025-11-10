@@ -596,6 +596,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               
               // Calculate bubble pressure at breakup
               CONVERGE_precision_t R_final = old_parcel_cloud.r_bubble[p_idx];
+              CONVERGE_precision_t R_drop_final = old_parcel_cloud.radius[p_idx];
               CONVERGE_precision_t T_final = old_parcel_cloud.temp[p_idx];
               CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
               
@@ -608,7 +609,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
               CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
               
-              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
                      p_idx,
                      old_parcel_cloud.lifetime[p_idx],
                      old_parcel_cloud.v_bubble[p_idx],
@@ -616,6 +617,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      Pb_final,
                      Pb_actual,
                      R_final,
+                     R_drop_final,
                      m_b_final,
                      rho_v_final);
               
