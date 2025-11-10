@@ -25,6 +25,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("user_lag_var", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("v_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("m_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("v_bubble_tm1", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST); 
    CONVERGE_variable_register("v_drop", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST); 
    CONVERGE_variable_register("r_bubble_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
@@ -90,6 +91,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    R_BUBBLE = CONVERGE_lagrangian_field_id("r_bubble");
    V_BUBBLE = CONVERGE_lagrangian_field_id("v_bubble");
+   M_BUBBLE = CONVERGE_lagrangian_field_id("m_bubble");
    V_B_TM1  = CONVERGE_lagrangian_field_id("v_bubble_tm1");
    V_DROP =    CONVERGE_lagrangian_field_id("v_drop");
    R_B_0    = CONVERGE_lagrangian_field_id("r_bubble_0");
@@ -429,6 +431,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_temp_starm1 = (double *)CONVERGE_cloud_get_field_data(c, USER_LAG_VAR);
    parcel_cloud_loc->r_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_BUBBLE);
    parcel_cloud_loc->v_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, V_BUBBLE);
+   parcel_cloud_loc->m_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, M_BUBBLE);
    parcel_cloud_loc->v_drop = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,V_DROP);
    parcel_cloud_loc->r_bubble_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_B_0);
    parcel_cloud_loc->r_bubble_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_B_TM1);

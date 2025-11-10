@@ -10,6 +10,7 @@ CONVERGE_id_t USER_LAG_VARv3;
 CONVERGE_id_t USER_LAG_VARv3b;
 CONVERGE_id_t R_BUBBLE;
 CONVERGE_id_t V_BUBBLE;
+CONVERGE_id_t M_BUBBLE;
 CONVERGE_id_t R_B_0;
 CONVERGE_id_t R_B_TM1;
 CONVERGE_id_t V_B_TM1;
@@ -344,6 +345,7 @@ struct ParcelCloud
    CONVERGE_vec3_t* user_lag_var_v3b;
    CONVERGE_precision_t* r_bubble;
    CONVERGE_precision_t* v_bubble;
+   CONVERGE_precision_t* m_bubble;
    CONVERGE_precision_t* v_drop;
    CONVERGE_precision_t* r_bubble_0;
    CONVERGE_precision_t* v_bubble_tm1;

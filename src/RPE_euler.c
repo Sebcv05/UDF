@@ -250,12 +250,19 @@ void RPE_euler_solver(
     state.Rdot = old_parcel_cloud->v_bubble[p_idx];
     state.T_drop = Td;
     
-    // Initialize bubble mass if not already set
-    CONVERGE_precision_t P_sat;
-    Saturation_PressureNH3(Td, &P_sat);
-    CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat, Td);
-    CONVERGE_precision_t Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
-    state.m_b = rho_b * Vb;
+    // Initialize or read bubble mass from parcel
+    // If m_bubble is zero or very small, initialize from equilibrium
+    if (old_parcel_cloud->m_bubble[p_idx] < 1e-20) {
+        CONVERGE_precision_t P_sat;
+        Saturation_PressureNH3(Td, &P_sat);
+        CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat, Td);
+        CONVERGE_precision_t Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
+        state.m_b = rho_b * Vb;
+        old_parcel_cloud->m_bubble[p_idx] = state.m_b;  // Store initial value
+    } else {
+        // Use stored bubble mass (preserves thermal limiting effect)
+        state.m_b = old_parcel_cloud->m_bubble[p_idx];
+    }
     
     // Diagnostic: Track RPE solver calls for parent parcels
     static int rpe_call_count = 0;
@@ -376,6 +383,7 @@ void RPE_euler_solver(
     old_parcel_cloud->r_bubble[p_idx] = state.R;
     old_parcel_cloud->v_bubble[p_idx] = state.Rdot;
     old_parcel_cloud->temp[p_idx] = state.T_drop;
+    old_parcel_cloud->m_bubble[p_idx] = state.m_b;  // CRITICAL: Store bubble mass!
     
 #if RPE_DEBUG_LOGGING
     // Lifetime-based tracking: log the oldest parcel in thermal breakup

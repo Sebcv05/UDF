@@ -604,13 +604,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               Saturation_PressureNH3(T_final, &Pb_final);
               
               // Detailed breakup diagnostic
-              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb=%.3e Pa, R_bubble=%.6e m\n",
+              CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
+              CONVERGE_precision_t m_b_final = old_parcel_cloud.m_bubble[p_idx];
+              CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
+              CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
+              
+              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
                      p_idx,
                      old_parcel_cloud.lifetime[p_idx],
                      old_parcel_cloud.v_bubble[p_idx],
                      T_final,
                      Pb_final,
-                     R_final);
+                     Pb_actual,
+                     R_final,
+                     m_b_final,
+                     rho_v_final);
               
               // If this is the tracked parcel, close the tracking file
               if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
