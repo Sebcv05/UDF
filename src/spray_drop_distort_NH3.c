@@ -162,6 +162,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    static int total_breakups = 0;
    static int last_reported_cycle = -1;
    int breakups_this_call = 0;
+   
+   // Single parcel tracking for detailed diagnostics
+   static FILE* parcel_track_file = NULL;
+   static int tracking_initialized = 0;
+   static int tracked_parcel_id = -1;  // Will be set to first parent parcel we encounter
 
 
 
@@ -284,6 +289,37 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                 p_idx, old_parcel_cloud.radius[p_idx], old_parcel_cloud.lifetime[p_idx], 
                 Td, old_parcel_cloud.is_child[p_idx]);
          radius_diag_count++;
+      }
+      
+      // Initialize single parcel tracking
+      if (!tracking_initialized && old_parcel_cloud.is_child[p_idx] == 0 && old_parcel_cloud.pbt[p_idx] == 1) {
+         tracked_parcel_id = p_idx;
+         tracking_initialized = 1;
+         parcel_track_file = fopen("tracked_parcel.csv", "w");
+         if (parcel_track_file) {
+            fprintf(parcel_track_file, "time,lifetime,p_idx,R_drop,R_bubble,Rdot,T_drop,Pb,P_amb,thermal_breakup_flag,kb\n");
+            printf("[TRACKING] Started tracking parcel %d\n", tracked_parcel_id);
+         }
+      }
+      
+      // Log tracked parcel data at every timestep
+      if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+         CONVERGE_precision_t Pb_track;
+         Saturation_PressureNH3(Td, &Pb_track);
+         fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
+                 sim_time,
+                 t_parcel,
+                 p_idx,
+                 old_parcel_cloud.radius[p_idx],
+                 Rb,
+                 old_parcel_cloud.v_bubble[p_idx],
+                 Td,
+                 Pb_track,
+                 P_amb,
+                 old_parcel_cloud.thermal_breakup_flag[p_idx],
+                 0.0);  // kb will be updated later in the loop
+         fflush(parcel_track_file);
       }
       
       // Calculate Saturation Pressure from Antoine's Equation
@@ -519,6 +555,26 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                spray_params_logged = 1;
             }
             prof_bc += CONVERGE_mpi_wtime() - t0;
+            
+            // Log kb for tracked parcel
+            if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+               CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+               CONVERGE_precision_t Pb_track;
+               Saturation_PressureNH3(Td, &Pb_track);
+               fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
+                       sim_time,
+                       t_parcel,
+                       p_idx,
+                       old_parcel_cloud.radius[p_idx],
+                       Rb,
+                       old_parcel_cloud.v_bubble[p_idx],
+                       Td,
+                       Pb_track,
+                       P_amb,
+                       old_parcel_cloud.thermal_breakup_flag[p_idx],
+                       kb);
+               fflush(parcel_track_file);
+            }
          
 
    
@@ -573,6 +629,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      T_final,
                      Pb_final,
                      R_final);
+              
+              // If this is the tracked parcel, close the tracking file
+              if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+                  fprintf(parcel_track_file, "# BREAKUP OCCURRED AT THIS TIMESTEP\n");
+                  fclose(parcel_track_file);
+                  parcel_track_file = NULL;
+                  printf("[TRACKING] Breakup detected for tracked parcel %d - tracking file closed\n", tracked_parcel_id);
+              }
               
               // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
                
