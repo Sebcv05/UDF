@@ -567,7 +567,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
                old_parcel_cloud.tbt[p_idx] = 1;
                old_parcel_cloud.r_bubble[p_idx] = Rb;
-               old_parcel_cloud.eta_drop[p_idx] = 0;
+               old_parcel_cloud.eta_drop[p_idx] = kb;  // Store final kb value for diagnostic
                break;
             }
    
@@ -609,7 +609,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
               CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
               
-              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+              // Get final kb value (stored in eta_drop)
+              CONVERGE_precision_t kb_final = old_parcel_cloud.eta_drop[p_idx];
+              
+              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
                      p_idx,
                      old_parcel_cloud.lifetime[p_idx],
                      old_parcel_cloud.v_bubble[p_idx],
@@ -618,6 +621,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      Pb_actual,
                      R_final,
                      R_drop_final,
+                     kb_final,
                      m_b_final,
                      rho_v_final);
               
