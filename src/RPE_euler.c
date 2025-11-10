@@ -152,7 +152,8 @@ void compute_derivatives(
     CONVERGE_precision_t Nu, Q_conv, mdot_local;
     compute_thermal_mass_transfer(R, Rdot, T_drop, m_b, params, &Nu, &Q_conv, &mdot_local);
     
-    CONVERGE_precision_t Q_evap = params->L_v * mdot;
+    // Use the locally computed mdot for energy balance (thermal limiting)
+    CONVERGE_precision_t Q_evap = params->L_v * mdot_local;
     CONVERGE_precision_t dTdt = safe_divide(Q_conv - Q_evap, params->m_drop * params->cp_l, 0.0);
     
     // Apply temperature rate limits
