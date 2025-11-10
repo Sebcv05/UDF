@@ -556,6 +556,24 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          {
               breakups_this_call++;  // Count breakup event
               
+              // Calculate bubble pressure at breakup
+              CONVERGE_precision_t R_final = old_parcel_cloud.r_bubble[p_idx];
+              CONVERGE_precision_t T_final = old_parcel_cloud.temp[p_idx];
+              CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
+              
+              // Get bubble pressure from saturation at droplet temperature
+              CONVERGE_precision_t Pb_final;
+              Saturation_PressureNH3(T_final, &Pb_final);
+              
+              // Detailed breakup diagnostic
+              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb=%.3e Pa, R_bubble=%.6e m\n",
+                     p_idx,
+                     old_parcel_cloud.lifetime[p_idx],
+                     old_parcel_cloud.v_bubble[p_idx],
+                     T_final,
+                     Pb_final,
+                     R_final);
+              
               // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
                
                pre_break = CONVERGE_mpi_wtime();
