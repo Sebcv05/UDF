@@ -599,12 +599,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               CONVERGE_precision_t T_final = old_parcel_cloud.temp[p_idx];
               CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
               
-              // Get bubble pressure from saturation at droplet temperature
+              // Get bubble pressure from saturation at droplet temperature (equilibrium)
               CONVERGE_precision_t Pb_final;
               Saturation_PressureNH3(T_final, &Pb_final);
               
-              // Detailed breakup diagnostic
-              CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
+              // Get actual bubble pressure from stored mass
               CONVERGE_precision_t m_b_final = old_parcel_cloud.m_bubble[p_idx];
               CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
               CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
