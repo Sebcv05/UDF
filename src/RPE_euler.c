@@ -145,16 +145,26 @@ void compute_derivatives(
     
     derivs->dRdotdt = Rddot;
     
-    // 3. Mass balance: dm_b/dt = mdot
-    derivs->dmbdt = mdot;
+    // Compute current mass transfer rate
+    CONVERGE_precision_t Nu, Q_conv, mdot_current;
+    compute_thermal_mass_transfer(R, Rdot, T_drop, m_b, params, &Nu, &Q_conv, &mdot_current);
     
-    // 4. Energy balance: dT_drop/dt
-    CONVERGE_precision_t Nu, Q_conv, mdot_local;
-    compute_thermal_mass_transfer(R, Rdot, T_drop, m_b, params, &Nu, &Q_conv, &mdot_local);
+    // 3. Mass balance: dm_b/dt = mdot (use current value)
+    derivs->dmbdt = mdot_current;
     
-    // Use the locally computed mdot for energy balance (thermal limiting)
-    CONVERGE_precision_t Q_evap = params->L_v * mdot_local;
+    // 4. Energy balance: dT_drop/dt (use same mdot for consistency)
+    CONVERGE_precision_t Q_evap = params->L_v * mdot_current;
     CONVERGE_precision_t dTdt = safe_divide(Q_conv - Q_evap, params->m_drop * params->cp_l, 0.0);
+    
+    // DIAGNOSTIC: Check energy balance (first few calls for parent parcels)
+    static int energy_diag_count = 0;
+    if (energy_diag_count < 5 && R > 1e-6 && R < 1e-4) {
+        printf("[RPE_ENERGY] R=%.3e m, T_drop=%.2f K, m_drop=%.3e kg\n", R, T_drop, params->m_drop);
+        printf("             Nu=%.2f, Q_conv=%.3e W, mdot=%.3e kg/s, Q_evap=%.3e W\n", 
+               Nu, Q_conv, mdot_current, Q_evap);
+        printf("             Q_net=%.3e W, dTdt=%.3e K/s\n", Q_conv - Q_evap, dTdt);
+        energy_diag_count++;
+    }
     
     // Apply temperature rate limits
     if (dTdt > 1e6) dTdt = 1e6;
