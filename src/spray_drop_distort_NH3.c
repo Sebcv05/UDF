@@ -569,9 +569,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             {
                static int expansion_breakup_count = 0;
                if (expansion_breakup_count < 10) {
+                  // Diagnostic: Print kb calculation details for comparison with 1D model
+                  CONVERGE_precision_t shell_thickness = old_parcel_cloud.radius[p_idx] - old_parcel_cloud.r_bubble[p_idx];
+                  CONVERGE_precision_t expansion_ratio = old_parcel_cloud.radius[p_idx] / old_parcel_cloud.r_drop_0[p_idx];
                   printf("[EXPANSION_BREAKUP] p_idx=%li, radius=%.3e m > 2.0*r_drop_0=%.3e m, triggering breakup (lifetime=%.3e s)\n",
                          p_idx, old_parcel_cloud.radius[p_idx], 2.0*old_parcel_cloud.r_drop_0[p_idx],
                          old_parcel_cloud.lifetime[p_idx]);
+                  printf("  [KB_DIAG] expansion_ratio=%.3f, shell_thickness=%.3e m, omega=%.3e, int_omega=%.3e, eta_0=%.3e, kb=%.6f\n",
+                         expansion_ratio, shell_thickness, 
+                         old_parcel_cloud.omega[p_idx], old_parcel_cloud.int_omega[p_idx],
+                         old_parcel_cloud.eta_drop_0[p_idx], old_parcel_cloud.eta_drop[p_idx]);
                   expansion_breakup_count++;
                }
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 6;
