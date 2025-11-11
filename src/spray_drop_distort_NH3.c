@@ -572,6 +572,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   // Diagnostic: Print kb calculation details for comparison with 1D model
                   CONVERGE_precision_t shell_thickness = old_parcel_cloud.radius[p_idx] - old_parcel_cloud.r_bubble[p_idx];
                   CONVERGE_precision_t expansion_ratio = old_parcel_cloud.radius[p_idx] / old_parcel_cloud.r_drop_0[p_idx];
+                  
+                  // Calculate DGRE parameters for comparison
+                  CONVERGE_precision_t Vb = old_parcel_cloud.v_bubble[p_idx];
+                  CONVERGE_precision_t Vd = old_parcel_cloud.v_drop[p_idx];
+                  CONVERGE_precision_t Rb = old_parcel_cloud.r_bubble[p_idx];
+                  CONVERGE_precision_t We_i_diag = old_parcel_cloud.density[p_idx] * Vb*Vb * Rb / old_parcel_cloud.surf_ten[p_idx];
+                  CONVERGE_precision_t We_o_diag = old_parcel_cloud.density[p_idx] * Vd*Vd * Rb / old_parcel_cloud.surf_ten[p_idx];
+                  CONVERGE_precision_t Ma_i_diag = Vb / 471.706;
+                  CONVERGE_precision_t Delta_diag = old_parcel_cloud.radius[p_idx] / Rb;
+                  
                   printf("[EXPANSION_BREAKUP] p_idx=%li, radius=%.3e m > 2.0*r_drop_0=%.3e m, triggering breakup (lifetime=%.3e s)\n",
                          p_idx, old_parcel_cloud.radius[p_idx], 2.0*old_parcel_cloud.r_drop_0[p_idx],
                          old_parcel_cloud.lifetime[p_idx]);
@@ -579,6 +589,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                          expansion_ratio, shell_thickness, 
                          old_parcel_cloud.omega[p_idx], old_parcel_cloud.int_omega[p_idx],
                          old_parcel_cloud.eta_drop_0[p_idx], old_parcel_cloud.eta_drop[p_idx]);
+                  printf("  [DGRE_DIAG] Vb=%.3e m/s, We_i=%.3e, We_o=%.3e, Ma_i=%.6f, Delta=%.3f, Rb=%.3e m\n",
+                         Vb, We_i_diag, We_o_diag, Ma_i_diag, Delta_diag, Rb);
                   expansion_breakup_count++;
                }
                old_parcel_cloud.thermal_breakup_flag[p_idx] = 6;
