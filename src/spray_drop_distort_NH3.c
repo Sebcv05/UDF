@@ -448,23 +448,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
 
             }
-            // REMOVED: Premature expansion check that prevented early parcels from thermal breakup
-            // This check at 1.5x expansion was skipping parcels that hadn't expanded much yet,
-            // preventing them from ever reaching the kb > threshold check at line 565
-            // The kb criterion should be the only trigger for thermal breakup
-            /*
-            if(old_parcel_cloud.radius[p_idx]> old_parcel_cloud.r_drop_0[p_idx]*1.5)
-            {
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 1;
-               old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.pbt[p_idx] = 0;
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 6;
-               continue;
-               // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
             
-               // printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
-            }
-            */
+            // Continue with thermal breakup processing
+            // Note: 1.5x expansion check is inside sub-timestep loop after Geometry() call
 
             //Calculate Species dependent properites
             CONVERGE_precision_t average_hvap = 0.0;
@@ -576,6 +562,22 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      printf("\nAborting...");
                      CONVERGE_mpi_abort();
                   }
+
+            // Check 1.5x expansion after Geometry update
+            if(old_parcel_cloud.radius[p_idx] > old_parcel_cloud.r_drop_0[p_idx]*1.5)
+            {
+               static int expansion_breakup_count = 0;
+               if (expansion_breakup_count < 10) {
+                  printf("[EXPANSION_BREAKUP] p_idx=%li, radius=%.3e m > 1.5*r_drop_0=%.3e m, triggering breakup (lifetime=%.3e s)\n",
+                         p_idx, old_parcel_cloud.radius[p_idx], 1.5*old_parcel_cloud.r_drop_0[p_idx],
+                         old_parcel_cloud.lifetime[p_idx]);
+                  expansion_breakup_count++;
+               }
+               old_parcel_cloud.thermal_breakup_flag[p_idx] = 6;
+               old_parcel_cloud.tbt[p_idx] = 1;
+               old_parcel_cloud.pbt[p_idx] = 0;
+               break;  // Exit sub-timestep loop
+            }
 
 
             CONVERGE_precision_t g_den = global_density[node_index];
