@@ -105,6 +105,14 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             root_values[1] = creal(r1.x1);
             root_values[2] = creal(r1.x2);
             
+            // Diagnostic: Print all roots for first few calls
+            static int root_diag_count = 0;
+            if (root_diag_count < 5) {
+               printf("[ROOT_DIAG] roots: x0=%.3e, x1=%.3e, x2=%.3e\n", 
+                      root_values[0], root_values[1], root_values[2]);
+               root_diag_count++;
+            }
+            
             // Find root with maximum real part
             CONVERGE_precision_t max_real = root_values[0];
             if (root_values[1] > max_real) max_real = root_values[1];
