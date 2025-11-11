@@ -563,6 +563,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      CONVERGE_mpi_abort();
                   }
 
+            // DISABLED: 2x expansion check - testing if kb criterion alone is sufficient
+            /*
             // Check 2x expansion after Geometry update
             // Based on 1D Python modeling showing parcels reach >1.5x even with Kcrit=1
             if(old_parcel_cloud.radius[p_idx] > old_parcel_cloud.r_drop_0[p_idx]*2.0)
@@ -598,6 +600,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                old_parcel_cloud.pbt[p_idx] = 0;
                break;  // Exit sub-timestep loop
             }
+            */
 
 
             CONVERGE_precision_t g_den = global_density[node_index];
