@@ -99,16 +99,29 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             }
             */
            
-            if (fabs(creal(r1.x0)) > 1.0e10)
+            // Select root with largest real part (maximum disturbance growth rate)
+            CONVERGE_precision_t root_values[3];
+            root_values[0] = creal(r1.x0);
+            root_values[1] = creal(r1.x1);
+            root_values[2] = creal(r1.x2);
+            
+            // Find root with maximum real part
+            CONVERGE_precision_t max_real = root_values[0];
+            if (root_values[1] > max_real) max_real = root_values[1];
+            if (root_values[2] > max_real) max_real = root_values[2];
+            
+            // Check for unreasonably large values
+            if (fabs(max_real) > 1.0e10)
             {
-               r1.x0 = 0;
+               max_real = 0.0;
             }
-            if (creal(r1.x0) <= 0.0)
+            
+            // If negative, use absolute value (modulus)
+            if (max_real < 0.0)
             {
-                old_parcel_cloud->omega[p_idx] = 0.0;
+               max_real = fabs(max_real);
             }
-            else
-            {
-                old_parcel_cloud->omega[p_idx] = creal(r1.x0) / c_omega;
-            }
+            
+            // Convert from non-dimensional to dimensional omega
+            old_parcel_cloud->omega[p_idx] = max_real / c_omega;
 }
