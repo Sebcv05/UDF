@@ -326,8 +326,13 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
       if(Td > 300.0){
-         printf("\n\n before P_sat, Td = %f, radius = %e, p_idx = %li, tbt = %i, pbt = %i, thermal_breakup_flag = %d",Td,old_parcel_cloud.radius[p_idx],old_parcel_cloud.tbt[p_idx],old_parcel_cloud.pbt[p_idx],old_parcel_cloud.thermal_breakup_flag[p_idx]);
-         printf("\nRemoving Parcel\n");
+         // FIX: Added diagnostic output and ensured parcel is properly disabled
+         static int td_high_count = 0;
+         if (td_high_count < 10) {
+            printf("[THERMAL_ABORT] p_idx=%li, Td=%.2f K > 300K, removing parcel (lifetime=%.3e s, radius=%.3e m)\n",
+                   p_idx, Td, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
+            td_high_count++;
+         }
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
          old_parcel_cloud.r_bubble[p_idx] = 0;
@@ -336,13 +341,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          old_parcel_cloud.lifetime[p_idx] = 0;
          old_parcel_cloud.tbt[p_idx] = 0;
          old_parcel_cloud.pbt[p_idx] = 0;
-         old_parcel_cloud.thermal_breakup_flag[p_idx] = 0;
-         old_parcel_cloud.int_omega[p_idx] = 0;
+         old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;  // Changed from 0 to 999 for consistency
          old_parcel_cloud.int_omega[p_idx] = 0;
          old_parcel_cloud.m0[p_idx] = 0;
          old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
-         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
+         old_parcel_cloud.r_bubble_0[p_idx] = 0;
+         old_parcel_cloud.r_therm[p_idx] = 0;
          continue;
       }
       Saturation_PressureNH3(Td, &P_sat);
@@ -365,16 +369,23 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
       if (P_sat < 1)
       {
-         printf("\nParcel Temperature outside of range for P_sat Correlation, continuing...");
-         old_parcel_cloud.v_bubble[p_idx] =0.0;
+         // FIX: Added pbt=0 and thermal_breakup_flag=999 to properly disable thermal breakup
+         static int psat_low_count = 0;
+         if (psat_low_count < 10) {
+            printf("[THERMAL_ABORT] p_idx=%li, P_sat=%.3e Pa < 1 Pa, Td=%.2f K outside Antoine range (lifetime=%.3e s)\n",
+                   p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
+            psat_low_count++;
+         }
+         old_parcel_cloud.v_bubble[p_idx] = 0.0;
          old_parcel_cloud.omega[p_idx] = 0.0;
          old_parcel_cloud.eta_drop[p_idx] = 0.0;
-         old_parcel_cloud.int_omega[p_idx] =0.0;
          old_parcel_cloud.int_omega[p_idx] = 0.0;
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
          old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
          old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
          old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
+         old_parcel_cloud.pbt[p_idx] = 0;  // CRITICAL FIX: Disable thermal breakup
+         old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;  // CRITICAL FIX: Mark as aborted
          continue;
 
       }
@@ -385,8 +396,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          CONVERGE_precision_t P_sat_new;
          Saturation_PressureNH3(old_parcel_cloud.temp[p_idx],&P_sat_new);
          // old_parcel_cloud.r_bubble[p_idx]= 2.0 * old_parcel_cloud.surf_ten[p_idx] / (P_sat_new - global_pressure[node_index]);
-         if(old_parcel_cloud.r_bubble[p_idx]<0.0)     //not superhearted anymore, deactivate thermal model for this parcel
+         if(old_parcel_cloud.r_bubble[p_idx]<0.0)     //not superheated anymore, deactivate thermal model for this parcel
          {
+            // FIX: Added diagnostic output
+            static int rbubble_neg_count = 0;
+            if (rbubble_neg_count < 10) {
+               printf("[THERMAL_ABORT] p_idx=%li, r_bubble<0 (subcooled), disabling thermal breakup (lifetime=%.3e s, Td=%.2f K)\n",
+                      p_idx, old_parcel_cloud.lifetime[p_idx], Td);
+               rbubble_neg_count++;
+            }
             old_parcel_cloud.r_bubble[p_idx]=0.0;
             old_parcel_cloud.thermal_breakup_flag[p_idx]=999;
             old_parcel_cloud.pbt[p_idx]=0;
@@ -405,6 +423,21 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          // Pre-breakup routine
          pre_pbr = CONVERGE_mpi_wtime();
 
+         // DIAGNOSTIC: Identify stuck parcels that persisted >100 µs without breaking up
+         if (old_parcel_cloud.lifetime[p_idx] > 1.0e-4 && 
+             old_parcel_cloud.pbt[p_idx] == 0 && 
+             old_parcel_cloud.thermal_breakup_flag[p_idx] != 3 && 
+             old_parcel_cloud.is_child[p_idx] == 0 &&
+             old_parcel_cloud.radius[p_idx] > 5.0e-5) {
+            static int stuck_parcel_count = 0;
+            if (stuck_parcel_count < 20) {
+               printf("[STUCK_PARCEL] p_idx=%li, lifetime=%.3e s, radius=%.3e m, pbt=%d, tbf=%d, Td=%.2f K, r_bubble=%.3e m\n",
+                      p_idx, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx],
+                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.thermal_breakup_flag[p_idx], 
+                      Td, old_parcel_cloud.r_bubble[p_idx]);
+               stuck_parcel_count++;
+            }
+         }
     
       
 
