@@ -450,7 +450,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             }
             
             // Continue with thermal breakup processing
-            // Note: 1.5x expansion check is inside sub-timestep loop after Geometry() call
+            // Note: 2x expansion check is inside sub-timestep loop after Geometry() call
 
             //Calculate Species dependent properites
             CONVERGE_precision_t average_hvap = 0.0;
@@ -563,13 +563,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      CONVERGE_mpi_abort();
                   }
 
-            // Check 1.5x expansion after Geometry update
-            if(old_parcel_cloud.radius[p_idx] > old_parcel_cloud.r_drop_0[p_idx]*1.5)
+            // Check 2x expansion after Geometry update
+            // Based on 1D Python modeling showing parcels reach >1.5x even with Kcrit=1
+            if(old_parcel_cloud.radius[p_idx] > old_parcel_cloud.r_drop_0[p_idx]*2.0)
             {
                static int expansion_breakup_count = 0;
                if (expansion_breakup_count < 10) {
-                  printf("[EXPANSION_BREAKUP] p_idx=%li, radius=%.3e m > 1.5*r_drop_0=%.3e m, triggering breakup (lifetime=%.3e s)\n",
-                         p_idx, old_parcel_cloud.radius[p_idx], 1.5*old_parcel_cloud.r_drop_0[p_idx],
+                  printf("[EXPANSION_BREAKUP] p_idx=%li, radius=%.3e m > 2.0*r_drop_0=%.3e m, triggering breakup (lifetime=%.3e s)\n",
+                         p_idx, old_parcel_cloud.radius[p_idx], 2.0*old_parcel_cloud.r_drop_0[p_idx],
                          old_parcel_cloud.lifetime[p_idx]);
                   expansion_breakup_count++;
                }
