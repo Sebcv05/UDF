@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <globals.h>
+#include <Breakup.h>  // For init_RR_distribution()
 
 struct UserInputs
 {
    double breakup_velocity_scale;
    double breakup_radius_scale;
    double kb_threshold;
+   double n_RR;  // Rosin-Rammler shape parameter
 };
 
 /**********************************************************************************************************/
@@ -53,6 +55,7 @@ CONVERGE_INPUT(read_user,
       user_inputs->breakup_velocity_scale = NAN;
       user_inputs->breakup_radius_scale = NAN;
       user_inputs->kb_threshold = NAN;
+      user_inputs->n_RR = 3.2;  // Default RR shape parameter (Kim & Park 2018)
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -108,6 +111,10 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->kb_threshold = atof(vtoken);
       }
+      else if(strcmp(ktoken, "n_RR") == 0 || strcmp(ktoken, "n_rosin_rammler") == 0)
+      {
+         user_inputs->n_RR = atof(vtoken);
+      }
    }
 
    CONVERGE_bool_t error = CONVERGE_FALSE;
@@ -135,9 +142,14 @@ CONVERGE_INPUT(read_user,
    breakup_velocity_scale = (CONVERGE_precision_t)user_inputs->breakup_velocity_scale;
    breakup_radius_scale = (CONVERGE_precision_t)user_inputs->breakup_radius_scale;
    kb_threshold = (CONVERGE_precision_t)user_inputs->kb_threshold;
+   
+   // Initialize Rosin-Rammler distribution parameters
+   init_RR_distribution(user_inputs->n_RR);
+   
    CONVERGE_logger_verbose("user_inputs->breakup_velocity_scale: %f", user_inputs->breakup_velocity_scale);
    CONVERGE_logger_verbose("user_inputs->breakup_radius_scale: %f", user_inputs->breakup_radius_scale);
    CONVERGE_logger_verbose("user_inputs->kb_threshold: %f", user_inputs->kb_threshold);
+   CONVERGE_logger_verbose("user_inputs->n_RR: %f", user_inputs->n_RR);
 
    // Write the echo file
    if(rank == 0)
@@ -145,6 +157,7 @@ CONVERGE_INPUT(read_user,
       CONVERGE_file_write(echo, "%-10.4f breakup_velocity_scale\n", user_inputs->breakup_velocity_scale);
       CONVERGE_file_write(echo, "%-10.4f breakup_radius_scale\n", user_inputs->breakup_radius_scale);
       CONVERGE_file_write(echo, "%-10.4f kb_threshold\n", user_inputs->kb_threshold);
+      CONVERGE_file_write(echo, "%-10.4f n_RR\n", user_inputs->n_RR);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);
    }

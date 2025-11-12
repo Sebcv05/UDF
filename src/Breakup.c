@@ -33,6 +33,258 @@ static double prof_property_copy = 0.0;
 static double prof_velocity_calc = 0.0;
 static double prof_insert_cloud = 0.0;
 static int last_cycle = -1;
+
+// Rosin-Rammler global parameters (initialized once)
+static RR_Params rr_params = {0};
+
+// ============================================================================
+// Gamma function approximation (Lanczos method)
+// Only called during initialization, not per-breakup
+// ============================================================================
+static double tgamma_lanczos(double z) {
+    static const double g = 7.0;
+    static const double coef[9] = {
+        0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+        771.32342877765313, -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+    };
+    
+    if (z < 0.5) {
+        return M_PI / (sin(M_PI * z) * tgamma_lanczos(1.0 - z));
+    }
+    
+    z -= 1.0;
+    double x = coef[0];
+    for (int i = 1; i < 9; i++) {
+        x += coef[i] / (z + i);
+    }
+    
+    double t = z + g + 0.5;
+    return sqrt(2.0 * M_PI) * pow(t, z + 0.5) * exp(-t) * x;
+}
+
+// ============================================================================
+// Initialize Rosin-Rammler parameters (called once at startup)
+// ============================================================================
+void init_RR_distribution(double n_shape) {
+    if (rr_params.initialized) {
+        return;
+    }
+    
+    rr_params.n_RR = n_shape;
+    
+    // Pre-compute gamma ratio: tgamma(1+2/n) / tgamma(1+3/n)
+    double gamma_2n = tgamma_lanczos(1.0 + 2.0 / n_shape);
+    double gamma_3n = tgamma_lanczos(1.0 + 3.0 / n_shape);
+    rr_params.gamma_ratio = gamma_2n / gamma_3n;
+    
+    rr_params.initialized = 1;
+    
+    int rank;
+    CONVERGE_mpi_comm_rank(&rank);
+    if (rank == 0) {
+        printf("[RR_INIT] Rosin-Rammler distribution initialized:\n");
+        printf("[RR_INIT]   n_RR = %.3f\n", rr_params.n_RR);
+        printf("[RR_INIT]   tgamma(1+2/n) = %.6e\n", gamma_2n);
+        printf("[RR_INIT]   tgamma(1+3/n) = %.6e\n", gamma_3n);
+        printf("[RR_INIT]   gamma_ratio = %.6e\n", rr_params.gamma_ratio);
+    }
+}
+
+// ============================================================================
+// FALLBACK: Uniform distribution (used if RR sampling fails)
+// ============================================================================
+void fallback_uniform_children(
+    CONVERGE_precision_t parent_radius,
+    CONVERGE_precision_t parent_num_drop,
+    CONVERGE_precision_t R32_target,
+    int N,
+    CONVERGE_precision_t* child_radii,
+    CONVERGE_precision_t* child_num_drop
+) {
+    // All children get same radius (R32_target) and same num_drop
+    CONVERGE_precision_t parent_volume = CONVERGE_cube(parent_radius);
+    CONVERGE_precision_t child_volume = CONVERGE_cube(R32_target);
+    CONVERGE_precision_t uniform_num_drop = parent_num_drop * parent_volume / (N * child_volume);
+    
+    for (int i = 0; i < N; i++) {
+        child_radii[i] = R32_target;
+        child_num_drop[i] = uniform_num_drop;
+    }
+    
+    static int fallback_warn_count = 0;
+    if (fallback_warn_count < 3) {
+        printf("[RR_FALLBACK] Using uniform distribution: all R=%.3e m, num_drop=%.3e\n",
+               R32_target, uniform_num_drop);
+        fallback_warn_count++;
+    }
+}
+
+// ============================================================================
+// ROSIN-RAMMLER CHILD SAMPLING FUNCTION
+// Returns: 0 on success, -1 on failure (fallback to uniform distribution)
+// ============================================================================
+int sample_RR_children(
+    CONVERGE_precision_t parent_radius,
+    CONVERGE_precision_t parent_num_drop,
+    CONVERGE_precision_t R32_target,
+    int N,
+    double n_RR,
+    double gamma_ratio,
+    CONVERGE_precision_t* child_radii,
+    CONVERGE_precision_t* child_num_drop
+) {
+    const double PI = 3.14159265358979323846;
+    const double U_MIN = 1.0e-12;
+    const double U_MAX = 1.0 - 1.0e-12;
+    const double SCALE_MIN = 0.1;
+    const double SCALE_MAX = 10.0;
+    
+    static int error_count = 0;
+    const int MAX_ERRORS = 5;
+    
+    // Input validation
+    if (parent_radius <= 0.0 || parent_num_drop <= 0.0 || R32_target <= 0.0 || N <= 0) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Invalid inputs: R_p=%.3e, Nd_p=%.3e, R32=%.3e, N=%d\n",
+                   parent_radius, parent_num_drop, R32_target, N);
+            error_count++;
+        }
+        return -1;
+    }
+    
+    if (n_RR <= 0.0 || gamma_ratio <= 0.0) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Invalid RR parameters: n_RR=%.3f, gamma_ratio=%.6f\n",
+                   n_RR, gamma_ratio);
+            error_count++;
+        }
+        return -1;
+    }
+    
+    CONVERGE_precision_t D32_target = 2.0 * R32_target;
+    CONVERGE_precision_t X_RR = D32_target * gamma_ratio;
+    double inv_n_RR = 1.0 / n_RR;
+    
+    CONVERGE_precision_t child_diameters[N];
+    CONVERGE_precision_t total_sampled_volume = 0.0;
+    
+    for (int i = 0; i < N; i++) {
+        CONVERGE_precision_t u = CONVERGE_random_precision();
+        if (u < U_MIN) u = U_MIN;
+        if (u > U_MAX) u = U_MAX;
+        
+        double log_arg = 1.0 - u;
+        if (log_arg <= 0.0) {
+            if (error_count < MAX_ERRORS) {
+                printf("[RR_ERROR] Invalid log argument: u=%.12e\n", u);
+                error_count++;
+            }
+            return -1;
+        }
+        
+        child_diameters[i] = X_RR * pow(-log(log_arg), inv_n_RR);
+        child_radii[i] = child_diameters[i] / 2.0;
+        total_sampled_volume += CONVERGE_cube(child_radii[i]);
+    }
+    
+    if (total_sampled_volume <= 0.0) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Zero sampled volume: %.3e\n", total_sampled_volume);
+            error_count++;
+        }
+        return -1;
+    }
+    
+    CONVERGE_precision_t D2_sum = 0.0, D3_sum = 0.0;
+    for (int i = 0; i < N; i++) {
+        CONVERGE_precision_t D = child_diameters[i];
+        D2_sum += D * D;
+        D3_sum += D * D * D;
+    }
+    
+    if (D2_sum <= 0.0) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Zero D2_sum\n");
+            error_count++;
+        }
+        return -1;
+    }
+    
+    CONVERGE_precision_t D32_sample = D3_sum / D2_sum;
+    if (D32_sample <= 0.0 || !isfinite(D32_sample)) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Invalid D32_sample: %.3e\n", D32_sample);
+            error_count++;
+        }
+        return -1;
+    }
+    
+    CONVERGE_precision_t scale_correction = D32_target / D32_sample;
+    if (scale_correction < SCALE_MIN || scale_correction > SCALE_MAX) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_WARNING] Extreme scale: %.4f (clamping)\n", scale_correction);
+            error_count++;
+        }
+        if (scale_correction < SCALE_MIN) scale_correction = SCALE_MIN;
+        if (scale_correction > SCALE_MAX) scale_correction = SCALE_MAX;
+    }
+    
+    total_sampled_volume = 0.0;
+    for (int i = 0; i < N; i++) {
+        child_diameters[i] *= scale_correction;
+        child_radii[i] = child_diameters[i] / 2.0;
+        total_sampled_volume += CONVERGE_cube(child_radii[i]);
+    }
+    
+    if (total_sampled_volume <= 0.0) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Zero volume after scaling\n");
+            error_count++;
+        }
+        return -1;
+    }
+    
+    CONVERGE_precision_t parent_volume = CONVERGE_cube(parent_radius);
+    CONVERGE_precision_t base_num_drop = parent_num_drop * parent_volume / total_sampled_volume;
+    
+    if (base_num_drop <= 0.0 || !isfinite(base_num_drop)) {
+        if (error_count < MAX_ERRORS) {
+            printf("[RR_ERROR] Invalid base_num_drop: %.3e\n", base_num_drop);
+            error_count++;
+        }
+        return -1;
+    }
+    
+    for (int i = 0; i < N; i++) {
+        child_num_drop[i] = base_num_drop;
+    }
+    
+    static int rr_diag_count = 0;
+    if (rr_diag_count < 3) {
+        printf("[RR_SAMPLE] Parent: R=%.3e m, num_drop=%.3e\n", parent_radius, parent_num_drop);
+        printf("[RR_SAMPLE] Target R32=%.3e m, X_RR=%.3e m, n_RR=%.2f\n", R32_target, X_RR, n_RR);
+        printf("[RR_SAMPLE] D32_sample=%.3e (ratio=%.4f), scale=%.4f\n", 
+               D32_sample, D32_sample/D32_target, scale_correction);
+        printf("[RR_SAMPLE] base_num_drop=%.3e (same for all)\n", base_num_drop);
+        
+        CONVERGE_precision_t total_child_volume = 0.0;
+        for (int i = 0; i < N; i++) {
+            total_child_volume += child_num_drop[i] * CONVERGE_cube(child_radii[i]);
+        }
+        CONVERGE_precision_t volume_error = fabs(total_child_volume - parent_num_drop * parent_volume) / 
+                                           (parent_num_drop * parent_volume);
+        printf("[RR_SAMPLE] Volume conservation: error=%.2e%% (num_drop*R^3, no 4/3*pi)\n", volume_error * 100.0);
+        
+        if (volume_error > 1.0e-6) {
+            printf("[RR_WARNING] Volume error > 1 ppm\n");
+        }
+        rr_diag_count++;
+    }
+    
+    return 0;
+}
+
 // Function to print profiling information
 
 
@@ -389,6 +641,47 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
 
     prof_calcs += CONVERGE_mpi_wtime() - t0;
     
+    // ============================================================================
+    // ROSIN-RAMMLER CHILD SAMPLING
+    // ============================================================================
+    
+    // Ensure RR parameters are initialized
+    if (!rr_params.initialized) {
+        init_RR_distribution(3.2);  // Initialize with default n_RR = 3.2
+    }
+    
+    // Arrays for sampled children
+    CONVERGE_precision_t child_radii[12];
+    CONVERGE_precision_t child_num_drop[12];
+    
+    // Call RR sampling function with error handling
+    int rr_status = sample_RR_children(
+        parent_radius,                      // Parent droplet radius
+        old_parcel_cloud->num_drop[p_idx],  // Parent num_drop
+        calculated_radius,                   // Target R32
+        num_child_parcels,                   // N = 12
+        rr_params.n_RR,                     // Shape parameter
+        rr_params.gamma_ratio,              // Pre-computed gamma ratio
+        child_radii,                        // Output: child radii
+        child_num_drop                      // Output: child num_drop
+    );
+    
+    // Fallback to uniform distribution if RR sampling failed
+    if (rr_status != 0) {
+        fallback_uniform_children(
+            parent_radius,
+            old_parcel_cloud->num_drop[p_idx],
+            calculated_radius,
+            num_child_parcels,
+            child_radii,
+            child_num_drop
+        );
+    }
+    
+    // ============================================================================
+    // END ROSIN-RAMMLER SAMPLING
+    // ============================================================================
+    
     //--------- Testing Child Parcel Introduction ----------------//
  
     // Calculate number of child parcels
@@ -398,12 +691,11 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     CONVERGE_precision_t new_parcel_num_drop, new_parcel_mass, new_radius;
     CONVERGE_vec3_t new_parcel_uu;
 
-    new_radius = calculated_radius ;
-    // new_radius = old_parcel_cloud->radius[p_idx];
-    //Calculate new number of droplets to conserve mass 
-    old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
-    new_mass = old_mass / num_child_parcels;
-    new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
+    // OLD APPROACH (commented out - now using RR):
+    // new_radius = calculated_radius;
+    // old_mass = old_parcel_cloud->num_drop[p_idx] * 1.3333 * PI * CONVERGE_cube(old_parcel_cloud->radius[p_idx]);
+    // new_mass = old_mass / num_child_parcels;
+    // new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
     // new_parcel_num_drop = old_parcel_cloud->num_drop[p_idx];
 
     //Try cooling the parcel to saturation temp -2 to prevent excessive evap 
@@ -430,6 +722,9 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
                     // old_parcel_cloud->xx[p_idx][0] = 1.0; // This put's the parcel outside of the domain, so it will be removed 
             for(nnn = 0; nnn < num_child_parcels; nnn++)
             {
+                // Use sampled RR radius and num_drop for this child
+                new_radius = child_radii[nnn];
+                new_parcel_num_drop = child_num_drop[nnn];
               
                 CONVERGE_vec3_add(parent_velocity, user_child_velocity[nnn], &new_parcel_uu);
 
@@ -450,8 +745,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
                CONVERGE_spray_child_parcel(new_parcel_uu,
                                             growth_rate,
                                             wave_length,
-                                            new_radius, 
-                                            new_parcel_num_drop,
+                                            new_radius,              // Now varies per child (from RR)
+                                            new_parcel_num_drop,     // Now from RR sampling
                                             p_idx,
                                             cloud);
                 prof_child_parcel += CONVERGE_mpi_wtime() - t1;
