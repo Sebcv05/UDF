@@ -1,4 +1,5 @@
 #include <CONVERGE/udf.h>
+#include "lagrangian/env.h"
 
 CONVERGE_POST(user_x, IN(VALUE(CONVERGE_mesh_t, mesh), FIELD(CONVERGE_vec3_t*, xcen)))
 {
@@ -43,7 +44,7 @@ CONVERGE_POST(user_lifetime, IN(VALUE(CONVERGE_mesh_t, mesh)))
    CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
    
    // Initialize the lifetime array
-   CONVERGE_mesh_iterator_t mesh_it;
+   CONVERGE_iterator_t mesh_it;
    CONVERGE_mesh_iterator_create(mesh, &mesh_it);
    for(CONVERGE_index_t i = CONVERGE_iterator_first(mesh_it); i != -1; i = CONVERGE_iterator_next(mesh_it))
    {
@@ -80,37 +81,117 @@ CONVERGE_POST(user_lifetime, IN(VALUE(CONVERGE_mesh_t, mesh)))
 }
 
 // Post-processing function to output is_child flag for parcels
-CONVERGE_POST_PARCEL(user_is_child, 
-                     IN(VALUE(CONVERGE_cloud_t, cloud), 
-                        VALUE(CONVERGE_index_t, p_idx)))
+// CONVERGE 3.1 doesn't have CONVERGE_POST_PARCEL, so we write to cell centers
+CONVERGE_POST(user_is_child, IN(VALUE(CONVERGE_mesh_t, mesh)))
 {
-   struct ParcelCloud parcel_cloud;
-   load_user_cloud(&parcel_cloud, cloud);
+   // Get the spray cloud list
+   CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    
-   // Return is_child flag (0 = parent, 1 = child)
-   return (CONVERGE_precision_t)parcel_cloud.is_child[p_idx];
+   // Initialize to -1 (no parcel)
+   CONVERGE_iterator_t mesh_it;
+   CONVERGE_mesh_iterator_create(mesh, &mesh_it);
+   for(CONVERGE_index_t i = CONVERGE_iterator_first(mesh_it); i != -1; i = CONVERGE_iterator_next(mesh_it))
+   {
+      user_is_child[i] = -1.0;
+   }
+   CONVERGE_iterator_destroy(&mesh_it);
+   
+   // Iterate over all clouds
+   CONVERGE_iterator_t cl_it;
+   CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
+   
+   for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(cl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(cl_it))
+   {
+      CONVERGE_cloud_t cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
+      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+      
+      if(node_index < 0) continue;
+      
+      struct ParcelCloud parcel_cloud;
+      load_user_cloud(&parcel_cloud, cloud);
+      
+      CONVERGE_index_t num_parcels = CONVERGE_cloud_size(cloud);
+      
+      // Store first parcel's is_child flag
+      if(num_parcels > 0) {
+         user_is_child[node_index] = (CONVERGE_precision_t)parcel_cloud.is_child[0];
+      }
+   }
+   
+   CONVERGE_iterator_destroy(&cl_it);
 }
 
 // Post-processing function to output bubble radius
-CONVERGE_POST_PARCEL(user_r_bubble,
-                     IN(VALUE(CONVERGE_cloud_t, cloud),
-                        VALUE(CONVERGE_index_t, p_idx)))
+CONVERGE_POST(user_r_bubble, IN(VALUE(CONVERGE_mesh_t, mesh)))
 {
-   struct ParcelCloud parcel_cloud;
-   load_user_cloud(&parcel_cloud, cloud);
+   CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    
-   // Return bubble radius in meters
-   return parcel_cloud.r_bubble[p_idx];
+   // Initialize to -1
+   CONVERGE_iterator_t mesh_it;
+   CONVERGE_mesh_iterator_create(mesh, &mesh_it);
+   for(CONVERGE_index_t i = CONVERGE_iterator_first(mesh_it); i != -1; i = CONVERGE_iterator_next(mesh_it))
+   {
+      user_r_bubble[i] = -1.0;
+   }
+   CONVERGE_iterator_destroy(&mesh_it);
+   
+   CONVERGE_iterator_t cl_it;
+   CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
+   
+   for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(cl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(cl_it))
+   {
+      CONVERGE_cloud_t cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
+      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+      
+      if(node_index < 0) continue;
+      
+      struct ParcelCloud parcel_cloud;
+      load_user_cloud(&parcel_cloud, cloud);
+      
+      CONVERGE_index_t num_parcels = CONVERGE_cloud_size(cloud);
+      
+      if(num_parcels > 0) {
+         user_r_bubble[node_index] = parcel_cloud.r_bubble[0];
+      }
+   }
+   
+   CONVERGE_iterator_destroy(&cl_it);
 }
 
 // Post-processing function to output thermal breakup flag
-CONVERGE_POST_PARCEL(user_pbt,
-                     IN(VALUE(CONVERGE_cloud_t, cloud),
-                        VALUE(CONVERGE_index_t, p_idx)))
+CONVERGE_POST(user_pbt, IN(VALUE(CONVERGE_mesh_t, mesh)))
 {
-   struct ParcelCloud parcel_cloud;
-   load_user_cloud(&parcel_cloud, cloud);
+   CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    
-   // Return pbt flag (0 = not in thermal breakup, 1 = in thermal breakup)
-   return (CONVERGE_precision_t)parcel_cloud.pbt[p_idx];
+   // Initialize to -1
+   CONVERGE_iterator_t mesh_it;
+   CONVERGE_mesh_iterator_create(mesh, &mesh_it);
+   for(CONVERGE_index_t i = CONVERGE_iterator_first(mesh_it); i != -1; i = CONVERGE_iterator_next(mesh_it))
+   {
+      user_pbt[i] = -1.0;
+   }
+   CONVERGE_iterator_destroy(&mesh_it);
+   
+   CONVERGE_iterator_t cl_it;
+   CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
+   
+   for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(cl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(cl_it))
+   {
+      CONVERGE_cloud_t cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
+      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+      
+      if(node_index < 0) continue;
+      
+      struct ParcelCloud parcel_cloud;
+      load_user_cloud(&parcel_cloud, cloud);
+      
+      CONVERGE_index_t num_parcels = CONVERGE_cloud_size(cloud);
+      
+      if(num_parcels > 0) {
+         user_pbt[node_index] = (CONVERGE_precision_t)parcel_cloud.pbt[0];
+      }
+   }
+   
+   CONVERGE_iterator_destroy(&cl_it);
 }
+
