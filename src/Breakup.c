@@ -23,6 +23,7 @@ CONVERGE_precision_t user_child_velocity_z = 0.0;
 CONVERGE_precision_t breakup_velocity_scale = 5.0;
 CONVERGE_precision_t breakup_radius_scale = 1.0;
 CONVERGE_precision_t kb_threshold = 1.0;
+CONVERGE_index_t num_child_parcels = 12;
 static int breakup_scale_logged = 0;
 
 // Profiling accumulators
@@ -319,7 +320,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\nBreakup.c: Invalid cloud or parcel cloud pointer\n");
         CONVERGE_mpi_abort();
     }
-    CONVERGE_vec3_t user_child_velocity[12];
+    CONVERGE_vec3_t user_child_velocity[MAX_NUM_CHILDREN];
 
     // Get cloud size and verify parcel index
     CONVERGE_index_t cloud_size = CONVERGE_cloud_size(cloud);
@@ -378,7 +379,6 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 
     // old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
     // printf("running thermal breakup routine p_idx = %i, breakup count = %i \n",p_idx);
-    CONVERGE_index_t num_child_parcels =12;
     CONVERGE_index_t N = num_child_parcels;
 
     // End of initialization section
@@ -651,8 +651,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     }
     
     // Arrays for sampled children
-    CONVERGE_precision_t child_radii[12];
-    CONVERGE_precision_t child_num_drop[12];
+    CONVERGE_precision_t child_radii[MAX_NUM_CHILDREN];
+    CONVERGE_precision_t child_num_drop[MAX_NUM_CHILDREN];
     
     // Call RR sampling function with error handling
     int rr_status = sample_RR_children(

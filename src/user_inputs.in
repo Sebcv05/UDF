@@ -5,3 +5,4 @@
 1.0 breakup_radius_scale     # B scaling factor (child radius scaling)
 1.0 kb_threshold             # Breakup criterion threshold
 3.2 n_RR                     # Rosin-Rammler shape parameter (2.5-4.0 typical)
+12  num_children             # Number of child parcels per breakup event (2-50)

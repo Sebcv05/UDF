@@ -12,6 +12,7 @@ struct UserInputs
    double breakup_radius_scale;
    double kb_threshold;
    double n_RR;  // Rosin-Rammler shape parameter
+   int num_children;  // Number of children per breakup event
 };
 
 /**********************************************************************************************************/
@@ -56,6 +57,7 @@ CONVERGE_INPUT(read_user,
       user_inputs->breakup_radius_scale = NAN;
       user_inputs->kb_threshold = NAN;
       user_inputs->n_RR = 3.2;  // Default RR shape parameter (Kim & Park 2018)
+      user_inputs->num_children = 12;  // Default: 12 children (Kim & Park 2018)
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -115,6 +117,10 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->n_RR = atof(vtoken);
       }
+      else if(strcmp(ktoken, "num_children") == 0 || strcmp(ktoken, "n_children") == 0)
+      {
+         user_inputs->num_children = atoi(vtoken);
+      }
    }
 
    CONVERGE_bool_t error = CONVERGE_FALSE;
@@ -133,6 +139,17 @@ CONVERGE_INPUT(read_user,
       CONVERGE_logger_err("user_inputs.in: kb_threshold missing or invalid");
       error = CONVERGE_TRUE;
    }
+   if(user_inputs->num_children < 2)
+   {
+      CONVERGE_logger_err("user_inputs.in: num_children must be >= 2 (got %d)", user_inputs->num_children);
+      error = CONVERGE_TRUE;
+   }
+   if(user_inputs->num_children > MAX_NUM_CHILDREN)
+   {
+      CONVERGE_logger_err("user_inputs.in: num_children=%d exceeds MAX_NUM_CHILDREN=%d", 
+                          user_inputs->num_children, MAX_NUM_CHILDREN);
+      error = CONVERGE_TRUE;
+   }
 
    if(error)
    {
@@ -142,6 +159,7 @@ CONVERGE_INPUT(read_user,
    breakup_velocity_scale = (CONVERGE_precision_t)user_inputs->breakup_velocity_scale;
    breakup_radius_scale = (CONVERGE_precision_t)user_inputs->breakup_radius_scale;
    kb_threshold = (CONVERGE_precision_t)user_inputs->kb_threshold;
+   num_child_parcels = (CONVERGE_index_t)user_inputs->num_children;
    
    // Initialize Rosin-Rammler distribution parameters
    init_RR_distribution(user_inputs->n_RR);
@@ -150,6 +168,7 @@ CONVERGE_INPUT(read_user,
    CONVERGE_logger_verbose("user_inputs->breakup_radius_scale: %f", user_inputs->breakup_radius_scale);
    CONVERGE_logger_verbose("user_inputs->kb_threshold: %f", user_inputs->kb_threshold);
    CONVERGE_logger_verbose("user_inputs->n_RR: %f", user_inputs->n_RR);
+   CONVERGE_logger_verbose("user_inputs->num_children: %d", user_inputs->num_children);
 
    // Write the echo file
    if(rank == 0)
@@ -158,6 +177,7 @@ CONVERGE_INPUT(read_user,
       CONVERGE_file_write(echo, "%-10.4f breakup_radius_scale\n", user_inputs->breakup_radius_scale);
       CONVERGE_file_write(echo, "%-10.4f kb_threshold\n", user_inputs->kb_threshold);
       CONVERGE_file_write(echo, "%-10.4f n_RR\n", user_inputs->n_RR);
+      CONVERGE_file_write(echo, "%-10d num_children\n", user_inputs->num_children);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);
    }
