@@ -173,8 +173,16 @@ CONVERGE_UDF(parcel_inject,
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
    parcel_cloud.r_bubble_0[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
-   // printf("\n END OF PARCEL_PROP.C \n");
+
    // printf("\n\n r_bubble = %e <seg_60> r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parcel_idx], parcel_cloud.r_bubble_0[passed_parcel_idx]);
+
+   // DIAGNOSTIC: Hijack unused output variables for Tecplot visualization
+   // radiation_energy → is_child flag (0 = parent)
+   parcel_cloud.radiation_energy[passed_parcel_idx] = 0.0;
+   // distant → bubble radius
+   parcel_cloud.distant[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
+   // t_turb → pbt flag  
+   parcel_cloud.t_turb[passed_parcel_idx] = 0.0;
 
    // R_D_0
    parcel_cloud.r_drop_0[passed_parcel_idx] = parcel_cloud.radius[passed_parcel_idx];
@@ -288,6 +296,14 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;   
       parcel_cloud.temp[passed_child_parcel_idx] = parcel_cloud.temp[passed_parent_parcel_idx];
       parcel_cloud.temp_tm1[passed_child_parcel_idx] = parcel_cloud.temp_tm1[passed_parent_parcel_idx];
+
+      // DIAGNOSTIC: Hijack unused output variables for Tecplot visualization
+      // radiation_energy → is_child flag (1 = child)
+      parcel_cloud.radiation_energy[passed_child_parcel_idx] = 1.0;
+      // distant → bubble radius (0 for children)
+      parcel_cloud.distant[passed_child_parcel_idx] = 0.0;
+      // t_turb → pbt flag (0 for children)
+      parcel_cloud.t_turb[passed_child_parcel_idx] = 0.0;
 
       // R_D_0 - should not be used for child parcels
       parcel_cloud.r_drop_0[passed_child_parcel_idx] = parcel_cloud.radius[passed_child_parcel_idx];
