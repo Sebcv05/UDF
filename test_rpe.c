@@ -1,11 +1,14 @@
 /*
- * RPE_euler Unit Test
+ * RPE_euler Parameter Sweep Test
  * 
- * Standalone test of RPE solver with fixed inputs
- * Tests bubble growth from nucleation to near-droplet size
+ * Sweeps initial droplet temperature from 273 K to 323 K (matching euler_explicit.py)
+ * Fixed ambient pressure at 2 bar
+ * Initial bubble radius: 1.1 * R_crit (matches CONVERGE UDF initialization)
+ * Outputs Rdot vs film thickness and log(time) for each case
  * 
- * Compile: gcc -o test_rpe test_rpe.c -lm
- * Run: ./test_rpe
+ * Compile: gcc -o test_rpe_sweep test_rpe.c -lm
+ * Run: ./test_rpe_sweep
+ * Plot: python3 plot_rpe_sweep.py
  */
 
 #include <stdio.h>
@@ -47,19 +50,23 @@ typedef struct {
 
 // Simplified Antoine equation for NH3
 double P_sat_NH3(double T) {
-    // NIST coefficients for ammonia (K, Pa)
-    double A = 9.96268;
-    double B = 1617.9;
-    double C = 6.65;
-    return exp(A - B / (T + C)) * 1000.0;
+    // Antoine equation: log10(P_kPa) = A - B/(T-C)
+    // Coefficients from euler_explicit.py (CORRECT for NH3)
+    double A = 6.67956;
+    double B = 1002.711;
+    double C = 25.215;
+    double log10_P_kPa = A - B / (T - C);
+    return pow(10.0, log10_P_kPa) * 1000.0;  // Convert kPa to Pa
 }
 
 double T_sat_NH3(double P) {
-    // Inverse of Antoine equation
-    double A = 9.96268;
-    double B = 1617.9;
-    double C = 6.65;
-    return B / (A - log(P / 1000.0)) - C;
+    // Inverse of Antoine equation: T = B/(A - log10(P_kPa)) + C
+    double A = 6.67956;
+    double B = 1002.711;
+    double C = 25.215;
+    double P_kPa = P / 1000.0;  // Convert Pa to kPa
+    double log10_P_kPa = log10(P_kPa);
+    return B / (A - log10_P_kPa) + C;
 }
 
 // Simplified bubble density
@@ -88,11 +95,33 @@ void compute_thermal_mass_transfer(
     double Nu = 2.0 + 0.6 * sqrt(Re) * pow(Pr, 1.0/3.0);
     if (Nu > params->max_Nu) Nu = params->max_Nu;
     
-    double h_conv = Nu * params->k_l / L_char;
     double A_bubble = 4.0 * PI * R * R;
-    double Q_conv = h_conv * A_bubble * dT;
     
+    // ========== DUAL GEOMETRY: Semi-infinite vs Film ==========
+    // Match Python euler_explicit.py and CONVERGE UDF: evaluate both, use max
+    
+    // Semi-infinite formulation
+    double h_conv_si = Nu * params->k_l / L_char;
+    double Q_si = h_conv_si * A_bubble * dT;
+    
+    // Film formulation
+    double film_thickness = params->Ro - R;
+    double h_conv_film, Q_film;
+    
+    if (film_thickness > 1e-12) {
+        h_conv_film = Nu * params->k_l / film_thickness;
+        Q_film = h_conv_film * A_bubble * dT;
+    } else {
+        h_conv_film = 1e20;
+        Q_film = 0.0;
+    }
+    
+    // Use maximum (least restrictive) for heat transfer
+    double Q_conv = (Q_film > Q_si) ? Q_film : Q_si;
+    
+    // Mass transfer rate (thermal limiting)
     double mdot = Q_conv / params->L_v;
+    if (mdot < 0.0) mdot = 0.0;  // Evaporation only
     
     *Nu_out = Nu;
     *Q_out = Q_conv;
@@ -160,125 +189,165 @@ void euler_step(BubbleState* state, const BubbleDerivatives* derivs, double dt)
 
 int main() {
     printf("=================================================================\n");
-    printf("  RPE_euler Unit Test - NH3 Bubble Growth\n");
+    printf("  RPE_euler Parameter Sweep - NH3 Bubble Growth\n");
+    printf("  P_amb = 2.0 bar (T_sat = 240 K), T0 = 273:10:323 K\n");
     printf("=================================================================\n\n");
     
-    // Test case: NH3 droplet at 323 K, 2 bar ambient
-    RPE_Params params;
-    params.rho_l = 610.0;        // kg/m³ (NH3 liquid at 323K)
-    params.mu_l = 1.2e-4;        // Pa·s
-    params.k_l = 0.5;            // W/(m·K)
-    params.cp_l = 4800.0;        // J/(kg·K)
-    params.sigma = 0.020;        // N/m
-    params.R_spec = R_SPEC_NH3;
-    params.L_v = 1.2e6;          // J/kg
-    params.Ro = 82.5e-6;         // m (82.5 µm)
-    params.P_amb = 2.0e5;        // Pa (2 bar)
-    params.T_amb = 298.0;        // K
-    params.max_Nu = 1000.0;
-    params.m_drop = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro * params.rho_l;
+    // Temperature sweep parameters (273 K to 323 K to match euler_explicit.py)
+    // Note: Some cases may be subcooled at 2 bar (T_sat ~ 240 K)
+    double T0_values[] = {273.0, 283.0, 293.0, 303.0, 313.0, 323.0};
+    int n_temps = 6;
+    double P_amb = 2.0e5;  // Pa (2 bar)
     
-    // Initial state
-    BubbleState state;
-    state.R = 1.0e-9;            // m (1 nm - nucleation size)
-    state.Rdot = 0.0;            // m/s
-    state.T_drop = 355.0;        // K (superheated)
+    // Fixed parameters
+    double Ro = 82.5e-6;  // m
     
-    double P_sat = P_sat_NH3(state.T_drop);
-    double rho_b = bubble_density_NH3(P_sat, state.T_drop);
-    double Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
-    state.m_b = rho_b * Vb;
+    // Open output files
+    FILE* fp_all = fopen("rpe_sweep_all.csv", "w");
+    fprintf(fp_all, "T0_K,time_us,R_um,Rdot_m_s,T_drop_K,film_thick_um,log10_time_us,Pb_bar,P_sat_bar\n");
     
-    printf("Initial Conditions:\n");
-    printf("  Droplet: Ro = %.3f µm, T = %.2f K, m = %.3e kg\n", 
-           params.Ro*1e6, state.T_drop, params.m_drop);
-    printf("  Bubble:  R = %.3f nm, Rdot = %.3f m/s\n", state.R*1e9, state.Rdot);
-    printf("  Ambient: P = %.2f bar, T = %.2f K\n", params.P_amb*1e-5, params.T_amb);
-    printf("  P_sat = %.2f bar (superheat = %.2f bar)\n\n", 
-           P_sat*1e-5, (P_sat - params.P_amb)*1e-5);
+    FILE* fp_summary = fopen("rpe_sweep_summary.csv", "w");
+    fprintf(fp_summary, "T0_K,max_Rdot_m_s,time_at_max_us,R_at_max_um,film_thick_at_max_um,superheat_K\n");
     
-    // Open output file
-    FILE* fp = fopen("rpe_unit_test.csv", "w");
-    fprintf(fp, "time_us,R_um,Rdot_m_s,T_drop_K,m_b_ng,Nu,Q_conv_W,mdot_mg_s,Pb_bar,P_sat_bar,dRdt,dRdotdt,dTdt\n");
-    
-    // Time integration
-    double dt = 1e-10;           // 0.1 ns timestep
-    double t = 0.0;
-    int n_steps = 100000;        // 10 µs total
-    int print_interval = 1000;   // Print every 1 µs
-    
-    printf("Time Integration (dt = %.2e s, t_end = %.2e s):\n", dt, n_steps*dt);
-    printf("%-10s %-12s %-12s %-10s %-10s %-8s %-12s\n",
-           "t (µs)", "R (µm)", "Rdot (m/s)", "T (K)", "Nu", "kb*", "Status");
-    printf("------------------------------------------------------------------------------------\n");
-    
-    for (int i = 0; i < n_steps; i++) {
-        // Compute derivatives
-        BubbleDerivatives derivs;
-        double Nu, Q_conv, mdot;
-        compute_thermal_mass_transfer(state.R, state.Rdot, state.T_drop, state.m_b,
-                                       &params, &Nu, &Q_conv, &mdot);
-        compute_derivatives(&state, &params, &derivs, mdot);
+    // Loop over temperatures
+    for (int temp_idx = 0; temp_idx < n_temps; temp_idx++) {
+        double T0 = T0_values[temp_idx];
         
-        // Calculate diagnostic values
-        double Vb_diag = (4.0/3.0) * PI * state.R * state.R * state.R;
-        double rho_v_diag = (Vb_diag > 1e-30) ? (state.m_b / Vb_diag) : 1e-6;
-        double Pb = rho_v_diag * params.R_spec * state.T_drop;
-        double P_sat_current = P_sat_NH3(state.T_drop);
+        printf("\n-----------------------------------------------------------------\n");
+        printf("Case %d/%d: T0 = %.1f K, P_amb = %.2f bar\n", 
+               temp_idx+1, n_temps, T0, P_amb*1e-5);
+        printf("-----------------------------------------------------------------\n");
         
-        // Simplified kb estimate (eta / liquid shell thickness)
-        double eta_0 = 0.05 * params.Ro;  // Typical initial perturbation
-        double kb_approx = (state.R > 0.01*params.Ro) ? 
-                           (eta_0 / (params.Ro - state.R)) : 0.0;
+        // Set up parameters (temperature-dependent properties)
+        RPE_Params params;
+        params.rho_l = 682.6 - 0.5 * (T0 - 273.0);  // Approximate NH3 liquid density
+        params.mu_l = 1.5e-4 * exp(-0.02 * (T0 - 273.0));  // Viscosity decreases with T
+        params.k_l = 0.5;
+        params.cp_l = 4800.0;
+        params.sigma = 0.025 - 0.0001 * (T0 - 273.0);  // Surface tension decreases with T
+        params.R_spec = R_SPEC_NH3;
+        params.L_v = 1.37e6 - 1000.0 * (T0 - 273.0);  // Latent heat decreases with T
+        params.Ro = Ro;
+        params.P_amb = P_amb;
+        params.T_amb = 298.0;
+        params.max_Nu = 1000.0;
+        params.m_drop = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro * params.rho_l;
         
-        // Write to file
-        fprintf(fp, "%.6f,%.6f,%.6f,%.6f,%.6f,%.3f,%.6e,%.6e,%.6f,%.6f,%.6e,%.6e,%.6e\n",
-                t*1e6, state.R*1e6, state.Rdot, state.T_drop, state.m_b*1e12,
-                Nu, Q_conv, mdot*1e6, Pb*1e-5, P_sat_current*1e-5,
-                derivs.dRdt, derivs.dRdotdt, derivs.dTdt);
+        // Calculate saturation pressure and critical radius
+        double P_sat = P_sat_NH3(T0);
         
-        // Print progress
-        if (i % print_interval == 0) {
-            char status[20];
-            if (state.R > 0.9 * params.Ro) {
-                sprintf(status, "FILLED");
-            } else if (kb_approx > 1.0) {
-                sprintf(status, "BREAKUP");
-            } else {
-                sprintf(status, "GROWING");
+        // Critical radius calculation: Rc = 2*sigma / (P_sat - P_amb)
+        double superheat_pressure = P_sat - P_amb;
+        double Rc = 2.0 * params.sigma / superheat_pressure;
+        
+        // Initial state - start with 1.1*Rc (just above critical radius, matching UDF)
+        BubbleState state;
+        state.R = 1.1 * Rc;  // m (1.1 times critical radius)
+        state.Rdot = 0.0;
+        state.T_drop = T0;
+        
+        // Initialize bubble mass at equilibrium
+        double rho_b = bubble_density_NH3(P_sat, state.T_drop);
+        double Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
+        state.m_b = rho_b * Vb;
+        
+        double superheat = superheat_pressure;
+        
+        printf("  P_sat(T0) = %.3f bar, Superheat = %.3f bar\n", 
+               P_sat*1e-5, superheat*1e-5);
+        printf("  R_crit = %.3e m (%.3f µm), R_init = %.3e m (%.3f µm)\n",
+               Rc, Rc*1e6, state.R, state.R*1e6);
+        
+        if (superheat < 0.0) {
+            printf("  >>> SUBCOOLED: Skipping this case <<<\n");
+            fprintf(fp_summary, "%.1f,0.0,0.0,0.0,0.0,%.3f\n", T0, superheat*1e-5);
+            continue;
+        }
+        
+        // Time integration - longer time to see full growth
+        double dt = 1e-9;  // 1 ns (larger timestep for stability)
+        double t = 0.0;
+        int n_steps = 100000;  // 100 µs total
+        int output_interval = 100;  // Output every 100 ns
+        
+        double max_Rdot = 0.0;
+        double t_at_max_Rdot = 0.0;
+        double R_at_max_Rdot = 0.0;
+        double film_at_max_Rdot = 0.0;
+        
+        int step_count = 0;
+        for (int i = 0; i < n_steps; i++) {
+            // Compute derivatives
+            BubbleDerivatives derivs;
+            double Nu, Q_conv, mdot;
+            compute_thermal_mass_transfer(state.R, state.Rdot, state.T_drop, state.m_b,
+                                           &params, &Nu, &Q_conv, &mdot);
+            compute_derivatives(&state, &params, &derivs, mdot);
+            
+            // Calculate diagnostic values
+            double Vb_diag = (4.0/3.0) * PI * state.R * state.R * state.R;
+            double rho_v_diag = (Vb_diag > 1e-30) ? (state.m_b / Vb_diag) : 1e-6;
+            double Pb = rho_v_diag * params.R_spec * state.T_drop;
+            double P_sat_current = P_sat_NH3(state.T_drop);
+            double film_thickness = params.Ro - state.R;  // m
+            
+            // Track maximum Rdot
+            if (fabs(state.Rdot) > max_Rdot) {
+                max_Rdot = fabs(state.Rdot);
+                t_at_max_Rdot = t;
+                R_at_max_Rdot = state.R;
+                film_at_max_Rdot = film_thickness;
             }
             
-            printf("%-10.2f %-12.3f %-12.3f %-10.2f %-10.2f %-8.3f %-12s\n",
-                   t*1e6, state.R*1e6, state.Rdot, state.T_drop, Nu, kb_approx, status);
+            // Output to file
+            if (i % output_interval == 0) {
+                double log10_time = (t > 1e-20) ? log10(t * 1e6) : -20.0;  // log10(time in µs)
+                fprintf(fp_all, "%.1f,%.6e,%.6e,%.6e,%.6f,%.6e,%.6f,%.6f,%.6f\n",
+                        T0, t*1e6, state.R*1e6, state.Rdot, state.T_drop,
+                        film_thickness*1e6, log10_time, Pb*1e-5, P_sat_current*1e-5);
+            }
+            
+            // Euler step
+            euler_step(&state, &derivs, dt);
+            t += dt;
+            step_count++;
+            
+            // Stop conditions
+            if (state.R > 0.95 * params.Ro) {
+                printf("  >>> Bubble filled droplet at t = %.3f µs <<<\n", t*1e6);
+                break;
+            }
+            
+            double T_sat_check = T_sat_NH3(params.P_amb);
+            if (state.T_drop < T_sat_check) {
+                printf("  >>> Droplet subcooled at t = %.3f µs <<<\n", t*1e6);
+                break;
+            }
+            
+            if (t > 200e-6) {  // 200 µs timeout
+                printf("  >>> Timeout at t = %.1f µs <<<\n", t*1e6);
+                break;
+            }
         }
         
-        // Euler step
-        euler_step(&state, &derivs, dt);
-        t += dt;
+        printf("  Final: R = %.3f µm (%.1f%%), Rdot = %.3f m/s, t = %.3f µs\n",
+               state.R*1e6, 100.0*state.R/params.Ro, state.Rdot, t*1e6);
+        printf("  Max Rdot: %.3f m/s at t = %.3f µs (film = %.3f µm)\n",
+               max_Rdot, t_at_max_Rdot*1e6, film_at_max_Rdot*1e6);
         
-        // Stop conditions
-        if (state.R > 0.95 * params.Ro) {
-            printf("\n>>> Bubble filled droplet at t = %.3f µs <<<\n", t*1e6);
-            break;
-        }
-        
-        double T_sat_check = T_sat_NH3(params.P_amb);
-        if (state.T_drop < T_sat_check) {
-            printf("\n>>> Droplet subcooled at t = %.3f µs (T = %.2f K < T_sat = %.2f K) <<<\n",
-                   t*1e6, state.T_drop, T_sat_check);
-            break;
-        }
+        // Write summary
+        fprintf(fp_summary, "%.1f,%.6e,%.6e,%.6e,%.6e,%.6f\n",
+                T0, max_Rdot, t_at_max_Rdot*1e6, R_at_max_Rdot*1e6, 
+                film_at_max_Rdot*1e6, superheat*1e-5);
     }
     
-    fclose(fp);
+    fclose(fp_all);
+    fclose(fp_summary);
     
     printf("\n=================================================================\n");
-    printf("Final State:\n");
-    printf("  R = %.3f µm (%.1f%% of Ro)\n", state.R*1e6, 100.0*state.R/params.Ro);
-    printf("  Rdot = %.3f m/s\n", state.Rdot);
-    printf("  T_drop = %.2f K (ΔT = %.2f K)\n", state.T_drop, 323.0 - state.T_drop);
-    printf("  Time = %.3f µs\n", t*1e6);
-    printf("\nOutput written to: rpe_unit_test.csv\n");
+    printf("Parameter sweep complete!\n");
+    printf("  Full data: rpe_sweep_all.csv\n");
+    printf("  Summary:   rpe_sweep_summary.csv\n");
     printf("=================================================================\n");
     
     return 0;

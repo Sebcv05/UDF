@@ -78,3 +78,39 @@ CONVERGE_POST(user_lifetime, IN(VALUE(CONVERGE_mesh_t, mesh)))
    // Clean up the iterator
    CONVERGE_iterator_destroy(&cl_it);
 }
+
+// Post-processing function to output is_child flag for parcels
+CONVERGE_POST_PARCEL(user_is_child, 
+                     IN(VALUE(CONVERGE_cloud_t, cloud), 
+                        VALUE(CONVERGE_index_t, p_idx)))
+{
+   struct ParcelCloud parcel_cloud;
+   load_user_cloud(&parcel_cloud, cloud);
+   
+   // Return is_child flag (0 = parent, 1 = child)
+   return (CONVERGE_precision_t)parcel_cloud.is_child[p_idx];
+}
+
+// Post-processing function to output bubble radius
+CONVERGE_POST_PARCEL(user_r_bubble,
+                     IN(VALUE(CONVERGE_cloud_t, cloud),
+                        VALUE(CONVERGE_index_t, p_idx)))
+{
+   struct ParcelCloud parcel_cloud;
+   load_user_cloud(&parcel_cloud, cloud);
+   
+   // Return bubble radius in meters
+   return parcel_cloud.r_bubble[p_idx];
+}
+
+// Post-processing function to output thermal breakup flag
+CONVERGE_POST_PARCEL(user_pbt,
+                     IN(VALUE(CONVERGE_cloud_t, cloud),
+                        VALUE(CONVERGE_index_t, p_idx)))
+{
+   struct ParcelCloud parcel_cloud;
+   load_user_cloud(&parcel_cloud, cloud);
+   
+   // Return pbt flag (0 = not in thermal breakup, 1 = in thermal breakup)
+   return (CONVERGE_precision_t)parcel_cloud.pbt[p_idx];
+}
