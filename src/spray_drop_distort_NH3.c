@@ -168,9 +168,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    static int tracking_initialized = 0;
    static int tracked_parcel_id = -1;  // Will be set to first parent parcel we encounter
 
-   // RESET COLLAPSE COUNTERS on first call (clears restart file values)
-   static int counters_initialized = 0;
-
 
    // printf("\n0");
    CONVERGE_size_t num_parcels_in_cloud = CONVERGE_cloud_size(cloud);
@@ -178,12 +175,18 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    load_user_cloud(&old_parcel_cloud, cloud);
    
-   if (!counters_initialized) {
+   // RESET COLLAPSE COUNTERS for this cloud on first timestep
+   static long last_reset_cycle = -1;
+   long current_cycle = CONVERGE_ncyc();
+   if (last_reset_cycle != current_cycle && current_cycle <= 5) {
+       // Only reset in first 5 cycles to handle injection timing
        for (CONVERGE_size_t p = 0; p < num_parcels_in_cloud; p++) {
            old_parcel_cloud.user_lag_var_i[p] = 0;
        }
-       counters_initialized = 1;
-       printf("[COLLAPSE_COUNTER] Initialized all collapse counters to 0 for %zu parcels\n", num_parcels_in_cloud);
+       if (last_reset_cycle < 0) {
+           printf("[COLLAPSE_COUNTER] Initializing collapse counters to 0 (cycle %ld)\n", current_cycle);
+       }
+       last_reset_cycle = current_cycle;
    }
 
    CONVERGE_precision_t pre_pl = CONVERGE_mpi_wtime();
