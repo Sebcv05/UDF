@@ -201,17 +201,8 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
-    // CRITICAL FIX: Reset counter if it got stuck from previous run
-    // dgre_cycle_count is being reused as collapse counter
-    if (old_parcel_cloud->dgre_cycle_count[p_idx] > 10) {
-        static int reset_count = 0;
-        if (reset_count < 5) {
-            printf("[RPE_FIX] Resetting stuck collapse counter: %d -> 0 for p_idx=%ld\n", 
-                   old_parcel_cloud->dgre_cycle_count[p_idx], p_idx);
-            reset_count++;
-        }
-        old_parcel_cloud->dgre_cycle_count[p_idx] = 0;
-    }
+    // Initialize collapse counter on first use (will be 0 from registration)
+    // user_lag_var_i is used as the collapse recovery counter
     
     // Initialize parameters structure
     RPE_Params params;
@@ -340,9 +331,9 @@ void RPE_euler_solver(
                state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
         
         // COLLAPSE RECOVERY LOGIC
-        // Increment collapse counter (reuse dgre_cycle_count for now)
-        old_parcel_cloud->dgre_cycle_count[p_idx]++;
-        int collapse_count = old_parcel_cloud->dgre_cycle_count[p_idx];
+        // Increment collapse counter using user_lag_var_i (clean field, not persisted weirdly)
+        old_parcel_cloud->user_lag_var_i[p_idx]++;
+        int collapse_count = old_parcel_cloud->user_lag_var_i[p_idx];
         
         printf("           Collapse count: %d\n", collapse_count);
         
@@ -397,10 +388,21 @@ void RPE_euler_solver(
             old_parcel_cloud->pbt[p_idx] = 0;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
             old_parcel_cloud->film_flag[p_idx] = 1;  // Mark as child for evaporation
-            old_parcel_cloud->dgre_cycle_count[p_idx] = 0;  // Reset counter
+            old_parcel_cloud->user_lag_var_i[p_idx] = 0;  // Reset counter
             
             return;
         }
+    }
+    
+    // RESET collapse counter if bubble is growing successfully after recovery
+    if (old_parcel_cloud->user_lag_var_i[p_idx] > 0 && state.Rdot > 0.0) {
+        static int recovery_success_count = 0;
+        if (recovery_success_count < 5) {
+            printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Counter %d -> 0, Rdot=%.3e m/s\n",
+                   old_parcel_cloud->user_lag_var_i[p_idx], state.Rdot);
+            recovery_success_count++;
+        }
+        old_parcel_cloud->user_lag_var_i[p_idx] = 0;  // Reset counter on successful recovery
     }
     
     // Diagnostic: Check if bubble is actually growing
