@@ -607,8 +607,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                   old_parcel_cloud.thermal_breakup_flag[p_idx]);
                           fflush(bubble_log);
                           
-                          printf("BUBBLE_SHRINK: t=%.6e, p_idx=%ld, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
-                                 CONVERGE_simulation_time_sec(), p_idx, 
+                          printf("BUBBLE_SHRINK: t=%.6e, p_idx=%d, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
+                                 CONVERGE_simulation_time_sec(), (int)p_idx, 
                                  old_parcel_cloud.radius[p_idx]*1e6, Rb_old_save*1e6, Rb*1e6);
                           printf("  T_drop=%.2f K, P_amb=%.2e Pa, P_bubble=%.2e Pa, superheat=%.2f K, v_bubble=%.2e m/s\n",
                                  Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
