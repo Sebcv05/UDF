@@ -291,6 +291,27 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          radius_diag_count++;
       }
       
+      // ROGUE PARCEL LOGGER: Check for parcels > 80 μm and > 10 mm downstream
+      CONVERGE_precision_t x = old_parcel_cloud.xx[p_idx][0];
+      CONVERGE_precision_t y = old_parcel_cloud.xx[p_idx][1];
+      CONVERGE_precision_t z = old_parcel_cloud.xx[p_idx][2];
+      CONVERGE_precision_t dist = sqrt(x*x + y*y + z*z);
+      CONVERGE_precision_t r = old_parcel_cloud.radius[p_idx];
+      
+      if (r > 80.0e-6 && dist > 0.010) {
+         CONVERGE_precision_t vx = old_parcel_cloud.uu[p_idx][0];
+         CONVERGE_precision_t vy = old_parcel_cloud.uu[p_idx][1];
+         CONVERGE_precision_t vz = old_parcel_cloud.uu[p_idx][2];
+         CONVERGE_precision_t vmag = sqrt(vx*vx + vy*vy + vz*vz);
+         CONVERGE_precision_t Weber = 610.0 * vmag * vmag * (2.0*r) / 0.0214;
+         
+         printf("ROGUE_PARCEL,%.6e,%d,%.6f,%.6f,%.3f,%.3e,%.3f,%.3f,%.3f,%.3f,%d,%d\n",
+                CONVERGE_simulation_time_sec(), p_idx, 
+                dist*1000.0, r*1e6, Td, old_parcel_cloud.num_drop[p_idx],
+                x*1000.0, y*1000.0, z*1000.0, vmag,
+                old_parcel_cloud.film_flag[p_idx], (int)Weber);
+      }
+      
       // Initialize single parcel tracking
       if (!tracking_initialized && old_parcel_cloud.is_child[p_idx] == 0 && old_parcel_cloud.pbt[p_idx] == 1) {
          tracked_parcel_id = p_idx;
