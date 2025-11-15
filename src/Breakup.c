@@ -843,7 +843,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("BREAKUP_COMPLETE: p_idx=%ld, R_drop: %.2f->%.2f um, R_bubble: %.2f->%.2f um, num_drop: %.3e->%.3e\n",
                p_idx, old_r*1e6, new_r*1e6, old_r_bubble*1e6, new_r_bubble*1e6, old_nd, new_nd);
         
-        static FILE* breakup_log = fopen("breakup_debug.csv", "a");
+        static FILE* breakup_log = NULL;
+        if (!breakup_log) {
+            breakup_log = fopen("breakup_debug.csv", "a");
+        }
         if (breakup_log) {
             fprintf(breakup_log, "%.6e,%ld,%ld,EXIT_BREAKUP,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.2f,%d\n",
                     CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
