@@ -366,6 +366,7 @@ void RPE_euler_solver(
             old_parcel_cloud->num_drop[p_idx] = new_num_drop;
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: recovery attempted, skip rest of timestep
             
             printf("           [RECOVERY %d/5] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
                    collapse_count, state.R, new_R_bubble, R_c);
@@ -374,7 +375,7 @@ void RPE_euler_solver(
             printf("           [RECOVERY %d/5] num_drop: %.3e -> %.3e (mass conserved)\n",
                    collapse_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
             
-            return;  // Exit RPE solver, try again next cycle
+            return;  // Exit RPE solver, break out of sub-cycling loop
             
         } else {
             // GIVE UP: After 5 attempts, treat as solid droplet

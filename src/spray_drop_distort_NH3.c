@@ -534,6 +534,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
                   break;
                }
+               
+               // Check if collapse recovery was attempted (tbf=888)
+               if(old_parcel_cloud.thermal_breakup_flag[p_idx] == 888)
+               {
+                  // Recovery attempted, skip rest of this timestep
+                  // Reset flag so next timestep can try again
+                  old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;
+                  break;
+               }
 
                //Load Rb
                Rb = old_parcel_cloud.r_bubble[p_idx];
