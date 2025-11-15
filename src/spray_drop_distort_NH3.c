@@ -596,8 +596,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                           CONVERGE_precision_t superheat = Td - T_sat_amb;
                           
                           char* event_type = "SHRINK";
-                          fprintf(bubble_log, "%.6e,%ld,%ld,%s,%.6e,%.6e,%.6e,%.6e,",
-                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx, event_type,
+                          fprintf(bubble_log, "%.6e,%ld,%d,%s,%.6e,%.6e,%.6e,%.6e,",
+                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), (int)p_idx, event_type,
                                   old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save);
                           fprintf(bubble_log, "%.6f,%.6e,%.6e,%.6f,%.6e,",
                                   Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
