@@ -178,6 +178,9 @@ CONVERGE_UDF(parcel_inject,
 
    // DIAGNOSTIC: Hijack film_flag for is_child (safe if not using film model)
    parcel_cloud.film_flag[passed_parcel_idx] = 0;  // 0 = parent
+   
+   // DIAGNOSTIC: Hijack film_thickness for r_bubble output (safe if not using film model)
+   parcel_cloud.film_thickness[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
 
    // R_D_0
    parcel_cloud.r_drop_0[passed_parcel_idx] = parcel_cloud.radius[passed_parcel_idx];
@@ -294,6 +297,9 @@ CONVERGE_UDF(parcel_child,
 
       // DIAGNOSTIC: Hijack film_flag for is_child (safe if not using film model)
       parcel_cloud.film_flag[passed_child_parcel_idx] = 1;  // 1 = child
+      
+      // DIAGNOSTIC: Hijack film_thickness for r_bubble output (safe if not using film model)
+      parcel_cloud.film_thickness[passed_child_parcel_idx] = parcel_cloud.r_bubble[passed_child_parcel_idx];
 
       // R_D_0 - should not be used for child parcels
       parcel_cloud.r_drop_0[passed_child_parcel_idx] = parcel_cloud.radius[passed_child_parcel_idx];
