@@ -570,29 +570,48 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   CONVERGE_precision_t Rb_old_save = old_parcel_cloud.r_bubble[p_idx];
                   old_parcel_cloud.r_bubble[p_idx] = Rb;
                   
-                  // DIAGNOSTIC: Log bubble changes for large parcels
-                  if (old_parcel_cloud.radius[p_idx] > 80.0e-6) {
+                  // DIAGNOSTIC: Log bubble changes with FULL details
+                  if (fabs(Rb - Rb_old_save) > 1e-9) {
                       static FILE* bubble_log = NULL;
                       if (!bubble_log) {
                           bubble_log = fopen("bubble_changes.csv", "w");
                           if (bubble_log) {
-                              fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,film_flag,pbt\n");
+                              fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,");
+                              fprintf(bubble_log, "T_drop,P_amb,P_bubble,superheat,v_bubble,");
+                              fprintf(bubble_log, "rho_liquid,sigma,film_flag,pbt,thermal_flag\n");
                           }
                       }
                       
-                      if (bubble_log && fabs(Rb - Rb_old_save) > 1e-9) {
-                          char* event_type = (Rb < Rb_old_save) ? "SHRINK" : "GROW";
-                          fprintf(bubble_log, "%.6e,%ld,%ld,%s,%.6e,%.6e,%.6e,%.6e,%d,%d\n",
+                      if (bubble_log && Rb < Rb_old_save) {  // SHRINK event
+                          // Calculate bubble pressure
+                          CONVERGE_precision_t P_bubble;
+                          Saturation_PressureNH3(Td, &P_bubble);
+                          
+                          // Get ambient pressure
+                          CONVERGE_precision_t P_amb = global_pressure[node_index];
+                          
+                          // Calculate superheat
+                          CONVERGE_precision_t T_sat_amb;
+                          Saturation_TemperatureNH3(P_amb, &T_sat_amb);
+                          CONVERGE_precision_t superheat = Td - T_sat_amb;
+                          
+                          char* event_type = "SHRINK";
+                          fprintf(bubble_log, "%.6e,%ld,%ld,%s,%.6e,%.6e,%.6e,%.6e,",
                                   CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx, event_type,
-                                  old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save,
-                                  old_parcel_cloud.film_flag[p_idx], old_parcel_cloud.pbt[p_idx]);
+                                  old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save);
+                          fprintf(bubble_log, "%.6f,%.6e,%.6e,%.6f,%.6e,",
+                                  Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
+                          fprintf(bubble_log, "%.6e,%.6e,%d,%d,%d\n",
+                                  old_parcel_cloud.density[p_idx], sigma,
+                                  old_parcel_cloud.film_flag[p_idx], old_parcel_cloud.pbt[p_idx],
+                                  old_parcel_cloud.thermal_breakup_flag[p_idx]);
                           fflush(bubble_log);
                           
-                          if (Rb < Rb_old_save) {
-                              printf("BUBBLE_SHRINK: t=%.6e, p_idx=%ld, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
-                                     CONVERGE_simulation_time_sec(), p_idx, 
-                                     old_parcel_cloud.radius[p_idx]*1e6, Rb_old_save*1e6, Rb*1e6);
-                          }
+                          printf("BUBBLE_SHRINK: t=%.6e, p_idx=%ld, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
+                                 CONVERGE_simulation_time_sec(), p_idx, 
+                                 old_parcel_cloud.radius[p_idx]*1e6, Rb_old_save*1e6, Rb*1e6);
+                          printf("  T_drop=%.2f K, P_amb=%.2e Pa, P_bubble=%.2e Pa, superheat=%.2f K, v_bubble=%.2e m/s\n",
+                                 Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
                       }
                   }
 

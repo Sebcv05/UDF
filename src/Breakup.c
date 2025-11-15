@@ -378,23 +378,11 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
     if (!breakup_log) {
         breakup_log = fopen("breakup_debug.csv", "w");
         if (breakup_log) {
-            fprintf(breakup_log, "time,ncyc,p_idx,event,R_drop_before,R_bubble_before,R_drop_after,R_bubble_after,num_drop_before,num_drop_after,temp,film_flag\n");
+            fprintf(breakup_log, "time,ncyc,p_idx,event,R_drop_before,R_bubble_before,R_drop_after,R_bubble_after,num_drop_before,num_drop_after,temp,film_flag,mean_child_radius\n");
         }
     }
     
-    if (old_r > 80.0e-6) {
-        printf("BREAKUP_LARGE: t=%.6e, p_idx=%ld, R_drop=%.3e (%.2f um), R_bubble=%.3e, num_drop=%.3e, temp=%.2f\n",
-               CONVERGE_simulation_time_sec(), p_idx, old_r, old_r*1e6, old_r_bubble, old_nd, 
-               old_parcel_cloud->temp[p_idx]);
-        
-        if (breakup_log) {
-            fprintf(breakup_log, "%.6e,%ld,%ld,ENTER_LARGE,%.6e,%.6e,0,0,%.6e,0,%.2f,%d\n",
-                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
-                    old_r, old_r_bubble, old_nd, old_parcel_cloud->temp[p_idx],
-                    old_parcel_cloud->film_flag[p_idx]);
-            fflush(breakup_log);
-        }
-    }
+    // DON'T log entry yet - wait until we know child radii
     
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
@@ -706,6 +694,27 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     // ============================================================================
     // END ROSIN-RAMMLER SAMPLING
     // ============================================================================
+    
+    // DIAGNOSTIC: Calculate mean child radius and log if > 80 μm
+    CONVERGE_precision_t mean_child_radius = 0.0;
+    for (int i = 0; i < num_child_parcels; i++) {
+        mean_child_radius += child_radii[i];
+    }
+    mean_child_radius /= num_child_parcels;
+    
+    if (mean_child_radius > 80.0e-6) {
+        printf("BREAKUP_LARGE_CHILDREN: t=%.6e, p_idx=%ld, mean_child_R=%.2f um, parent_R=%.2f um\n",
+               CONVERGE_simulation_time_sec(), p_idx, mean_child_radius*1e6, old_r*1e6);
+        
+        static FILE* breakup_log = fopen("breakup_debug.csv", "a");
+        if (breakup_log) {
+            fprintf(breakup_log, "%.6e,%ld,%ld,LARGE_CHILDREN,%.6e,%.6e,0,0,%.6e,0,%.2f,%d,%.6e\n",
+                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                    old_r, old_r_bubble, old_nd, old_parcel_cloud->temp[p_idx],
+                    old_parcel_cloud->film_flag[p_idx], mean_child_radius);
+            fflush(breakup_log);
+        }
+    }
     
     //--------- Testing Child Parcel Introduction ----------------//
  
