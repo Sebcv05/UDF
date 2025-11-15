@@ -590,9 +590,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                           // Get ambient pressure
                           CONVERGE_precision_t P_amb = global_pressure[node_index];
                           
-                          // Calculate superheat
-                          CONVERGE_precision_t T_sat_amb;
-                          Saturation_TemperatureNH3(P_amb, &T_sat_amb);
+                          // Calculate superheat using T_satNH3 function
+                          CONVERGE_precision_t T_sat_amb = T_satNH3(P_amb);
                           CONVERGE_precision_t superheat = Td - T_sat_amb;
                           
                           char* event_type = "SHRINK";
