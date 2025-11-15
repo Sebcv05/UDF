@@ -336,7 +336,7 @@ void RPE_euler_solver(
         
         printf("           Collapse count: %d\n", collapse_count);
         
-        if (collapse_count <= 5) {
+        if (collapse_count <= 100) {
             // ATTEMPT RECOVERY: Shrink bubble to near critical and reset droplet
             CONVERGE_precision_t R_c = 2.0 * params.sigma / (P_sat_calc - params.P_amb);
             if (R_c < 1e-12) R_c = 1e-12;
@@ -367,17 +367,17 @@ void RPE_euler_solver(
             old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: recovery attempted, skip rest of timestep
             
-            printf("           [RECOVERY %d/5] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
+            printf("           [RECOVERY %d/100] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
                    collapse_count, state.R, new_R_bubble, R_c);
-            printf("           [RECOVERY %d/5] R_drop: %.3e -> %.3e m (r_drop_0)\n",
+            printf("           [RECOVERY %d/100] R_drop: %.3e -> %.3e m (r_drop_0)\n",
                    collapse_count, params.Ro, new_R_drop);
-            printf("           [RECOVERY %d/5] num_drop: %.3e -> %.3e (mass conserved)\n",
+            printf("           [RECOVERY %d/100] num_drop: %.3e -> %.3e (mass conserved)\n",
                    collapse_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
             
             return;  // Exit RPE solver, break out of sub-cycling loop
             
         } else {
-            // GIVE UP: After 5 attempts, treat as solid droplet
+            // GIVE UP: After 100 attempts, treat as solid droplet
             printf("           [COLLAPSE FINAL] After %d attempts, treating as solid droplet\n", collapse_count);
             
             old_parcel_cloud->r_bubble[p_idx] = 0.0;
