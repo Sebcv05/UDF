@@ -371,6 +371,31 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
 }
  CONVERGE_precision_t   old_r = old_parcel_cloud->radius[p_idx];
  CONVERGE_precision_t  old_nd = old_parcel_cloud->num_drop[p_idx];
+ CONVERGE_precision_t  old_r_bubble = old_parcel_cloud->r_bubble[p_idx];
+ 
+    // DIAGNOSTIC: Check for large parcels entering breakup
+    static FILE* breakup_log = NULL;
+    if (!breakup_log) {
+        breakup_log = fopen("breakup_debug.csv", "w");
+        if (breakup_log) {
+            fprintf(breakup_log, "time,ncyc,p_idx,event,R_drop_before,R_bubble_before,R_drop_after,R_bubble_after,num_drop_before,num_drop_after,temp,film_flag\n");
+        }
+    }
+    
+    if (old_r > 80.0e-6) {
+        printf("BREAKUP_LARGE: t=%.6e, p_idx=%ld, R_drop=%.3e (%.2f um), R_bubble=%.3e, num_drop=%.3e, temp=%.2f\n",
+               CONVERGE_simulation_time_sec(), p_idx, old_r, old_r*1e6, old_r_bubble, old_nd, 
+               old_parcel_cloud->temp[p_idx]);
+        
+        if (breakup_log) {
+            fprintf(breakup_log, "%.6e,%ld,%ld,ENTER_LARGE,%.6e,%.6e,0,0,%.6e,0,%.2f,%d\n",
+                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                    old_r, old_r_bubble, old_nd, old_parcel_cloud->temp[p_idx],
+                    old_parcel_cloud->film_flag[p_idx]);
+            fflush(breakup_log);
+        }
+    }
+    
     // printf("\nbreakup count %i",breakup_counter);
     if (old_parcel_cloud->radius[p_idx] < old_parcel_cloud->r_bubble[p_idx])
     {
@@ -808,4 +833,24 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     prof_loop = prof_child_parcel = prof_calcs = 0.0;
     last_cycle = ncyc;
 }
+
+    // DIAGNOSTIC: Log completion of breakup for large parcels
+    if (old_r > 80.0e-6) {
+        CONVERGE_precision_t new_r = old_parcel_cloud->radius[p_idx];
+        CONVERGE_precision_t new_r_bubble = old_parcel_cloud->r_bubble[p_idx];
+        CONVERGE_precision_t new_nd = old_parcel_cloud->num_drop[p_idx];
+        
+        printf("BREAKUP_COMPLETE: p_idx=%ld, R_drop: %.2f->%.2f um, R_bubble: %.2f->%.2f um, num_drop: %.3e->%.3e\n",
+               p_idx, old_r*1e6, new_r*1e6, old_r_bubble*1e6, new_r_bubble*1e6, old_nd, new_nd);
+        
+        static FILE* breakup_log = fopen("breakup_debug.csv", "a");
+        if (breakup_log) {
+            fprintf(breakup_log, "%.6e,%ld,%ld,EXIT_BREAKUP,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.2f,%d\n",
+                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                    old_r, old_r_bubble, new_r, new_r_bubble,
+                    old_nd, new_nd, old_parcel_cloud->temp[p_idx],
+                    old_parcel_cloud->film_flag[p_idx]);
+            fflush(breakup_log);
+        }
+    }
 }

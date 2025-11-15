@@ -567,7 +567,34 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                else
                {
                   //Save Rb 
+                  CONVERGE_precision_t Rb_old_save = old_parcel_cloud.r_bubble[p_idx];
                   old_parcel_cloud.r_bubble[p_idx] = Rb;
+                  
+                  // DIAGNOSTIC: Log bubble changes for large parcels
+                  if (old_parcel_cloud.radius[p_idx] > 80.0e-6) {
+                      static FILE* bubble_log = NULL;
+                      if (!bubble_log) {
+                          bubble_log = fopen("bubble_changes.csv", "w");
+                          if (bubble_log) {
+                              fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,film_flag,pbt\n");
+                          }
+                      }
+                      
+                      if (bubble_log && fabs(Rb - Rb_old_save) > 1e-9) {
+                          char* event_type = (Rb < Rb_old_save) ? "SHRINK" : "GROW";
+                          fprintf(bubble_log, "%.6e,%ld,%ld,%s,%.6e,%.6e,%.6e,%.6e,%d,%d\n",
+                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx, event_type,
+                                  old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save,
+                                  old_parcel_cloud.film_flag[p_idx], old_parcel_cloud.pbt[p_idx]);
+                          fflush(bubble_log);
+                          
+                          if (Rb < Rb_old_save) {
+                              printf("BUBBLE_SHRINK: t=%.6e, p_idx=%ld, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
+                                     CONVERGE_simulation_time_sec(), p_idx, 
+                                     old_parcel_cloud.radius[p_idx]*1e6, Rb_old_save*1e6, Rb*1e6);
+                          }
+                      }
+                  }
 
 
             // Update droplet radius
@@ -577,6 +604,35 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             Geometry(&old_parcel_cloud, p_idx, dt_sub);
             prof_geom += CONVERGE_mpi_wtime() - t0;
             CONVERGE_precision_t rdrop_after_geometry = old_parcel_cloud.radius[p_idx];
+            
+                  // DIAGNOSTIC: Log radius increase for large parcels
+                  if (rdrop_after_geometry > 80.0e-6 && fabs(rdrop_after_geometry - rdrop_before_geometry) > 1e-9) {
+                      static FILE* radius_log = NULL;
+                      if (!radius_log) {
+                          radius_log = fopen("radius_changes.csv", "w");
+                          if (radius_log) {
+                              fprintf(radius_log, "time,ncyc,p_idx,R_drop_before,R_drop_after,delta_R,R_bubble,R_drop_0,expansion_ratio,film_flag\n");
+                          }
+                      }
+                      
+                      if (radius_log) {
+                          CONVERGE_precision_t expansion = rdrop_after_geometry / old_parcel_cloud.r_drop_0[p_idx];
+                          fprintf(radius_log, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e,%.6e,%.4f,%d\n",
+                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                                  rdrop_before_geometry, rdrop_after_geometry, 
+                                  rdrop_after_geometry - rdrop_before_geometry,
+                                  old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
+                                  expansion, old_parcel_cloud.film_flag[p_idx]);
+                          fflush(radius_log);
+                          
+                          if (rdrop_after_geometry > old_parcel_cloud.r_drop_0[p_idx] * 1.5) {
+                              printf("RADIUS_LARGE_EXPANSION: t=%.6e, p_idx=%ld, R_drop: %.2f -> %.2f um (%.1fx injection)\n",
+                                     CONVERGE_simulation_time_sec(), p_idx,
+                                     rdrop_before_geometry*1e6, rdrop_after_geometry*1e6, expansion);
+                          }
+                      }
+                  }
+            
                   if(rdrop_after_geometry< rdrop_before_geometry){
 
                      printf("\nGeometry has shrunk parcel, rdrop_before_geometry = %e, rdrop_after_geometry = %e\n", rdrop_before_geometry, rdrop_after_geometry);
