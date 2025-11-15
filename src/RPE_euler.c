@@ -201,6 +201,18 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
+    // CRITICAL FIX: Reset counter if it got stuck from previous run
+    // dgre_cycle_count is being reused as collapse counter
+    if (old_parcel_cloud->dgre_cycle_count[p_idx] > 10) {
+        static int reset_count = 0;
+        if (reset_count < 5) {
+            printf("[RPE_FIX] Resetting stuck collapse counter: %d -> 0 for p_idx=%ld\n", 
+                   old_parcel_cloud->dgre_cycle_count[p_idx], p_idx);
+            reset_count++;
+        }
+        old_parcel_cloud->dgre_cycle_count[p_idx] = 0;
+    }
+    
     // Initialize parameters structure
     RPE_Params params;
     
