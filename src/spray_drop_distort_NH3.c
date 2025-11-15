@@ -636,8 +636,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                       
                       if (radius_log) {
                           CONVERGE_precision_t expansion = rdrop_after_geometry / old_parcel_cloud.r_drop_0[p_idx];
-                          fprintf(radius_log, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e,%.6e,%.4f,%d\n",
-                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                          fprintf(radius_log, "%.6e,%ld,%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.4f,%d\n",
+                                  CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), (int)p_idx,
                                   rdrop_before_geometry, rdrop_after_geometry, 
                                   rdrop_after_geometry - rdrop_before_geometry,
                                   old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
