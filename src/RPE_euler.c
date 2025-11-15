@@ -332,15 +332,12 @@ void RPE_euler_solver(
         Saturation_PressureNH3(state.T_drop, &P_sat_calc);
         CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
         
-        static int negative_rdot_count = 0;
-        if (negative_rdot_count < 3) {
-            printf("[RPE_STOP] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
-            printf("           T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
-                   state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
-            printf("           R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
-                   state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
-            negative_rdot_count++;
-        }
+        // Always print collapse diagnostics
+        printf("[RPE_STOP] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
+        printf("           T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
+               state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
+        printf("           R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
+               state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
         
         // COLLAPSE RECOVERY LOGIC
         // Increment collapse counter (reuse dgre_cycle_count for now)
