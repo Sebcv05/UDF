@@ -643,11 +643,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                   expansion, old_parcel_cloud.film_flag[p_idx]);
                           fflush(radius_log);
                           
+                          // DISABLED: Too much output
+                          /*
                           if (rdrop_after_geometry > old_parcel_cloud.r_drop_0[p_idx] * 1.5) {
                               printf("RADIUS_LARGE_EXPANSION: t=%.6e, p_idx=%d, R_drop: %.2f -> %.2f um (%.1fx injection)\n",
                                      CONVERGE_simulation_time_sec(), (int)p_idx,
                                      rdrop_before_geometry*1e6, rdrop_after_geometry*1e6, expansion);
                           }
+                          */
                       }
                   }
             
