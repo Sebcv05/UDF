@@ -315,11 +315,13 @@ void RPE_euler_solver(
     
     // SAFETY: Prevent negative Rdot (bubble collapse) with recovery logic
     if (state.Rdot < 0.0) {
+        // Calculate saturation pressure
+        CONVERGE_precision_t P_sat_calc;
+        Saturation_PressureNH3(state.T_drop, &P_sat_calc);
+        CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
+        
         static int negative_rdot_count = 0;
         if (negative_rdot_count < 3) {
-            CONVERGE_precision_t P_sat_calc;
-            Saturation_PressureNH3(state.T_drop, &P_sat_calc);
-            CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
             printf("[RPE_STOP] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
             printf("           T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
                    state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
