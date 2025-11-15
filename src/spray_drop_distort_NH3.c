@@ -174,20 +174,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
 
    load_user_cloud(&old_parcel_cloud, cloud);
-   
-   // RESET COLLAPSE COUNTERS for this cloud on first timestep
-   static long last_reset_cycle = -1;
-   long current_cycle = CONVERGE_ncyc();
-   if (last_reset_cycle != current_cycle && current_cycle <= 5) {
-       // Only reset in first 5 cycles to handle injection timing
-       for (CONVERGE_size_t p = 0; p < num_parcels_in_cloud; p++) {
-           old_parcel_cloud.user_lag_var_i[p] = 0;
-       }
-       if (last_reset_cycle < 0) {
-           printf("[COLLAPSE_COUNTER] Initializing collapse counters to 0 (cycle %ld)\n", current_cycle);
-       }
-       last_reset_cycle = current_cycle;
-   }
 
    CONVERGE_precision_t pre_pl = CONVERGE_mpi_wtime();
    CONVERGE_precision_t pre_TAB,post_TAB,pre_DGRE,post_DGRE,pre_Geom,post_Geom,pre_break,post_break,pre_bc,post_bc,pre_pbr,post_pbr,sopl,eopl;

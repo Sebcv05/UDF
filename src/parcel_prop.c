@@ -225,6 +225,10 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.thermal_breakup_flag[passed_parcel_idx] = -1;
    parcel_cloud.parcel_index[passed_parcel_idx] = user_parcel_counter;
    parcel_cloud.cloud_index[passed_parcel_idx] = -1;
+   
+   // Initialize collapse counter to 0
+   parcel_cloud.user_lag_var_i[passed_parcel_idx] = 0;
+   
    user_parcel_counter ++;
    
 
@@ -314,6 +318,10 @@ CONVERGE_UDF(parcel_child,
       // In the parcel_child function, add this line where other parcel properties are being set:
       parcel_cloud.lifetime[passed_child_parcel_idx] = 0.0;  // Reset lifetime for new child droplets 
       parcel_cloud.is_child[passed_child_parcel_idx] = 1;   //Field to identify whether parent has undrgone breakup 
+      
+      // Initialize collapse counter to 0
+      parcel_cloud.user_lag_var_i[passed_child_parcel_idx] = 0;
+      
       // If parent's thermal_breakup_flag is set, displace the child parcel
       int rank;
       CONVERGE_mpi_comm_rank(&rank);
