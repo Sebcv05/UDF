@@ -202,6 +202,22 @@ void RPE_euler_solver(
     CONVERGE_size_t num_parcel_species
 ) {
     // user_lag_var_i is used as the collapse recovery counter
+    // dgre_cycle_count is used as cooldown timer (only active after recovery)
+    
+    // Check if this parcel is in cooldown period after recovery
+    if (old_parcel_cloud->dgre_cycle_count[p_idx] > 0) {
+        old_parcel_cloud->dgre_cycle_count[p_idx]--;
+        
+        static int cooldown_print_count = 0;
+        if (cooldown_print_count < 10) {
+            printf("[RPE_COOLDOWN] Parcel %ld: Skipping RPE for %d more cycles (recovery cooldown)\n", 
+                   p_idx, old_parcel_cloud->dgre_cycle_count[p_idx]);
+            cooldown_print_count++;
+        }
+        
+        // Don't run RPE solver during cooldown for THIS parcel only
+        return;
+    }
     
     // Initialize parameters structure
     RPE_Params params;
@@ -367,12 +383,17 @@ void RPE_euler_solver(
             old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: recovery attempted, skip rest of timestep
             
+            // Set 10-cycle cooldown for THIS parcel only
+            old_parcel_cloud->dgre_cycle_count[p_idx] = 10;
+            
             printf("           [RECOVERY %d/5] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
                    collapse_count, state.R, new_R_bubble, R_c);
             printf("           [RECOVERY %d/5] R_drop: %.3e -> %.3e m (r_drop_0)\n",
                    collapse_count, params.Ro, new_R_drop);
             printf("           [RECOVERY %d/5] num_drop: %.3e -> %.3e (mass conserved)\n",
                    collapse_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
+            printf("           [RECOVERY %d/5] Setting 10-cycle cooldown for this parcel\n",
+                   collapse_count);
             
             return;  // Exit RPE solver, break out of sub-cycling loop
             
