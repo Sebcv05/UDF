@@ -396,12 +396,8 @@ void RPE_euler_solver(
     
     // RESET collapse counter if bubble is growing successfully after recovery
     if (old_parcel_cloud->user_lag_var_i[p_idx] > 0 && state.Rdot > 0.0) {
-        static int recovery_success_count = 0;
-        if (recovery_success_count < 5) {
-            printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Counter %d -> 0, Rdot=%.3e m/s\n",
-                   old_parcel_cloud->user_lag_var_i[p_idx], state.Rdot);
-            recovery_success_count++;
-        }
+        printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Counter %d -> 0, Rdot=%.3e m/s\n",
+               old_parcel_cloud->user_lag_var_i[p_idx], state.Rdot);
         old_parcel_cloud->user_lag_var_i[p_idx] = 0;  // Reset counter on successful recovery
     }
     
