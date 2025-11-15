@@ -313,24 +313,82 @@ void RPE_euler_solver(
     // Euler step
     euler_step(&state, &derivs, dt_sub);
     
-    // SAFETY: Prevent negative Rdot (bubble collapse)
+    // SAFETY: Prevent negative Rdot (bubble collapse) with recovery logic
     if (state.Rdot < 0.0) {
         static int negative_rdot_count = 0;
         if (negative_rdot_count < 3) {
             CONVERGE_precision_t P_sat_calc;
             Saturation_PressureNH3(state.T_drop, &P_sat_calc);
             CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
-            printf("[RPE_STOP] Negative Rdot=%.3e, stopping growth (bubble collapsing)\n", state.Rdot);
+            printf("[RPE_STOP] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
             printf("           T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
                    state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
             printf("           R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
                    state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
             negative_rdot_count++;
         }
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
-        return;
+        
+        // COLLAPSE RECOVERY LOGIC
+        // Increment collapse counter (reuse dgre_cycle_count for now)
+        old_parcel_cloud->dgre_cycle_count[p_idx]++;
+        int collapse_count = old_parcel_cloud->dgre_cycle_count[p_idx];
+        
+        printf("           Collapse count: %d\n", collapse_count);
+        
+        if (collapse_count <= 5) {
+            // ATTEMPT RECOVERY: Shrink bubble to near critical and reset droplet
+            CONVERGE_precision_t R_c = 2.0 * params.sigma / (P_sat_calc - params.P_amb);
+            if (R_c < 1e-12) R_c = 1e-12;
+            
+            CONVERGE_precision_t new_R_bubble = 1.1 * R_c;
+            CONVERGE_precision_t new_R_drop = old_parcel_cloud->r_drop_0[p_idx];
+            
+            // Calculate old and new masses
+            CONVERGE_precision_t V_drop_old = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro;
+            CONVERGE_precision_t V_bubble_old = (4.0/3.0) * PI * state.R * state.R * state.R;
+            CONVERGE_precision_t V_liquid_old = V_drop_old - V_bubble_old;
+            CONVERGE_precision_t mass_liquid_old = V_liquid_old * params.rho_l;
+            
+            CONVERGE_precision_t V_drop_new = (4.0/3.0) * PI * new_R_drop * new_R_drop * new_R_drop;
+            CONVERGE_precision_t V_bubble_new = (4.0/3.0) * PI * new_R_bubble * new_R_bubble * new_R_bubble;
+            CONVERGE_precision_t V_liquid_new = V_drop_new - V_bubble_new;
+            CONVERGE_precision_t mass_per_drop_new = V_liquid_new * params.rho_l;
+            
+            // Conserve mass by adjusting num_drop
+            CONVERGE_precision_t total_mass = old_parcel_cloud->num_drop[p_idx] * mass_liquid_old;
+            CONVERGE_precision_t new_num_drop = total_mass / mass_per_drop_new;
+            
+            // Apply recovery
+            old_parcel_cloud->r_bubble[p_idx] = new_R_bubble;
+            old_parcel_cloud->radius[p_idx] = new_R_drop;
+            old_parcel_cloud->num_drop[p_idx] = new_num_drop;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
+            
+            printf("           [RECOVERY %d/5] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
+                   collapse_count, state.R, new_R_bubble, R_c);
+            printf("           [RECOVERY %d/5] R_drop: %.3e -> %.3e m (r_drop_0)\n",
+                   collapse_count, params.Ro, new_R_drop);
+            printf("           [RECOVERY %d/5] num_drop: %.3e -> %.3e (mass conserved)\n",
+                   collapse_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
+            
+            return;  // Exit RPE solver, try again next cycle
+            
+        } else {
+            // GIVE UP: After 5 attempts, treat as solid droplet
+            printf("           [COLLAPSE FINAL] After %d attempts, treating as solid droplet\n", collapse_count);
+            
+            old_parcel_cloud->r_bubble[p_idx] = 0.0;
+            old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
+            old_parcel_cloud->radius[p_idx] = old_parcel_cloud->r_drop_0[p_idx];
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            old_parcel_cloud->pbt[p_idx] = 0;
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+            old_parcel_cloud->film_flag[p_idx] = 1;  // Mark as child for evaporation
+            old_parcel_cloud->dgre_cycle_count[p_idx] = 0;  // Reset counter
+            
+            return;
+        }
     }
     
     // Diagnostic: Check if bubble is actually growing
