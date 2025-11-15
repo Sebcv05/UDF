@@ -706,7 +706,10 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("BREAKUP_LARGE_CHILDREN: t=%.6e, p_idx=%ld, mean_child_R=%.2f um, parent_R=%.2f um\n",
                CONVERGE_simulation_time_sec(), p_idx, mean_child_radius*1e6, old_r*1e6);
         
-        static FILE* breakup_log = fopen("breakup_debug.csv", "a");
+        static FILE* breakup_log = NULL;
+        if (!breakup_log) {
+            breakup_log = fopen("breakup_debug.csv", "a");
+        }
         if (breakup_log) {
             fprintf(breakup_log, "%.6e,%ld,%ld,LARGE_CHILDREN,%.6e,%.6e,0,0,%.6e,0,%.2f,%d,%.6e\n",
                     CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
