@@ -201,6 +201,13 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
+    // Check if this parcel just recovered (flag = -999 from last timestep)
+    static int post_recovery_print_count = 0;
+    if (old_parcel_cloud->thermal_breakup_flag[p_idx] == -999 && post_recovery_print_count < 5) {
+        printf("[RPE_POST_RECOVERY] Parcel entering RPE again after recovery, flag=-999, Rdot will be checked\n");
+        post_recovery_print_count++;
+    }
+    
     // user_lag_var_i is used as the collapse recovery counter
     
     // Initialize parameters structure
