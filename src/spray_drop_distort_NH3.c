@@ -459,39 +459,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             }
          }
     
-         // CHECK: Handle parcels in recovery mode
-         if (old_parcel_cloud.recovery_time[p_idx] > 0.0) {
-            CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-            CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud.recovery_time[p_idx];
-            const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;  // 20 microseconds
-            
-            if (time_since_recovery < RECOVERY_PERIOD) {
-               // Still in recovery wait - disable pbt to freeze parcel
-               if (old_parcel_cloud.pbt[p_idx] == 1) {
-                  static int recovery_freeze_count = 0;
-                  if (recovery_freeze_count < 10) {
-                     printf("[RECOVERY_FREEZE] p_idx=%li, time_since_recovery=%.3e/%.3e s, setting pbt=0\n",
-                            p_idx, time_since_recovery, RECOVERY_PERIOD);
-                     recovery_freeze_count++;
-                  }
-                  old_parcel_cloud.pbt[p_idx] = 0;  // Disable thermal breakup during wait
-               }
-               continue;  // Skip to next parcel
-            } else {
-               // Recovery period elapsed - re-enable pbt if it was disabled
-               if (old_parcel_cloud.pbt[p_idx] == 0 && old_parcel_cloud.recovery_count[p_idx] > 0) {
-                  static int recovery_thaw_count = 0;
-                  if (recovery_thaw_count < 10) {
-                     printf("[RECOVERY_THAW] p_idx=%li, time_since_recovery=%.3e s, setting pbt=1\n",
-                            p_idx, time_since_recovery);
-                     recovery_thaw_count++;
-                  }
-                  old_parcel_cloud.pbt[p_idx] = 1;  // Re-enable thermal breakup
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;  // Allow RPE entry
-               }
-               // Now fall through to normal processing (pbt=1, will enter RPE block below)
-            }
-         }
       
 
          if (old_parcel_cloud.thermal_breakup_flag[p_idx] <0 && old_parcel_cloud.pbt[p_idx]==1)

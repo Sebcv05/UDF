@@ -354,114 +354,79 @@ void RPE_euler_solver(
         // Get current simulation time
         CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
         
-        // Check if we're currently in recovery period
+        // Check if this parcel has already been recovered (now a child)
         CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
-        CONVERGE_precision_t time_since_recovery = current_time - recovery_start_time;
         
-        // Recovery period: 2e-5 seconds (20 microseconds)
-        const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;
-        
-        if (recovery_start_time > 0.0 && time_since_recovery < RECOVERY_PERIOD) {
-            // Still in recovery period - don't allow new collapse
-            printf("[RPE_RECOVERY_WAIT] Still in recovery period: %.3e / %.3e s elapsed\n",
-                   time_since_recovery, RECOVERY_PERIOD);
-            printf("                    Rdot=%.3e (negative but waiting), R=%.3e m\n", 
-                   state.Rdot, state.R);
-            
-            // Keep bubble stable during recovery wait - use small positive velocity to avoid "too small" check
-            old_parcel_cloud->v_bubble[p_idx] = 1.0e-9;
-            old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: skip rest of timestep
+        if (recovery_start_time > 0.0) {
+            // This parcel was already recovered and converted to child
+            // It shouldn't be in RPE anymore (pbt=0, is_child=1)
+            printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
+                   p_idx, recovery_start_time);
+            old_parcel_cloud->pbt[p_idx] = 0;
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
             return;
         }
         
-        // Not in recovery period - attempt recovery
+        // First time collapse - attempt recovery by converting to child
         // Always print collapse diagnostics
-        printf("[RPE_COLLAPSE] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
-        printf("               Time: %.6e s, Last recovery: %.6e s (%.3e s ago)\n",
-               current_time, recovery_start_time, time_since_recovery);
-        
-        // If this is a repeat recovery, note it
-        if (recovery_start_time > 0.0) {
-            printf("               [REPEAT COLLAPSE] %.3e s since last recovery (period=%.3e s), attempting recovery #%d\n",
-                   time_since_recovery, RECOVERY_PERIOD, old_parcel_cloud->recovery_count[p_idx] + 1);
-            printf("               [REPEAT COLLAPSE] Parcel keeps collapsing! Check conditions.\n");
-        }
+        printf("[RPE_COLLAPSE] Negative Rdot=%.3e, converting to child parcel\n", state.Rdot);
+        printf("               Time: %.6e s\n", current_time);
         
         printf("               T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
                state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
         printf("               R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
                state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
         
-        // ATTEMPT RECOVERY: Shrink bubble to near critical and reset droplet
-        CONVERGE_precision_t R_c = 2.0 * params.sigma / (P_sat_calc - params.P_amb);
-        if (R_c < 1e-12) R_c = 1e-12;
+        // NEW RECOVERY STRATEGY: Reset to injection state and convert to child parcel
+        // This allows KH-RT and evaporation to handle the parcel naturally
         
-        CONVERGE_precision_t new_R_bubble = 1.1 * R_c;
-        CONVERGE_precision_t new_R_drop = old_parcel_cloud->r_drop_0[p_idx];
+        // Get injection radius (assuming r_drop_0 is injection radius)
+        CONVERGE_precision_t injection_radius = old_parcel_cloud->r_drop_0[p_idx];
         
-        // Calculate old and new masses
+        // Calculate mass to conserve
         CONVERGE_precision_t V_drop_old = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro;
         CONVERGE_precision_t V_bubble_old = (4.0/3.0) * PI * state.R * state.R * state.R;
         CONVERGE_precision_t V_liquid_old = V_drop_old - V_bubble_old;
         CONVERGE_precision_t mass_liquid_old = V_liquid_old * params.rho_l;
-        
-        CONVERGE_precision_t V_drop_new = (4.0/3.0) * PI * new_R_drop * new_R_drop * new_R_drop;
-        CONVERGE_precision_t V_bubble_new = (4.0/3.0) * PI * new_R_bubble * new_R_bubble * new_R_bubble;
-        CONVERGE_precision_t V_liquid_new = V_drop_new - V_bubble_new;
-        CONVERGE_precision_t mass_per_drop_new = V_liquid_new * params.rho_l;
-        
-        // Conserve mass by adjusting num_drop
         CONVERGE_precision_t total_mass = old_parcel_cloud->num_drop[p_idx] * mass_liquid_old;
+        
+        // New state: droplet at injection radius, no bubble
+        CONVERGE_precision_t V_drop_new = (4.0/3.0) * PI * injection_radius * injection_radius * injection_radius;
+        CONVERGE_precision_t mass_per_drop_new = V_drop_new * params.rho_l;
         CONVERGE_precision_t new_num_drop = total_mass / mass_per_drop_new;
         
-        // Apply recovery
-        old_parcel_cloud->r_bubble[p_idx] = new_R_bubble;
-        old_parcel_cloud->radius[p_idx] = new_R_drop;
+        // Apply recovery: reset to injection state
+        old_parcel_cloud->radius[p_idx] = injection_radius;
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;  // Zero bubble - thermal breakup disabled
+        old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
         old_parcel_cloud->num_drop[p_idx] = new_num_drop;
-        old_parcel_cloud->v_bubble[p_idx] = 1.0e-9;  // Small positive velocity to avoid triggering "too small" check
-        old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: recovery attempted, skip rest of timestep
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->is_child[p_idx] = 1;  // Mark as child so KH-RT/evaporation work
+        old_parcel_cloud->pbt[p_idx] = 0;  // Disable thermal breakup
+        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;  // Mark as aborted
         
-        // Record recovery time and increment counter
+        // Record recovery
         old_parcel_cloud->recovery_time[p_idx] = current_time;
         old_parcel_cloud->recovery_count[p_idx]++;
         int recovery_count = old_parcel_cloud->recovery_count[p_idx];
         
-        printf("               [RECOVERY #%d] R_bubble: %.3e -> %.3e m (1.1*Rc=%.3e)\n",
-               recovery_count, state.R, new_R_bubble, R_c);
-        printf("               [RECOVERY #%d] R_drop: %.3e -> %.3e m (r_drop_0)\n",
-               recovery_count, params.Ro, new_R_drop);
+        printf("               [RECOVERY #%d] R_drop: %.3e -> %.3e m (injection radius)\n",
+               recovery_count, params.Ro, injection_radius);
+        printf("               [RECOVERY #%d] R_bubble: %.3e -> 0.00e+00 m (zeroed)\n",
+               recovery_count, state.R);
         printf("               [RECOVERY #%d] num_drop: %.3e -> %.3e (mass conserved)\n",
                recovery_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
         printf("               [RECOVERY #%d] Recovery time logged: %.6e s, wait %.3e s before next\n",
                recovery_count, current_time, RECOVERY_PERIOD);
+        printf("               [RECOVERY #%d] is_child: 0 -> 1 (converted to child parcel)\n",
+               recovery_count);
+        printf("               [RECOVERY #%d] pbt: 1 -> 0 (thermal breakup disabled)\n",
+               recovery_count);
         
-        return;  // Exit RPE solver, break out of sub-cycling loop
+        return;  // Exit RPE solver
     }
     
-    // RESET recovery timer if bubble is growing successfully after recovery
-    // BUT only if the recovery period has elapsed
-    if (old_parcel_cloud->recovery_time[p_idx] > 0.0 && state.Rdot > 0.0) {
-        CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-        CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
-        CONVERGE_precision_t time_since_recovery = current_time - recovery_start_time;
-        
-        // Recovery period: must match the wait period above
-        const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;
-        
-        // Only declare success if recovery period has elapsed
-        if (time_since_recovery >= RECOVERY_PERIOD) {
-            printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Rdot=%.3e m/s, %.3e s after recovery\n",
-                   state.Rdot, time_since_recovery);
-            printf("                       R_bubble=%.3e m, R_drop=%.3e m, recovery_count was %d\n",
-                   state.R, params.Ro, old_parcel_cloud->recovery_count[p_idx]);
-            printf("                       Resetting recovery timer (was %.6e s), flag=%d\n", 
-                   recovery_start_time, old_parcel_cloud->thermal_breakup_flag[p_idx]);
-            old_parcel_cloud->recovery_time[p_idx] = 0.0;  // Reset recovery time
-            old_parcel_cloud->thermal_breakup_flag[p_idx] = -1;  // Reset flag to normal operation
-            // Keep counter for tracking history: old_parcel_cloud->recovery_count[p_idx] 
-        }
-    }
+    // Note: Recovery success check removed - parcels are converted to children and won't re-enter RPE
     
     // Diagnostic: Check if bubble is actually growing
     static int growth_check_count = 0;
