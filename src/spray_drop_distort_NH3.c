@@ -406,6 +406,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
          old_parcel_cloud.pbt[p_idx] = 0;  // CRITICAL FIX: Disable thermal breakup
          old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;  // CRITICAL FIX: Mark as aborted
+         old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
          continue;
 
       }
@@ -428,6 +429,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             old_parcel_cloud.r_bubble[p_idx]=0.0;
             old_parcel_cloud.thermal_breakup_flag[p_idx]=999;
             old_parcel_cloud.pbt[p_idx]=0;
+            old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
          
          }
 
@@ -526,6 +528,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                {
                   old_parcel_cloud.pbt[p_idx] = 0;
                   old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+                  old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
                   break;
                }
                
