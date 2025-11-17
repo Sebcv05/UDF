@@ -535,6 +535,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                p_idx, time_since_recovery, RECOVERY_PERIOD);
                         recovery_wait_count++;
                      }
+                     // CRITICAL: Reset flag to -999 so parcel can re-enter RPE next cycle
+                     if (old_parcel_cloud.thermal_breakup_flag[p_idx] == 888) {
+                        old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;
+                     }
                      break;  // Exit sub-cycle loop, move to next parcel
                   } else {
                      // Recovery period has elapsed - check if recovered or needs retry in RPE_euler
