@@ -521,6 +521,32 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                 hvap_table, cp_table, num_parcel_species);
                prof_bubble += CONVERGE_mpi_wtime() - t0;
                
+               // CHECK: If parcel is in recovery mode and period hasn't elapsed, break from sub-cycle
+               if (old_parcel_cloud.recovery_time[p_idx] > 0.0) {
+                  CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+                  CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud.recovery_time[p_idx];
+                  const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;  // 20 microseconds
+                  
+                  if (time_since_recovery < RECOVERY_PERIOD) {
+                     // Still in recovery period - skip rest of sub-cycle for this parcel
+                     static int recovery_wait_count = 0;
+                     if (recovery_wait_count < 10) {
+                        printf("[RECOVERY_WAIT_SUBCYCLE] p_idx=%li, time_since_recovery=%.3e/%.3e s, breaking sub-cycle\n",
+                               p_idx, time_since_recovery, RECOVERY_PERIOD);
+                        recovery_wait_count++;
+                     }
+                     break;  // Exit sub-cycle loop, move to next parcel
+                  } else {
+                     // Recovery period has elapsed - check if recovered or needs retry in RPE_euler
+                     static int recovery_elapsed_count = 0;
+                     if (recovery_elapsed_count < 10) {
+                        printf("[RECOVERY_PERIOD_ELAPSED] p_idx=%li, time_since_recovery=%.3e s, continuing sub-cycle\n",
+                               p_idx, time_since_recovery);
+                        recovery_elapsed_count++;
+                     }
+                  }
+               }
+               
                // Check if bubble growth stopped
                if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
                {
