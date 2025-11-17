@@ -515,23 +515,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                CONVERGE_precision_t dt_sub = dt_global / (CONVERGE_precision_t)n_sub;
                for (int sub = 0; sub < n_sub; ++sub) {
 
-               //RPE Euler solver - updates v_bubble, r_bubble, temp
-               CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
-               RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
-                                hvap_table, cp_table, num_parcel_species);
-               prof_bubble += CONVERGE_mpi_wtime() - t0;
-               
-               // CHECK: If parcel is in recovery mode and period hasn't elapsed, break from sub-cycle
+               // CHECK: If parcel is in recovery mode and period hasn't elapsed, skip RPE and break
                if (old_parcel_cloud.recovery_time[p_idx] > 0.0) {
                   CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
                   CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud.recovery_time[p_idx];
                   const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;  // 20 microseconds
                   
                   if (time_since_recovery < RECOVERY_PERIOD) {
-                     // Still in recovery period - skip rest of sub-cycle for this parcel
+                     // Still in recovery period - skip RPE entirely for this parcel
                      static int recovery_wait_count = 0;
                      if (recovery_wait_count < 10) {
-                        printf("[RECOVERY_WAIT_SUBCYCLE] p_idx=%li, time_since_recovery=%.3e/%.3e s, breaking sub-cycle\n",
+                        printf("[RECOVERY_WAIT_SKIP_RPE] p_idx=%li, time_since_recovery=%.3e/%.3e s, skipping RPE call\n",
                                p_idx, time_since_recovery, RECOVERY_PERIOD);
                         recovery_wait_count++;
                      }
@@ -539,17 +533,23 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      if (old_parcel_cloud.thermal_breakup_flag[p_idx] == 888) {
                         old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;
                      }
-                     break;  // Exit sub-cycle loop, move to next parcel
+                     break;  // Exit sub-cycle loop without calling RPE_euler
                   } else {
-                     // Recovery period has elapsed - check if recovered or needs retry in RPE_euler
+                     // Recovery period has elapsed - allow RPE to run normally
                      static int recovery_elapsed_count = 0;
                      if (recovery_elapsed_count < 10) {
-                        printf("[RECOVERY_PERIOD_ELAPSED] p_idx=%li, time_since_recovery=%.3e s, continuing sub-cycle\n",
+                        printf("[RECOVERY_PERIOD_ELAPSED] p_idx=%li, time_since_recovery=%.3e s, calling RPE\n",
                                p_idx, time_since_recovery);
                         recovery_elapsed_count++;
                      }
                   }
                }
+
+               //RPE Euler solver - updates v_bubble, r_bubble, temp
+               CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
+               RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
+                                hvap_table, cp_table, num_parcel_species);
+               prof_bubble += CONVERGE_mpi_wtime() - t0;
                
                // Check if bubble growth stopped
                if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
