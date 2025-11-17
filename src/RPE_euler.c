@@ -347,8 +347,8 @@ void RPE_euler_solver(
             printf("                    Rdot=%.3e (negative but waiting), R=%.3e m\n", 
                    state.Rdot, state.R);
             
-            // Keep bubble stable during recovery wait
-            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            // Keep bubble stable during recovery wait - use small positive velocity to avoid "too small" check
+            old_parcel_cloud->v_bubble[p_idx] = 1.0e-9;
             old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: skip rest of timestep
             return;
         }
@@ -389,7 +389,7 @@ void RPE_euler_solver(
         old_parcel_cloud->r_bubble[p_idx] = new_R_bubble;
         old_parcel_cloud->radius[p_idx] = new_R_drop;
         old_parcel_cloud->num_drop[p_idx] = new_num_drop;
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 1.0e-9;  // Small positive velocity to avoid triggering "too small" check
         old_parcel_cloud->r_bubble_0[p_idx] = new_R_bubble;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 888;  // Signal: recovery attempted, skip rest of timestep
         
@@ -459,8 +459,8 @@ void RPE_euler_solver(
         state.Rdot = 0.0;  // Stop growth at droplet edge
     }
     
-    // Check for very small velocity
-    if (state.Rdot < 1.0e-10) {
+    // Check for very small velocity (but skip if in recovery mode)
+    if (state.Rdot < 1.0e-10 && old_parcel_cloud->recovery_time[p_idx] == 0.0) {
         static int small_vel_count = 0;
         if (small_vel_count < 3) {
             printf("[RPE_STOP] Bubble velocity too small: Rdot=%.3e < 1e-10, stopping\n",
