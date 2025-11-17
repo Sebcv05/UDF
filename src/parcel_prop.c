@@ -229,6 +229,10 @@ CONVERGE_UDF(parcel_inject,
    // Initialize collapse counter to 0
    parcel_cloud.user_lag_var_i[passed_parcel_idx] = 0;
    
+   // Initialize recovery fields
+   parcel_cloud.recovery_time[passed_parcel_idx] = 0.0;
+   parcel_cloud.recovery_count[passed_parcel_idx] = 0;
+   
    user_parcel_counter ++;
    
 
@@ -321,6 +325,10 @@ CONVERGE_UDF(parcel_child,
       
       // Initialize collapse counter to 0
       parcel_cloud.user_lag_var_i[passed_child_parcel_idx] = 0;
+      
+      // Initialize recovery fields
+      parcel_cloud.recovery_time[passed_child_parcel_idx] = 0.0;
+      parcel_cloud.recovery_count[passed_child_parcel_idx] = 0;
       
       // If parent's thermal_breakup_flag is set, displace the child parcel
       int rank;

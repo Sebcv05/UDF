@@ -34,6 +34,10 @@ CONVERGE_id_t CHILD_INDEX;
 CONVERGE_id_t M0;
 CONVERGE_id_t CHILD_UU;				//Child UU vector
 
+// Collapse recovery field IDs
+CONVERGE_id_t RECOVERY_TIME;			//Time when last recovery occurred (seconds)
+CONVERGE_id_t RECOVERY_COUNT;			//Number of recovery attempts
+
 
 // Lagrangian Data Field IDs
 CONVERGE_id_t LAGRANGIAN_REL_VEL;
@@ -366,6 +370,10 @@ struct ParcelCloud
    CONVERGE_int_t* pbt;
    CONVERGE_int_t* child_index;
    CONVERGE_int_t* is_child;
+   
+   // Collapse recovery fields
+   CONVERGE_precision_t* recovery_time;
+   CONVERGE_int_t* recovery_count;
 
    // CONVERGE data
    int* from_injector;

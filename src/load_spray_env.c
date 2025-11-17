@@ -41,6 +41,10 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("eta_drop", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("eta_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("thermal_breakup_flag", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   
+   // Collapse recovery fields
+   CONVERGE_variable_register("recovery_time", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("recovery_count", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    // Register a simple int data parcel field
    CONVERGE_variable_register("user_lag_var_i", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
@@ -115,6 +119,10 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    USER_LAG_VARv3  = CONVERGE_lagrangian_field_id("user_lag_var_v3");
    USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    M0 = CONVERGE_lagrangian_field_id("m0");
+   
+   // Collapse recovery field IDs
+   RECOVERY_TIME = CONVERGE_lagrangian_field_id("recovery_time");
+   RECOVERY_COUNT = CONVERGE_lagrangian_field_id("recovery_count");
 
 
    LAGRANGIAN_FROM_INJECTOR = CONVERGE_lagrangian_field_id("LAGRANGIAN_FROM_INJECTOR");
@@ -457,6 +465,10 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->cloud_index = (int *)CONVERGE_cloud_get_field_data(c, CLOUD_INDEX);
    parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
+   
+   // Collapse recovery fields
+   parcel_cloud_loc->recovery_time = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, RECOVERY_TIME);
+   parcel_cloud_loc->recovery_count = (CONVERGE_int_t *)CONVERGE_cloud_get_field_data(c, RECOVERY_COUNT);
 
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->child_uu = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, CHILD_UU);
