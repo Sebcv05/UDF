@@ -236,6 +236,10 @@ void RPE_euler_solver(
     
     // Safety check: If droplet radius is too small, don't run RPE
     if (params.Ro < 1.0e-9) {
+        if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+            printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Ro too small (%.3e m), recovery_time=%.3e s, recovery_count=%d\n",
+                   p_idx, params.Ro, old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
+        }
         printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m, skipping RPE solver\n", params.Ro);
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->pbt[p_idx] = 0;
@@ -316,6 +320,10 @@ void RPE_euler_solver(
     CONVERGE_precision_t P_sat;
     Saturation_PressureNH3(Td, &P_sat);
     if ((P_sat - P_amb) < 0.0) {
+        if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+            printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Negative P_sat-P_amb (%.3e Pa), recovery_time=%.3e s, recovery_count=%d\n",
+                   p_idx, (P_sat - P_amb), old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
+        }
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->pbt[p_idx] = 0;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
@@ -463,9 +471,9 @@ void RPE_euler_solver(
         growth_check_count++;
     }
     
-    // Check if droplet has cooled below saturation temperature
+    // Check if droplet has cooled below saturation temperature (but skip if in recovery mode)
     CONVERGE_precision_t T_sat_check = T_satNH3(P_amb);
-    if (state.T_drop < T_sat_check) {
+    if (state.T_drop < T_sat_check && old_parcel_cloud->recovery_time[p_idx] == 0.0) {
         // Droplet subcooled - stop bubble growth
         static int subcool_count = 0;
         if (subcool_count < 3) {
@@ -477,6 +485,16 @@ void RPE_euler_solver(
         old_parcel_cloud->pbt[p_idx] = 0;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
         return;
+    }
+    
+    // If in recovery mode and would be subcooled, log it but don't kill
+    if (state.T_drop < T_sat_check && old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+        static int subcool_recovery_count = 0;
+        if (subcool_recovery_count < 5) {
+            printf("[RPE_SUBCOOL_IN_RECOVERY] p_idx=%li, T_drop=%.2f K < T_sat=%.2f K, but protected (recovery_time=%.3e s)\n",
+                   p_idx, state.T_drop, T_sat_check, old_parcel_cloud->recovery_time[p_idx]);
+            subcool_recovery_count++;
+        }
     }
     
     // Enforce constraint: R <= Ro
@@ -503,6 +521,16 @@ void RPE_euler_solver(
         old_parcel_cloud->pbt[p_idx] = 0;
         old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
         return;
+    }
+    
+    // If in recovery mode and velocity is small, log it but don't kill
+    if (state.Rdot < 1.0e-10 && old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+        static int small_vel_recovery_count = 0;
+        if (small_vel_recovery_count < 5) {
+            printf("[RPE_SMALL_VEL_IN_RECOVERY] p_idx=%li, Rdot=%.3e < 1e-10, but protected (recovery_time=%.3e s)\n",
+                   p_idx, state.Rdot, old_parcel_cloud->recovery_time[p_idx]);
+            small_vel_recovery_count++;
+        }
     }
     
     // Update parcel cloud with new state
