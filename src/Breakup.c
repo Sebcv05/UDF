@@ -263,11 +263,11 @@ int sample_RR_children(
     
     static int rr_diag_count = 0;
     if (rr_diag_count < 3) {
-        printf("[RR_SAMPLE] Parent: R=%.3e m, num_drop=%.3e\n", parent_radius, parent_num_drop);
-        printf("[RR_SAMPLE] Target R32=%.3e m, X_RR=%.3e m, n_RR=%.2f\n", R32_target, X_RR, n_RR);
-        printf("[RR_SAMPLE] D32_sample=%.3e (ratio=%.4f), scale=%.4f\n", 
-               D32_sample, D32_sample/D32_target, scale_correction);
-        printf("[RR_SAMPLE] base_num_drop=%.3e (same for all)\n", base_num_drop);
+        // printf("[RR_SAMPLE] Parent: R=%.3e m, num_drop=%.3e\n", parent_radius, parent_num_drop);
+        // printf("[RR_SAMPLE] Target R32=%.3e m, X_RR=%.3e m, n_RR=%.2f\n", R32_target, X_RR, n_RR);
+        // printf("[RR_SAMPLE] D32_sample=%.3e (ratio=%.4f), scale=%.4f\n", 
+        //        D32_sample, D32_sample/D32_target, scale_correction);
+        // printf("[RR_SAMPLE] base_num_drop=%.3e (same for all)\n", base_num_drop);
         
         CONVERGE_precision_t total_child_volume = 0.0;
         for (int i = 0; i < N; i++) {
@@ -275,7 +275,7 @@ int sample_RR_children(
         }
         CONVERGE_precision_t volume_error = fabs(total_child_volume - parent_num_drop * parent_volume) / 
                                            (parent_num_drop * parent_volume);
-        printf("[RR_SAMPLE] Volume conservation: error=%.2e%% (num_drop*R^3, no 4/3*pi)\n", volume_error * 100.0);
+        // printf("[RR_SAMPLE] Volume conservation: error=%.2e%% (num_drop*R^3, no 4/3*pi)\n", volume_error * 100.0);
         
         if (volume_error > 1.0e-6) {
             printf("[RR_WARNING] Volume error > 1 ppm\n");
@@ -852,8 +852,8 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         CONVERGE_precision_t new_r_bubble = old_parcel_cloud->r_bubble[p_idx];
         CONVERGE_precision_t new_nd = old_parcel_cloud->num_drop[p_idx];
         
-        printf("BREAKUP_COMPLETE: p_idx=%ld, R_drop: %.2f->%.2f um, R_bubble: %.2f->%.2f um, num_drop: %.3e->%.3e\n",
-               p_idx, old_r*1e6, new_r*1e6, old_r_bubble*1e6, new_r_bubble*1e6, old_nd, new_nd);
+        // printf("BREAKUP_COMPLETE: p_idx=%ld, R_drop: %.2f->%.2f um, R_bubble: %.2f->%.2f um, num_drop: %.3e->%.3e\n",
+        //        p_idx, old_r*1e6, new_r*1e6, old_r_bubble*1e6, new_r_bubble*1e6, old_nd, new_nd);
         
         static FILE* breakup_log = NULL;
         if (!breakup_log) {

@@ -789,19 +789,19 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
               }
               CONVERGE_int_t breakup_flag = old_parcel_cloud.thermal_breakup_flag[p_idx];
               
-              printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
-                     p_idx,
-                     old_parcel_cloud.lifetime[p_idx],
-                     old_parcel_cloud.v_bubble[p_idx],
-                     T_final,
-                     Pb_final,
-                     Pb_actual,
-                     R_final,
-                     R_drop_final,
-                     kb_final,
-                     breakup_flag,
-                     m_b_final,
-                     rho_v_final);
+              // printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+              //        p_idx,
+              //        old_parcel_cloud.lifetime[p_idx],
+              //        old_parcel_cloud.v_bubble[p_idx],
+              //        T_final,
+              //        Pb_final,
+              //        Pb_actual,
+              //        R_final,
+              //        R_drop_final,
+              //        kb_final,
+              //        breakup_flag,
+              //        m_b_final,
+              //        rho_v_final);
               
               // If this is the tracked parcel, close the tracking file
               if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {

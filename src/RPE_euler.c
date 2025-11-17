@@ -208,6 +208,19 @@ void RPE_euler_solver(
         post_recovery_print_count++;
     }
     
+    // Check if parcel is in recovery mode and print status
+    if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+        CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+        CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud->recovery_time[p_idx];
+        static int recovery_status_count = 0;
+        if (recovery_status_count < 20) {
+            printf("[RPE_IN_RECOVERY] p_idx=%li, recovery_count=%d, time_since_recovery=%.3e s, R=%.3e m\n",
+                   p_idx, old_parcel_cloud->recovery_count[p_idx], time_since_recovery, 
+                   old_parcel_cloud->r_bubble[p_idx]);
+            recovery_status_count++;
+        }
+    }
+    
     // recovery_time stores the time when last recovery occurred (seconds)
     // recovery_count stores the number of recovery attempts
     
@@ -337,8 +350,8 @@ void RPE_euler_solver(
         CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
         CONVERGE_precision_t time_since_recovery = current_time - recovery_start_time;
         
-        // Recovery period: 5e-5 seconds
-        const CONVERGE_precision_t RECOVERY_PERIOD = 5.0e-5;
+        // Recovery period: 2e-5 seconds (20 microseconds)
+        const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;
         
         if (recovery_start_time > 0.0 && time_since_recovery < RECOVERY_PERIOD) {
             // Still in recovery period - don't allow new collapse
@@ -358,6 +371,14 @@ void RPE_euler_solver(
         printf("[RPE_COLLAPSE] Negative Rdot=%.3e, attempting recovery (bubble collapsing)\n", state.Rdot);
         printf("               Time: %.6e s, Last recovery: %.6e s (%.3e s ago)\n",
                current_time, recovery_start_time, time_since_recovery);
+        
+        // If this is a repeat recovery, note it
+        if (recovery_start_time > 0.0) {
+            printf("               [REPEAT COLLAPSE] %.3e s since last recovery (period=%.3e s), attempting recovery #%d\n",
+                   time_since_recovery, RECOVERY_PERIOD, old_parcel_cloud->recovery_count[p_idx] + 1);
+            printf("               [REPEAT COLLAPSE] Parcel keeps collapsing! Check conditions.\n");
+        }
+        
         printf("               T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
                state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
         printf("               R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
@@ -411,16 +432,27 @@ void RPE_euler_solver(
     }
     
     // RESET recovery timer if bubble is growing successfully after recovery
+    // BUT only if the recovery period has elapsed
     if (old_parcel_cloud->recovery_time[p_idx] > 0.0 && state.Rdot > 0.0) {
         CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
         CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
         CONVERGE_precision_t time_since_recovery = current_time - recovery_start_time;
         
-        printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Rdot=%.3e m/s, %.3e s after recovery\n",
-               state.Rdot, time_since_recovery);
-        printf("                       Resetting recovery timer (was %.6e s)\n", recovery_start_time);
-        old_parcel_cloud->recovery_time[p_idx] = 0.0;  // Reset recovery time
-        // Keep counter for tracking history: old_parcel_cloud->recovery_count[p_idx] 
+        // Recovery period: must match the wait period above
+        const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;
+        
+        // Only declare success if recovery period has elapsed
+        if (time_since_recovery >= RECOVERY_PERIOD) {
+            printf("[RPE_RECOVERY_SUCCESS] Bubble recovered! Rdot=%.3e m/s, %.3e s after recovery\n",
+                   state.Rdot, time_since_recovery);
+            printf("                       R_bubble=%.3e m, R_drop=%.3e m, recovery_count was %d\n",
+                   state.R, params.Ro, old_parcel_cloud->recovery_count[p_idx]);
+            printf("                       Resetting recovery timer (was %.6e s), flag=%d\n", 
+                   recovery_start_time, old_parcel_cloud->thermal_breakup_flag[p_idx]);
+            old_parcel_cloud->recovery_time[p_idx] = 0.0;  // Reset recovery time
+            old_parcel_cloud->thermal_breakup_flag[p_idx] = -1;  // Reset flag to normal operation
+            // Keep counter for tracking history: old_parcel_cloud->recovery_count[p_idx] 
+        }
     }
     
     // Diagnostic: Check if bubble is actually growing
