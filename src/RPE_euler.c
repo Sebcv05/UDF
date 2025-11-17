@@ -416,8 +416,8 @@ void RPE_euler_solver(
                recovery_count, state.R);
         printf("               [RECOVERY #%d] num_drop: %.3e -> %.3e (mass conserved)\n",
                recovery_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
-        printf("               [RECOVERY #%d] Recovery time logged: %.6e s, wait %.3e s before next\n",
-               recovery_count, current_time, RECOVERY_PERIOD);
+        printf("               [RECOVERY #%d] Recovery time logged: %.6e s\n",
+               recovery_count, current_time);
         printf("               [RECOVERY #%d] is_child: 0 -> 1 (converted to child parcel)\n",
                recovery_count);
         printf("               [RECOVERY #%d] pbt: 1 -> 0 (thermal breakup disabled)\n",
