@@ -458,50 +458,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                stuck_parcel_count++;
             }
          }
-         
-         // CHECK: Is this parcel in recovery mode waiting for the recovery period to elapse?
-         if (old_parcel_cloud.recovery_time[p_idx] > 0.0 && old_parcel_cloud.pbt[p_idx] == 1) {
-            CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-            CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud.recovery_time[p_idx];
-            const CONVERGE_precision_t RECOVERY_PERIOD = 2.0e-5;  // 20 microseconds
-            
-            if (time_since_recovery < RECOVERY_PERIOD) {
-               // Still in recovery period - skip this parcel entirely
-               static int recovery_skip_count = 0;
-               if (recovery_skip_count < 10) {
-                  printf("[RECOVERY_SKIP] p_idx=%li, time_since_recovery=%.3e/%.3e s, skipping to next parcel\n",
-                         p_idx, time_since_recovery, RECOVERY_PERIOD);
-                  recovery_skip_count++;
-               }
-               continue;  // Skip to next parcel in the loop
-            } else {
-               // Recovery period has elapsed - allow parcel to proceed
-               static int recovery_elapsed_count = 0;
-               if (recovery_elapsed_count < 10) {
-                  printf("[RECOVERY_ELAPSED] p_idx=%li, time_since_recovery=%.3e s, allowing RPE entry\n",
-                         p_idx, time_since_recovery);
-                  recovery_elapsed_count++;
-               }
-               // Don't reset recovery_time yet - let RPE_euler handle success/failure
-            }
-         }
     
       
 
          if (old_parcel_cloud.thermal_breakup_flag[p_idx] <0 && old_parcel_cloud.pbt[p_idx]==1)
          {
-            // Log if this is a parcel in recovery mode entering RPE
-            if (old_parcel_cloud.recovery_time[p_idx] > 0.0) {
-                static int recovery_entry_count = 0;
-                if (recovery_entry_count < 20) {
-                    CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-                    CONVERGE_precision_t time_since_recovery = current_time - old_parcel_cloud.recovery_time[p_idx];
-                    printf("[RPE_ENTRY_IN_RECOVERY] p_idx=%li, flag=%d, pbt=%d, time_since_recovery=%.3e s, R_bubble=%.3e m\n",
-                           p_idx, old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.pbt[p_idx],
-                           time_since_recovery, old_parcel_cloud.r_bubble[p_idx]);
-                    recovery_entry_count++;
-                }
-            }
             
             // Continue with thermal breakup processing
             // Note: 2x expansion check is inside sub-timestep loop after Geometry() call
@@ -573,12 +534,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                {
                   // Recovery attempted, skip rest of this timestep
                   // Reset flag so next timestep can try again
-                  static int recovery_break_count = 0;
-                  if (recovery_break_count < 10) {
-                      printf("[RECOVERY_BREAK] p_idx=%li, flag 888->-999, breaking sub-loop, recovery_time=%.3e s, R_bubble=%.3e m\n",
-                             p_idx, old_parcel_cloud.recovery_time[p_idx], old_parcel_cloud.r_bubble[p_idx]);
-                      recovery_break_count++;
-                  }
                   old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;
                   break;
                }
