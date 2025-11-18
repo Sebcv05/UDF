@@ -423,11 +423,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          pre_pbr = CONVERGE_mpi_wtime();
 
          // FIX: Convert stuck parcels to children
-         // These are parcels with pbt=0 (never activated thermal breakup) and tbt!=1
-         // (thermal breakup not active). Set these to children at start.
-         if (old_parcel_cloud.pbt[p_idx] == 0 && 
-             old_parcel_cloud.tbt[p_idx] != 1 && 
-             old_parcel_cloud.is_child[p_idx] == 0) {
+         // These are large parent parcels (is_child=0) that are NOT in thermal breakup
+         // (thermal_breakup_flag >= 0). They should have entered breakup but thermal model
+         // was disabled or they never met conditions. Force them to children.
+         if (old_parcel_cloud.is_child[p_idx] == 0 && 
+             old_parcel_cloud.radius[p_idx] > 70e-6 &&
+             old_parcel_cloud.thermal_breakup_flag[p_idx] >= 0) {
             static int stuck_parcel_count = 0;
             if (stuck_parcel_count < 20) {
                printf("[STUCK_PARCEL_FIX] p_idx=%li, lifetime=%.3e s, radius=%.3e m, pbt=%d, tbt=%d, tbf=%d, Td=%.2f K\n",
@@ -439,6 +440,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             }
             // Convert to child so KH-RT and evaporation can proceed
             old_parcel_cloud.is_child[p_idx] = 1;
+            old_parcel_cloud.film_flag[p_idx] = 1;  // Update hijacked variable
             old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
             continue;  // Skip thermal breakup routine
          }
