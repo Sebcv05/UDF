@@ -422,7 +422,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          // Pre-breakup routine
          pre_pbr = CONVERGE_mpi_wtime();
 
-         // DIAGNOSTIC: Identify stuck parcels that persisted >100 µs without breaking up
+         // FIX: Convert stuck parcels to children
+         // These are parcels that persisted >100 µs as parents (is_child=0) but never
+         // entered thermal breakup (pbt=0). This can happen if they were disabled early
+         // or never met conditions to start thermal breakup.
          if (old_parcel_cloud.lifetime[p_idx] > 1.0e-4 && 
              old_parcel_cloud.pbt[p_idx] == 0 && 
              old_parcel_cloud.thermal_breakup_flag[p_idx] != 3 && 
@@ -430,12 +433,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
              old_parcel_cloud.radius[p_idx] > 5.0e-5) {
             static int stuck_parcel_count = 0;
             if (stuck_parcel_count < 20) {
-               printf("[STUCK_PARCEL] p_idx=%li, lifetime=%.3e s, radius=%.3e m, pbt=%d, tbf=%d, Td=%.2f K, r_bubble=%.3e m\n",
+               printf("[STUCK_PARCEL_FIX] p_idx=%li, lifetime=%.3e s, radius=%.3e m, pbt=%d, tbf=%d, Td=%.2f K, r_bubble=%.3e m\n",
                       p_idx, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx],
                       old_parcel_cloud.pbt[p_idx], old_parcel_cloud.thermal_breakup_flag[p_idx], 
                       Td, old_parcel_cloud.r_bubble[p_idx]);
+               printf("               Converting to child to enable KH-RT/evaporation\n");
                stuck_parcel_count++;
             }
+            // Convert to child so KH-RT and evaporation can proceed
+            old_parcel_cloud.is_child[p_idx] = 1;
+            old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+            continue;  // Skip thermal breakup routine
          }
     
       
