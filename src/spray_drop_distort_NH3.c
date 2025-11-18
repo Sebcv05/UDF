@@ -28,6 +28,7 @@
 #include <TsatNH3.h>
 #include <DGRE_NH3.h>
 #include <Geometry.h>
+#include <parcel_reset.h>
 //#include <mpi.h>
 //#include <DestroyTables.h>
 #include <Vb.h>
@@ -353,20 +354,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, Td, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
             td_high_count++;
          }
+         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Temperature too high");
+         // Also zero out the parcel for complete removal
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
-         old_parcel_cloud.r_bubble[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = 0;
-         old_parcel_cloud.v_bubble_tm1[p_idx] = 0;
-         old_parcel_cloud.lifetime[p_idx] = 0;
-         old_parcel_cloud.tbt[p_idx] = 0;
-         old_parcel_cloud.pbt[p_idx] = 0;
-         old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;  // Changed from 0 to 999 for consistency
-         old_parcel_cloud.int_omega[p_idx] = 0;
-         old_parcel_cloud.m0[p_idx] = 0;
-         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = 0;
-         old_parcel_cloud.r_therm[p_idx] = 0;
          continue;
       }
       Saturation_PressureNH3(Td, &P_sat);
@@ -396,17 +387,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
             psat_low_count++;
          }
-         old_parcel_cloud.v_bubble[p_idx] = 0.0;
-         old_parcel_cloud.omega[p_idx] = 0.0;
-         old_parcel_cloud.eta_drop[p_idx] = 0.0;
-         old_parcel_cloud.int_omega[p_idx] = 0.0;
-         old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
-         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
-         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
-         old_parcel_cloud.pbt[p_idx] = 0;  // CRITICAL FIX: Disable thermal breakup
-         old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;  // CRITICAL FIX: Mark as aborted
-         old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
+         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Pre-check: P_sat < P_amb");
          continue;
 
       }
@@ -426,11 +407,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                       p_idx, old_parcel_cloud.lifetime[p_idx], Td);
                rbubble_neg_count++;
             }
-            old_parcel_cloud.r_bubble[p_idx]=0.0;
-            old_parcel_cloud.thermal_breakup_flag[p_idx]=999;
-            old_parcel_cloud.pbt[p_idx]=0;
-            old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
-         
+            reset_parcel_to_child(&old_parcel_cloud, p_idx, "r_bubble < 0");
          }
 
 
@@ -526,9 +503,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // Check if bubble growth stopped
                if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
                {
-                  old_parcel_cloud.pbt[p_idx] = 0;
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
-                  old_parcel_cloud.is_child[p_idx] = 1;  // BUG FIX: Mark as child so KH-RT/evap can work
+                  reset_parcel_to_child(&old_parcel_cloud, p_idx, "Post-RPE: v_bubble too small");
                   break;
                }
                

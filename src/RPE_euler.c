@@ -6,6 +6,7 @@
 #include <PsatNH3.h>
 #include <TsatNH3.h>
 #include <BubbleDensityNH3.h>
+#include <parcel_reset.h>
 #include <CONVERGE/udf.h>
 #include <math.h>
 #include <stdio.h>
@@ -240,10 +241,8 @@ void RPE_euler_solver(
             printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Ro too small (%.3e m), recovery_time=%.3e s, recovery_count=%d\n",
                    p_idx, params.Ro, old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
         }
-        printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m, skipping RPE solver\n", params.Ro);
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m\n", params.Ro);
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "Droplet too small");
         return;
     }
     
@@ -324,9 +323,7 @@ void RPE_euler_solver(
             printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Negative P_sat-P_amb (%.3e Pa), recovery_time=%.3e s, recovery_count=%d\n",
                    p_idx, (P_sat - P_amb), old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
         }
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "P_sat < P_amb (subcooled)");
         return;
     }
     
@@ -362,8 +359,7 @@ void RPE_euler_solver(
             // It shouldn't be in RPE anymore (pbt=0, is_child=1)
             printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
                    p_idx, recovery_start_time);
-            old_parcel_cloud->pbt[p_idx] = 0;
-            old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+            reset_parcel_to_child(old_parcel_cloud, p_idx, "Recovered parcel in RPE");
             return;
         }
         
@@ -380,48 +376,16 @@ void RPE_euler_solver(
         // NEW RECOVERY STRATEGY: Reset to injection state and convert to child parcel
         // This allows KH-RT and evaporation to handle the parcel naturally
         
-        // Get injection radius (assuming r_drop_0 is injection radius)
-        CONVERGE_precision_t injection_radius = old_parcel_cloud->r_drop_0[p_idx];
-        
-        // Calculate mass to conserve
-        CONVERGE_precision_t V_drop_old = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro;
-        CONVERGE_precision_t V_bubble_old = (4.0/3.0) * PI * state.R * state.R * state.R;
-        CONVERGE_precision_t V_liquid_old = V_drop_old - V_bubble_old;
-        CONVERGE_precision_t mass_liquid_old = V_liquid_old * params.rho_l;
-        CONVERGE_precision_t total_mass = old_parcel_cloud->num_drop[p_idx] * mass_liquid_old;
-        
-        // New state: droplet at injection radius, no bubble
-        CONVERGE_precision_t V_drop_new = (4.0/3.0) * PI * injection_radius * injection_radius * injection_radius;
-        CONVERGE_precision_t mass_per_drop_new = V_drop_new * params.rho_l;
-        CONVERGE_precision_t new_num_drop = total_mass / mass_per_drop_new;
-        
         // Apply recovery: reset to injection state
-        old_parcel_cloud->radius[p_idx] = injection_radius;
-        old_parcel_cloud->r_bubble[p_idx] = 0.0;  // Zero bubble - thermal breakup disabled
-        old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
-        old_parcel_cloud->num_drop[p_idx] = new_num_drop;
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->is_child[p_idx] = 1;  // Mark as child so KH-RT/evaporation work
-        old_parcel_cloud->pbt[p_idx] = 0;  // Disable thermal breakup
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;  // Mark as aborted
-        
-        // Record recovery
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "Bubble collapse (Rdot < 0)");
         old_parcel_cloud->recovery_time[p_idx] = current_time;
         old_parcel_cloud->recovery_count[p_idx]++;
         int recovery_count = old_parcel_cloud->recovery_count[p_idx];
         
-        printf("               [RECOVERY #%d] R_drop: %.3e -> %.3e m (injection radius)\n",
-               recovery_count, params.Ro, injection_radius);
-        printf("               [RECOVERY #%d] R_bubble: %.3e -> 0.00e+00 m (zeroed)\n",
-               recovery_count, state.R);
-        printf("               [RECOVERY #%d] num_drop: %.3e -> %.3e (mass conserved)\n",
-               recovery_count, old_parcel_cloud->num_drop[p_idx] * mass_liquid_old / total_mass, new_num_drop);
         printf("               [RECOVERY #%d] Recovery time logged: %.6e s\n",
                recovery_count, current_time);
-        printf("               [RECOVERY #%d] is_child: 0 -> 1 (converted to child parcel)\n",
-               recovery_count);
-        printf("               [RECOVERY #%d] pbt: 1 -> 0 (thermal breakup disabled)\n",
-               recovery_count);
+        printf("               [RECOVERY #%d] Recovery count: %d\n",
+               recovery_count, recovery_count);
         
         return;  // Exit RPE solver
     }
@@ -446,9 +410,7 @@ void RPE_euler_solver(
                    state.T_drop, T_sat_check);
             subcool_count++;
         }
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "Subcooled (T < T_sat)");
         return;
     }
     
@@ -482,9 +444,7 @@ void RPE_euler_solver(
                    state.Rdot);
             small_vel_count++;
         }
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        old_parcel_cloud->pbt[p_idx] = 0;
-        old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "Rdot too small");
         return;
     }
     
