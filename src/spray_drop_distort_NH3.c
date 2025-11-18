@@ -738,6 +738,29 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
 
          } // Delimiter for if thermal_breakup_flag=0
+         else
+         {
+            // FIX: Large parent parcels that did NOT enter thermal breakup
+            // Catch parcels with is_child=0, large radius, but not in thermal breakup routine
+            if (old_parcel_cloud.is_child[p_idx] == 0 && old_parcel_cloud.radius[p_idx] > 70e-6) {
+               static int stuck_count = 0;
+               if (stuck_count < 20) {
+                  printf("[STUCK_NO_THERMAL] p_idx=%d, r=%.2e m, pbt=%d, tbt=%d, tbf=%d, T=%.2f K, lifetime=%.2e s\n",
+                         p_idx, old_parcel_cloud.radius[p_idx],
+                         old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
+                         old_parcel_cloud.thermal_breakup_flag[p_idx], Td, old_parcel_cloud.lifetime[p_idx]);
+                  printf("              Reason: Did not enter thermal breakup (tbf=%d, pbt=%d)\n",
+                         old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.pbt[p_idx]);
+                  stuck_count++;
+               }
+               // Convert to child
+               old_parcel_cloud.is_child[p_idx] = 1;
+               old_parcel_cloud.film_flag[p_idx] = 1;
+               old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+               old_parcel_cloud.pbt[p_idx] = 0;
+               old_parcel_cloud.tbt[p_idx] = 0;
+            }
+         }
          //********************** BREAKUP ROUTINE ***************************************//
          // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
          post_pbr = CONVERGE_mpi_wtime();
