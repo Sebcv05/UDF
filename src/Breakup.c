@@ -26,6 +26,12 @@ CONVERGE_precision_t kb_threshold = 1.0;
 CONVERGE_index_t num_child_parcels = 12;
 static int breakup_scale_logged = 0;
 
+// Langmuir-Knudsen evaporation model parameters (set by read_input.c)
+CONVERGE_index_t lk_correction_flag = 0;
+CONVERGE_index_t lk_diagnostic_flag = 0;
+CONVERGE_precision_t lk_chi_neq_min = 0.0;
+CONVERGE_precision_t lk_chi_neq_max = 0.9999;
+
 // Profiling accumulators
 static double prof_calcs = 0.0;
 static double prof_loop = 0.0;

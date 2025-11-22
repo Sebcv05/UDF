@@ -6,11 +6,7 @@
 #include <globals.h>
 #include <Breakup.h>  // For init_RR_distribution()
 
-// Define LK global variables
-CONVERGE_index_t lk_correction_flag = 0;
-CONVERGE_index_t lk_diagnostic_flag = 0;
-CONVERGE_precision_t lk_chi_neq_min = 0.0;
-CONVERGE_precision_t lk_chi_neq_max = 0.9999;
+// LK global variables are defined in Breakup.c, just set them here
 
 struct UserInputs
 {
