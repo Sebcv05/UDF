@@ -945,7 +945,14 @@ CONVERGE_precision_t user_radius = 0.0;
                         lk_call_count = 1;
                      }
                      
-                     // Get liquid density for this species
+                     // Get liquid density for this species with safety check
+                     if(rho_table == NULL || rho_table[isp] == NULL)
+                     {
+                        printf("[LK_ERROR] rho_table not initialized for species %d\n", (int)isp);
+                        y1_star = 1.0e-10;  // Fallback to small value
+                        continue;  // Skip LK calculation
+                     }
+                     
                      CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
                      
                      // Use LK model to calculate y1_star
