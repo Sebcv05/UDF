@@ -253,6 +253,21 @@ CONVERGE_UDF(spray_evap,
 
 void spray_evap_cell(CONVERGE_cloud_t cloud)
 {
+   // DEBUG: Write to file to confirm this function is called
+   static int test_write_done = 0;
+   if(test_write_done == 0)
+   {
+      FILE *fp_test = fopen("spray_evap_test.txt", "w");
+      if(fp_test != NULL)
+      {
+         fprintf(fp_test, "spray_evap_cell() was called at ncyc=%ld\n", CONVERGE_ncyc());
+         fprintf(fp_test, "lk_correction_flag = %d\n", lk_correction_flag);
+         fprintf(fp_test, "lk_diagnostic_flag = %d\n", lk_diagnostic_flag);
+         fclose(fp_test);
+         test_write_done = 1;
+      }
+   }
+   
    // Start timing the entire function
    
    // Debug: Print LK flags once per cycle
