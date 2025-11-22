@@ -12,6 +12,7 @@
 #include <counter.h>
 #include <CONVERGE/udf.h>
 #include <pthread.h>
+#include <globals.h>
 //Global variables to index parcels and clouds - need to initialize here
  user_parcel_counter = 0; //First index
  user_cloud_counter = 0; //First index
@@ -20,6 +21,18 @@
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
 {
+   // Read LK parameters using CONVERGE_get_user_* functions
+   lk_correction_flag = CONVERGE_get_user_int("lk_correction_flag", 0);
+   lk_diagnostic_flag = CONVERGE_get_user_int("lk_diagnostic_flag", 0);
+   lk_chi_neq_min = CONVERGE_get_user_double("lk_chi_neq_min", 0.0);
+   lk_chi_neq_max = CONVERGE_get_user_double("lk_chi_neq_max", 0.9999);
+   
+   // Log the values
+   CONVERGE_logger_concise("LK Model Parameters:");
+   CONVERGE_logger_concise("  lk_correction_flag = %d", lk_correction_flag);
+   CONVERGE_logger_concise("  lk_diagnostic_flag = %d", lk_diagnostic_flag);
+   CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", lk_chi_neq_min);
+   CONVERGE_logger_concise("  lk_chi_neq_max = %.4f", lk_chi_neq_max);
    
    // Register a simple double data parcel field
    CONVERGE_variable_register("user_lag_var", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
