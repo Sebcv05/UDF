@@ -21,9 +21,9 @@
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
 {
-   // TEMPORARY: Disable LK for testing - just use classical model
-   lk_correction_flag = 0;
-   lk_diagnostic_flag = 0;
+   // Enable LK model with robust safety checks
+   lk_correction_flag = 1;
+   lk_diagnostic_flag = 1;
    lk_chi_neq_min = 0.0;
    lk_chi_neq_max = 0.9999;
    

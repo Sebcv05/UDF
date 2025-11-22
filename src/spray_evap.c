@@ -945,32 +945,78 @@ CONVERGE_precision_t user_radius = 0.0;
                         lk_call_count = 1;
                      }
                      
-                     // Get liquid density for this species with safety check
-                     if(rho_table == NULL || rho_table[isp] == NULL)
+                     // Safety checks before calling LK model
+                     int skip_lk = 0;
+                     
+                     // Check temperature is valid
+                     if(isnan(temp1) || isinf(temp1) || temp1 < 100.0 || temp1 > 1000.0)
                      {
-                        printf("[LK_ERROR] rho_table not initialized for species %d\n", (int)isp);
-                        y1_star = 1.0e-10;  // Fallback to small value
-                        continue;  // Skip LK calculation
+                        skip_lk = 1;
                      }
                      
-                     CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
+                     // Check drdt is valid (not NaN, Inf, or unreasonably large)
+                     CONVERGE_precision_t drdt_prev = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+                     if(isnan(drdt_prev) || isinf(drdt_prev) || fabs(drdt_prev) > 1.0e6)
+                     {
+                        skip_lk = 1;
+                     }
                      
-                     // Use LK model to calculate y1_star
-                     y1_star = calculate_lk_y1_star(
-                        temp1,                                           // T_drop
-                        global_pressure[node_index],                     // P_gas
-                        vapor_pres,                                      // P_sat
-                        parcel_cloud.radius[i_pc],                       // radius
-                        parcel_cloud.drdt[i_pc * num_parcel_species + isp], // drdt_prev
-                        mol_visc,                                        // mu_gas
-                        rho_liquid,                                      // rho_liquid
-                        pr_num,                                          // Pr_gas
-                        sc_num,                                          // Sc_gas
-                        vapor_mass[isp] / mass,                          // Y_inf
-                        CONVERGE_get_parcel_species_mw(isp),            // M_species
-                        w_0,                                             // M_gas_avg
-                        lk_diagnostic_flag                               // diagnostic flag
-                     );
+                     // Check radius is valid
+                     if(isnan(parcel_cloud.radius[i_pc]) || parcel_cloud.radius[i_pc] < 1.0e-10)
+                     {
+                        skip_lk = 1;
+                     }
+                     
+                     // Skip LK for child parcels in their first timesteps (drdt not yet established)
+                     if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
+                     {
+                        skip_lk = 1;
+                     }
+                     
+                     if(skip_lk == 1)
+                     {
+                        // Fall back to classical model
+                        if(drop_evap_source_flag == 0)
+                        {
+                           y1_star = CONVERGE_species_mw(sp, local_evap_species_index) /
+                                     (CONVERGE_species_mw(sp, local_evap_species_index) +
+                                      (w_0 * (global_pressure[node_index] / vapor_pres - 1.0)));
+                        }
+                        else
+                        {
+                           y1_star = parcel_mole_fraction[isp] * vapor_pres /
+                                   global_pressure[node_index] * CONVERGE_get_parcel_species_mw(isp) / w_0_denom;
+                        }
+                     }
+                     else
+                     {
+                        // Get liquid density for this species with safety check
+                        if(rho_table == NULL || rho_table[isp] == NULL)
+                        {
+                           printf("[LK_ERROR] rho_table not initialized for species %d\n", (int)isp);
+                           y1_star = 1.0e-10;
+                           continue;
+                        }
+                        
+                        CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
+                        
+                        // Use LK model to calculate y1_star
+                        y1_star = calculate_lk_y1_star(
+                           temp1,                                           // T_drop
+                           global_pressure[node_index],                     // P_gas
+                           vapor_pres,                                      // P_sat
+                           parcel_cloud.radius[i_pc],                       // radius
+                           drdt_prev,                                       // drdt_prev
+                           mol_visc,                                        // mu_gas
+                           rho_liquid,                                      // rho_liquid
+                           pr_num,                                          // Pr_gas
+                           sc_num,                                          // Sc_gas
+                           vapor_mass[isp] / mass,                          // Y_inf
+                           CONVERGE_get_parcel_species_mw(isp),            // M_species
+                           w_0,                                             // M_gas_avg
+                           lk_diagnostic_flag                               // diagnostic flag
+                        );
+                     }
                   }
                   else
                   {
