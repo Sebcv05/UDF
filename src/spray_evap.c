@@ -948,9 +948,25 @@ CONVERGE_precision_t user_radius = 0.0;
                      // Get values for safety checks and debugging
                      CONVERGE_precision_t drdt_prev = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
                      
-                     // Print values before safety checks (sample first few calls)
+                     // Print values before safety checks (always print for invalid parcels)
                      static int debug_print_count = 0;
-                     if(debug_print_count < 5)
+                     int print_this = 0;
+                     
+                     if(debug_print_count < 10)
+                     {
+                        print_this = 1;
+                        debug_print_count++;
+                     }
+                     
+                     // Also print if we detect potential issues
+                     if(isnan(temp1) || isinf(temp1) || temp1 < 100.0 || temp1 > 1000.0 ||
+                        isnan(drdt_prev) || isinf(drdt_prev) || fabs(drdt_prev) > 1.0e6 ||
+                        isnan(parcel_cloud.radius[i_pc]) || parcel_cloud.radius[i_pc] < 1.0e-10)
+                     {
+                        print_this = 1;
+                     }
+                     
+                     if(print_this)
                      {
                         printf("[LK_VALUES] ncyc=%ld, i_pc=%d, isp=%d:\n", CONVERGE_ncyc(), (int)i_pc, (int)isp);
                         printf("  temp1=%.3f K, vapor_pres=%.1f Pa, P_gas=%.1f Pa\n", 
@@ -961,7 +977,6 @@ CONVERGE_precision_t user_radius = 0.0;
                                parcel_cloud.is_child[i_pc], parcel_cloud.lifetime[i_pc]);
                         printf("  isnan(temp1)=%d, isinf(temp1)=%d, isnan(drdt)=%d, isinf(drdt)=%d\n",
                                isnan(temp1), isinf(temp1), isnan(drdt_prev), isinf(drdt_prev));
-                        debug_print_count++;
                      }
                      
                      // Safety checks before calling LK model
