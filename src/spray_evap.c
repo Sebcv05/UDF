@@ -254,7 +254,15 @@ CONVERGE_UDF(spray_evap,
 void spray_evap_cell(CONVERGE_cloud_t cloud)
 {
    // Start timing the entire function
-
+   
+   // Debug: Print LK flags once per cycle
+   static long last_lk_debug_cycle = -1;
+   if(CONVERGE_ncyc() != last_lk_debug_cycle)
+   {
+      printf("[LK_DEBUG] ncyc=%ld: lk_correction_flag=%d, lk_diagnostic_flag=%d\n",
+             CONVERGE_ncyc(), lk_correction_flag, lk_diagnostic_flag);
+      last_lk_debug_cycle = CONVERGE_ncyc();
+   }
    
    // Setup parcel species counts and iterator
    CONVERGE_iterator_t psp_it;
@@ -914,6 +922,14 @@ CONVERGE_precision_t user_radius = 0.0;
                   // Apply Langmuir-Knudsen correction if enabled
                   if(lk_correction_flag == 1)
                   {
+                     // Debug: print once
+                     static int lk_call_count = 0;
+                     if(lk_call_count == 0)
+                     {
+                        printf("[LK_DEBUG] LK model called! lk_diagnostic_flag=%d\n", lk_diagnostic_flag);
+                        lk_call_count = 1;
+                     }
+                     
                      // Get liquid density for this species
                      CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
                      
@@ -2038,6 +2054,15 @@ CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
    // Diagnostic output to file
    if(lk_diagnostic_flag == 1)
    {
+      // Debug: verify function is called
+      static int file_write_count = 0;
+      file_write_count++;
+      if(file_write_count <= 3)
+      {
+         printf("[LK_DEBUG] Writing to file, call #%d, lk_diagnostic_header_written=%d\n",
+                file_write_count, lk_diagnostic_header_written);
+      }
+      
       // Write header on first call
       if(lk_diagnostic_header_written == 0)
       {
