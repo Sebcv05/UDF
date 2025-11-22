@@ -29,6 +29,19 @@ static CONVERGE_index_t compute_parcel_mole_fractions(CONVERGE_precision_t *mass
                                                       CONVERGE_index_t num_parcel_species,
                                                       CONVERGE_species_t sp,
                                                       CONVERGE_index_t spray_evap_flag);
+static CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
+                                                  CONVERGE_precision_t P_gas,
+                                                  CONVERGE_precision_t P_sat,
+                                                  CONVERGE_precision_t radius,
+                                                  CONVERGE_precision_t drdt_prev,
+                                                  CONVERGE_precision_t mu_gas,
+                                                  CONVERGE_precision_t rho_liquid,
+                                                  CONVERGE_precision_t Pr_gas,
+                                                  CONVERGE_precision_t Sc_gas,
+                                                  CONVERGE_precision_t Y_inf,
+                                                  CONVERGE_precision_t M_species,
+                                                  CONVERGE_precision_t M_gas_avg,
+                                                  CONVERGE_index_t lk_diagnostic_flag);
 
 
 /********************************************************************************************/
@@ -303,6 +316,12 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       CONVERGE_get_double("lagrangian.scale_mass_trans_coeff_spray");
    
    CONVERGE_index_t hidden_multi_component_diffusion_flag = CONVERGE_get_int("hidden.multi_component_diffusion_flag");
+
+   ///////////// Langmuir-Knudsen (LK) Model Parameters //////////////////////////
+   CONVERGE_index_t lk_correction_flag = CONVERGE_get_int("lagrangian.lk_correction_flag");
+   CONVERGE_index_t lk_diagnostic_flag = CONVERGE_get_int("lagrangian.lk_diagnostic_flag");
+   CONVERGE_precision_t lk_chi_neq_min = CONVERGE_get_double("lagrangian.lk_chi_neq_min");
+   CONVERGE_precision_t lk_chi_neq_max = CONVERGE_get_double("lagrangian.lk_chi_neq_max");
 
    ///////////// Flash Boiling related local variables //////////////////////////
    CONVERGE_index_t evap_flag_flash_boiling = CONVERGE_get_int("lagrangian.flash_boiling.evap");
@@ -894,17 +913,44 @@ CONVERGE_precision_t user_radius = 0.0;
                CONVERGE_precision_t y1_star = 0.0;
                if(spray_evap_flag > 0)
                {
-                  if(drop_evap_source_flag == 0)
+                  // Apply Langmuir-Knudsen correction if enabled
+                  if(lk_correction_flag == 1)
                   {
-                     y1_star = CONVERGE_species_mw(sp, local_evap_species_index) /
-                               (CONVERGE_species_mw(sp, local_evap_species_index) +
-                                (w_0 * (global_pressure[node_index] / vapor_pres - 1.0)));
+                     // Get liquid density for this species
+                     CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
+                     
+                     // Use LK model to calculate y1_star
+                     y1_star = calculate_lk_y1_star(
+                        temp1,                                           // T_drop
+                        global_pressure[node_index],                     // P_gas
+                        vapor_pres,                                      // P_sat
+                        parcel_cloud.radius[i_pc],                       // radius
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp], // drdt_prev
+                        mol_visc,                                        // mu_gas
+                        rho_liquid,                                      // rho_liquid
+                        pr_num,                                          // Pr_gas
+                        sc_num,                                          // Sc_gas
+                        vapor_mass[isp] / mass,                          // Y_inf
+                        CONVERGE_get_parcel_species_mw(isp),            // M_species
+                        w_0,                                             // M_gas_avg
+                        lk_diagnostic_flag                               // diagnostic flag
+                     );
                   }
                   else
                   {
-                     // Urea model to be implemented
-                     y1_star = parcel_mole_fraction[isp] * vapor_pres /
-                             global_pressure[node_index] * CONVERGE_get_parcel_species_mw(isp) / w_0_denom;
+                     // Classical model (existing calculation)
+                     if(drop_evap_source_flag == 0)
+                     {
+                        y1_star = CONVERGE_species_mw(sp, local_evap_species_index) /
+                                  (CONVERGE_species_mw(sp, local_evap_species_index) +
+                                   (w_0 * (global_pressure[node_index] / vapor_pres - 1.0)));
+                     }
+                     else
+                     {
+                        // Urea model to be implemented
+                        y1_star = parcel_mole_fraction[isp] * vapor_pres /
+                                global_pressure[node_index] * CONVERGE_get_parcel_species_mw(isp) / w_0_denom;
+                     }
                   }
                }
                y1_star                     = (y1_star < 0.0) ? 1.0e-10 : y1_star;
@@ -1918,6 +1964,92 @@ CONVERGE_precision_t user_radius = 0.0;
        free(mult_sc_num);
        free(mult_sh_num);
    }
+}
+
+/**
+ * @brief calculate_lk_y1_star: Calculate surface vapor mass fraction using Langmuir-Knudsen correction
+ *
+ * @param T_drop: Droplet temperature [K]
+ * @param P_gas: Gas pressure [Pa]
+ * @param P_sat: Saturation pressure at droplet temperature [Pa]
+ * @param radius: Droplet radius [m]
+ * @param drdt_prev: Rate of radius change from previous iteration [m/s]
+ * @param mu_gas: Gas dynamic viscosity [Pa·s]
+ * @param rho_liquid: Liquid density [kg/m³]
+ * @param Pr_gas: Prandtl number (gas) [-]
+ * @param Sc_gas: Schmidt number (gas) [-]
+ * @param Y_inf: Ambient vapor mass fraction [-]
+ * @param M_species: Molecular weight of evaporating species [kg/kmol]
+ * @param M_gas_avg: Average molecular weight of gas [kg/kmol]
+ * @param lk_diagnostic_flag: Flag to enable diagnostic printing
+ *
+ * @return Surface vapor mass fraction Y_v_s corrected by L-K model
+ */
+CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
+                                          CONVERGE_precision_t P_gas,
+                                          CONVERGE_precision_t P_sat,
+                                          CONVERGE_precision_t radius,
+                                          CONVERGE_precision_t drdt_prev,
+                                          CONVERGE_precision_t mu_gas,
+                                          CONVERGE_precision_t rho_liquid,
+                                          CONVERGE_precision_t Pr_gas,
+                                          CONVERGE_precision_t Sc_gas,
+                                          CONVERGE_precision_t Y_inf,
+                                          CONVERGE_precision_t M_species,
+                                          CONVERGE_precision_t M_gas_avg,
+                                          CONVERGE_index_t lk_diagnostic_flag)
+{
+   // Physical constants
+   const CONVERGE_precision_t R_univ = 8314.46;  // J/(kmol·K)
+   const CONVERGE_precision_t PI_const = 3.14159265358979323846;
+   
+   // Calculate equilibrium mole fraction at droplet surface
+   CONVERGE_precision_t chi_eq = P_sat / (P_gas + 1.0e-10);
+   
+   // Calculate Knudsen layer length scale
+   // L_k = μ_g * sqrt(2π * R_univ * T_d / M_species) / (Sc * P_g)
+   CONVERGE_precision_t sqrt_term = sqrt(2.0 * PI_const * R_univ * T_drop / M_species);
+   CONVERGE_precision_t L_k = mu_gas * sqrt_term / (Sc_gas * P_gas + 1.0e-30);
+   
+   // Calculate non-dimensional correction parameter
+   // ψ = 2 * L_k / d = L_k / R
+   CONVERGE_precision_t psi = L_k / (radius + 1.0e-30);
+   
+   // Calculate evaporation rate parameter β
+   // β = -(ρ_l * Pr * R / μ_g) * dR/dt
+   CONVERGE_precision_t beta = -(rho_liquid * Pr_gas * radius / (mu_gas + 1.0e-30)) * drdt_prev;
+   
+   // Apply L-K correction to mole fraction
+   // χ_neq = χ_eq / (1 + ψ·β)
+   CONVERGE_precision_t chi_neq = chi_eq / (1.0 + psi * beta);
+   
+   // Clip to physical range [0, 0.9999]
+   chi_neq = (chi_neq < 0.0) ? 0.0 : chi_neq;
+   chi_neq = (chi_neq > 0.9999) ? 0.9999 : chi_neq;
+   
+   // Convert mole fraction to mass fraction
+   // Y_v_s = (χ_neq * M_species) / (χ_neq * M_species + (1 - χ_neq) * M_gas)
+   CONVERGE_precision_t numerator = chi_neq * M_species;
+   CONVERGE_precision_t denominator = numerator + (1.0 - chi_neq) * M_gas_avg + 1.0e-30;
+   CONVERGE_precision_t Y_v_s = numerator / denominator;
+   
+   // Clip to CONVERGE physical range
+   Y_v_s = (Y_v_s < 1.0e-10) ? 1.0e-10 : Y_v_s;
+   Y_v_s = (Y_v_s > 1.0) ? 1.0 : Y_v_s;
+   
+   // Diagnostic output
+   if(lk_diagnostic_flag == 1)
+   {
+      printf("=== LK Model Diagnostics ===\n");
+      printf("  T_drop = %.3f K, P_gas = %.1f Pa, P_sat = %.1f Pa\n", T_drop, P_gas, P_sat);
+      printf("  radius = %.3e m, drdt_prev = %.3e m/s\n", radius, drdt_prev);
+      printf("  chi_eq = %.6f, chi_neq = %.6f\n", chi_eq, chi_neq);
+      printf("  L_k = %.3e m, psi = %.6f, beta = %.6f\n", L_k, psi, beta);
+      printf("  Y_v_s (LK) = %.6f, Y_inf = %.6f\n", Y_v_s, Y_inf);
+      printf("============================\n");
+   }
+   
+   return Y_v_s;
 }
 
 /**
