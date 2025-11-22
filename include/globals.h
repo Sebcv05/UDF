@@ -16,4 +16,10 @@ extern CONVERGE_precision_t breakup_radius_scale;
 extern CONVERGE_precision_t kb_threshold;
 extern CONVERGE_index_t num_child_parcels;
 
+// Langmuir-Knudsen evaporation model parameters
+extern CONVERGE_index_t lk_correction_flag;
+extern CONVERGE_index_t lk_diagnostic_flag;
+extern CONVERGE_precision_t lk_chi_neq_min;
+extern CONVERGE_precision_t lk_chi_neq_max;
+
 #endif

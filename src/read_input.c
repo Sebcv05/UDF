@@ -6,6 +6,12 @@
 #include <globals.h>
 #include <Breakup.h>  // For init_RR_distribution()
 
+// Define LK global variables
+CONVERGE_index_t lk_correction_flag = 0;
+CONVERGE_index_t lk_diagnostic_flag = 0;
+CONVERGE_precision_t lk_chi_neq_min = 0.0;
+CONVERGE_precision_t lk_chi_neq_max = 0.9999;
+
 struct UserInputs
 {
    double breakup_velocity_scale;
@@ -13,6 +19,12 @@ struct UserInputs
    double kb_threshold;
    double n_RR;  // Rosin-Rammler shape parameter
    int num_children;  // Number of children per breakup event
+   
+   // Langmuir-Knudsen evaporation model parameters
+   int lk_correction_flag;
+   int lk_diagnostic_flag;
+   double lk_chi_neq_min;
+   double lk_chi_neq_max;
 };
 
 /**********************************************************************************************************/
@@ -58,6 +70,12 @@ CONVERGE_INPUT(read_user,
       user_inputs->kb_threshold = NAN;
       user_inputs->n_RR = 3.2;  // Default RR shape parameter (Kim & Park 2018)
       user_inputs->num_children = 12;  // Default: 12 children (Kim & Park 2018)
+      
+      // Default LK parameters
+      user_inputs->lk_correction_flag = 0;     // Off by default
+      user_inputs->lk_diagnostic_flag = 0;     // Off by default
+      user_inputs->lk_chi_neq_min = 0.0;
+      user_inputs->lk_chi_neq_max = 0.9999;
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -121,6 +139,23 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->num_children = atoi(vtoken);
       }
+      // Langmuir-Knudsen parameters
+      else if(strcmp(ktoken, "lk_correction_flag") == 0)
+      {
+         user_inputs->lk_correction_flag = atoi(vtoken);
+      }
+      else if(strcmp(ktoken, "lk_diagnostic_flag") == 0)
+      {
+         user_inputs->lk_diagnostic_flag = atoi(vtoken);
+      }
+      else if(strcmp(ktoken, "lk_chi_neq_min") == 0)
+      {
+         user_inputs->lk_chi_neq_min = atof(vtoken);
+      }
+      else if(strcmp(ktoken, "lk_chi_neq_max") == 0)
+      {
+         user_inputs->lk_chi_neq_max = atof(vtoken);
+      }
    }
 
    CONVERGE_bool_t error = CONVERGE_FALSE;
@@ -161,6 +196,12 @@ CONVERGE_INPUT(read_user,
    kb_threshold = (CONVERGE_precision_t)user_inputs->kb_threshold;
    num_child_parcels = (CONVERGE_index_t)user_inputs->num_children;
    
+   // Set LK global variables
+   lk_correction_flag = (CONVERGE_index_t)user_inputs->lk_correction_flag;
+   lk_diagnostic_flag = (CONVERGE_index_t)user_inputs->lk_diagnostic_flag;
+   lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
+   lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
+   
    // Initialize Rosin-Rammler distribution parameters
    init_RR_distribution(user_inputs->n_RR);
    
@@ -169,6 +210,10 @@ CONVERGE_INPUT(read_user,
    CONVERGE_logger_verbose("user_inputs->kb_threshold: %f", user_inputs->kb_threshold);
    CONVERGE_logger_verbose("user_inputs->n_RR: %f", user_inputs->n_RR);
    CONVERGE_logger_verbose("user_inputs->num_children: %d", user_inputs->num_children);
+   CONVERGE_logger_verbose("user_inputs->lk_correction_flag: %d", user_inputs->lk_correction_flag);
+   CONVERGE_logger_verbose("user_inputs->lk_diagnostic_flag: %d", user_inputs->lk_diagnostic_flag);
+   CONVERGE_logger_verbose("user_inputs->lk_chi_neq_min: %f", user_inputs->lk_chi_neq_min);
+   CONVERGE_logger_verbose("user_inputs->lk_chi_neq_max: %f", user_inputs->lk_chi_neq_max);
 
    // Write the echo file
    if(rank == 0)
@@ -178,6 +223,10 @@ CONVERGE_INPUT(read_user,
       CONVERGE_file_write(echo, "%-10.4f kb_threshold\n", user_inputs->kb_threshold);
       CONVERGE_file_write(echo, "%-10.4f n_RR\n", user_inputs->n_RR);
       CONVERGE_file_write(echo, "%-10d num_children\n", user_inputs->num_children);
+      CONVERGE_file_write(echo, "%-10d lk_correction_flag\n", user_inputs->lk_correction_flag);
+      CONVERGE_file_write(echo, "%-10d lk_diagnostic_flag\n", user_inputs->lk_diagnostic_flag);
+      CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_min\n", user_inputs->lk_chi_neq_min);
+      CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_max\n", user_inputs->lk_chi_neq_max);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);
    }

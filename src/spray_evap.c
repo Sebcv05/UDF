@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <globals.h>
 
 
 
@@ -317,11 +318,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
    
    CONVERGE_index_t hidden_multi_component_diffusion_flag = CONVERGE_get_int("hidden.multi_component_diffusion_flag");
 
-   ///////////// Langmuir-Knudsen (LK) Model Parameters //////////////////////////
-   CONVERGE_index_t lk_correction_flag = CONVERGE_get_int("lagrangian.lk_correction_flag");
-   CONVERGE_index_t lk_diagnostic_flag = CONVERGE_get_int("lagrangian.lk_diagnostic_flag");
-   CONVERGE_precision_t lk_chi_neq_min = CONVERGE_get_double("lagrangian.lk_chi_neq_min");
-   CONVERGE_precision_t lk_chi_neq_max = CONVERGE_get_double("lagrangian.lk_chi_neq_max");
+   // Langmuir-Knudsen parameters are loaded from user_inputs.in via read_input.c (global variables)
 
    ///////////// Flash Boiling related local variables //////////////////////////
    CONVERGE_index_t evap_flag_flash_boiling = CONVERGE_get_int("lagrangian.flash_boiling.evap");
