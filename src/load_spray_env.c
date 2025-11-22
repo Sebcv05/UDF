@@ -21,14 +21,14 @@
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
 {
-   // Read LK parameters using CONVERGE_get_user_* functions
-   lk_correction_flag = CONVERGE_get_user_int("lk_correction_flag", 0);
-   lk_diagnostic_flag = CONVERGE_get_user_int("lk_diagnostic_flag", 0);
-   lk_chi_neq_min = CONVERGE_get_user_double("lk_chi_neq_min", 0.0);
-   lk_chi_neq_max = CONVERGE_get_user_double("lk_chi_neq_max", 0.9999);
+   // TEMPORARY: Hardcode LK parameters for testing
+   lk_correction_flag = 1;
+   lk_diagnostic_flag = 1;
+   lk_chi_neq_min = 0.0;
+   lk_chi_neq_max = 0.9999;
    
    // Log the values
-   CONVERGE_logger_concise("LK Model Parameters:");
+   CONVERGE_logger_concise("LK Model Parameters (HARDCODED FOR TESTING):");
    CONVERGE_logger_concise("  lk_correction_flag = %d", lk_correction_flag);
    CONVERGE_logger_concise("  lk_diagnostic_flag = %d", lk_diagnostic_flag);
    CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", lk_chi_neq_min);
