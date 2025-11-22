@@ -2066,45 +2066,51 @@ CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
    Y_v_s = (Y_v_s < 1.0e-10) ? 1.0e-10 : Y_v_s;
    Y_v_s = (Y_v_s > 1.0) ? 1.0 : Y_v_s;
    
-   // Diagnostic output to file
+   // Diagnostic output to file (only on rank 0 to avoid conflicts)
    if(lk_diagnostic_flag == 1)
    {
-      // Debug: verify function is called
-      static int file_write_count = 0;
-      file_write_count++;
-      if(file_write_count <= 3)
-      {
-         printf("[LK_DEBUG] Writing to file, call #%d, lk_diagnostic_header_written=%d\n",
-                file_write_count, lk_diagnostic_header_written);
-      }
+      int rank;
+      CONVERGE_mpi_comm_rank(&rank);
       
-      // Write header on first call
-      if(lk_diagnostic_header_written == 0)
+      if(rank == 0)  // Only rank 0 writes to file
       {
-         FILE *fp_lk = fopen("lk_evap_diagnostics.txt", "w");
+         // Debug: verify function is called
+         static int file_write_count = 0;
+         file_write_count++;
+         if(file_write_count <= 3)
+         {
+            printf("[LK_DEBUG] Writing to file, call #%d, lk_diagnostic_header_written=%d\n",
+                   file_write_count, lk_diagnostic_header_written);
+         }
+         
+         // Write header on first call
+         if(lk_diagnostic_header_written == 0)
+         {
+            FILE *fp_lk = fopen("lk_evap_diagnostics.txt", "w");
+            if (fp_lk != NULL)
+            {
+               fprintf(fp_lk, "# Langmuir-Knudsen Evaporation Model Diagnostics\n");
+               fprintf(fp_lk, "# ncyc = cycle number, time = simulation time [s]\n");
+               fprintf(fp_lk, "# T_drop = droplet temperature [K], P_gas = gas pressure [Pa], P_sat = saturation pressure [Pa]\n");
+               fprintf(fp_lk, "# R = radius [m], drdt = rate of radius change [m/s]\n");
+               fprintf(fp_lk, "# chi_eq = equilibrium mole fraction, chi_neq = non-equilibrium mole fraction (LK corrected)\n");
+               fprintf(fp_lk, "# L_k = Knudsen layer length [m], psi = L_k/R [-], beta = evaporation rate parameter [-]\n");
+               fprintf(fp_lk, "# Y_v_s = surface vapor mass fraction (LK corrected), Y_inf = ambient vapor mass fraction\n");
+               fprintf(fp_lk, "# Format: ncyc, time, T_drop, P_gas, P_sat, R, drdt, chi_eq, chi_neq, L_k, psi, beta, Y_v_s, Y_inf\n");
+               fclose(fp_lk);
+               lk_diagnostic_header_written = 1;
+            }
+         }
+         
+         // Append data
+         FILE *fp_lk = fopen("lk_evap_diagnostics.txt", "a");
          if (fp_lk != NULL)
          {
-            fprintf(fp_lk, "# Langmuir-Knudsen Evaporation Model Diagnostics\n");
-            fprintf(fp_lk, "# ncyc = cycle number, time = simulation time [s]\n");
-            fprintf(fp_lk, "# T_drop = droplet temperature [K], P_gas = gas pressure [Pa], P_sat = saturation pressure [Pa]\n");
-            fprintf(fp_lk, "# R = radius [m], drdt = rate of radius change [m/s]\n");
-            fprintf(fp_lk, "# chi_eq = equilibrium mole fraction, chi_neq = non-equilibrium mole fraction (LK corrected)\n");
-            fprintf(fp_lk, "# L_k = Knudsen layer length [m], psi = L_k/R [-], beta = evaporation rate parameter [-]\n");
-            fprintf(fp_lk, "# Y_v_s = surface vapor mass fraction (LK corrected), Y_inf = ambient vapor mass fraction\n");
-            fprintf(fp_lk, "# Format: ncyc, time, T_drop, P_gas, P_sat, R, drdt, chi_eq, chi_neq, L_k, psi, beta, Y_v_s, Y_inf\n");
+            fprintf(fp_lk, "%ld, %.6e, %.3f, %.1f, %.1f, %.3e, %.3e, %.6f, %.6f, %.3e, %.6f, %.6f, %.6f, %.6f\n",
+                    CONVERGE_ncyc(), CONVERGE_simulation_time(), T_drop, P_gas, P_sat,
+                    radius, drdt_prev, chi_eq, chi_neq, L_k, psi, beta, Y_v_s, Y_inf);
             fclose(fp_lk);
-            lk_diagnostic_header_written = 1;
          }
-      }
-      
-      // Append data
-      FILE *fp_lk = fopen("lk_evap_diagnostics.txt", "a");
-      if (fp_lk != NULL)
-      {
-         fprintf(fp_lk, "%ld, %.6e, %.3f, %.1f, %.1f, %.3e, %.3e, %.6f, %.6f, %.3e, %.6f, %.6f, %.6f, %.6f\n",
-                 CONVERGE_ncyc(), CONVERGE_simulation_time(), T_drop, P_gas, P_sat,
-                 radius, drdt_prev, chi_eq, chi_neq, L_k, psi, beta, Y_v_s, Y_inf);
-         fclose(fp_lk);
       }
    }
    
