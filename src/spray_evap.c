@@ -945,31 +945,60 @@ CONVERGE_precision_t user_radius = 0.0;
                         lk_call_count = 1;
                      }
                      
+                     // Get values for safety checks and debugging
+                     CONVERGE_precision_t drdt_prev = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+                     
+                     // Print values before safety checks (sample first few calls)
+                     static int debug_print_count = 0;
+                     if(debug_print_count < 5)
+                     {
+                        printf("[LK_VALUES] ncyc=%ld, i_pc=%d, isp=%d:\n", CONVERGE_ncyc(), (int)i_pc, (int)isp);
+                        printf("  temp1=%.3f K, vapor_pres=%.1f Pa, P_gas=%.1f Pa\n", 
+                               temp1, vapor_pres, global_pressure[node_index]);
+                        printf("  radius=%.3e m, drdt_prev=%.3e m/s\n", 
+                               parcel_cloud.radius[i_pc], drdt_prev);
+                        printf("  is_child=%d, lifetime=%.3e s\n", 
+                               parcel_cloud.is_child[i_pc], parcel_cloud.lifetime[i_pc]);
+                        printf("  isnan(temp1)=%d, isinf(temp1)=%d, isnan(drdt)=%d, isinf(drdt)=%d\n",
+                               isnan(temp1), isinf(temp1), isnan(drdt_prev), isinf(drdt_prev));
+                        debug_print_count++;
+                     }
+                     
                      // Safety checks before calling LK model
                      int skip_lk = 0;
                      
                      // Check temperature is valid
                      if(isnan(temp1) || isinf(temp1) || temp1 < 100.0 || temp1 > 1000.0)
                      {
+                        printf("[LK_SKIP] Invalid temp1=%.3e at ncyc=%ld, i_pc=%d\n", 
+                               temp1, CONVERGE_ncyc(), (int)i_pc);
                         skip_lk = 1;
                      }
                      
                      // Check drdt is valid (not NaN, Inf, or unreasonably large)
-                     CONVERGE_precision_t drdt_prev = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
                      if(isnan(drdt_prev) || isinf(drdt_prev) || fabs(drdt_prev) > 1.0e6)
                      {
+                        printf("[LK_SKIP] Invalid drdt_prev=%.3e at ncyc=%ld, i_pc=%d\n", 
+                               drdt_prev, CONVERGE_ncyc(), (int)i_pc);
                         skip_lk = 1;
                      }
                      
                      // Check radius is valid
                      if(isnan(parcel_cloud.radius[i_pc]) || parcel_cloud.radius[i_pc] < 1.0e-10)
                      {
+                        printf("[LK_SKIP] Invalid radius=%.3e at ncyc=%ld, i_pc=%d\n", 
+                               parcel_cloud.radius[i_pc], CONVERGE_ncyc(), (int)i_pc);
                         skip_lk = 1;
                      }
                      
                      // Skip LK for child parcels in their first timesteps (drdt not yet established)
                      if(parcel_cloud.is_child[i_pc] == 1 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
                      {
+                        if(debug_print_count < 10)
+                        {
+                           printf("[LK_SKIP] Child parcel i_pc=%d, lifetime=%.3e s < 1e-6 at ncyc=%ld\n", 
+                                  (int)i_pc, parcel_cloud.lifetime[i_pc], CONVERGE_ncyc());
+                        }
                         skip_lk = 1;
                      }
                      
