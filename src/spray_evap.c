@@ -893,6 +893,21 @@ CONVERGE_precision_t user_radius = 0.0;
             vaporization_term = 0.0;
             csubp_liquid      = 0.0;
             bsub_d_avg        = 0.0;
+            
+            // Skip entire parcel if radius is invalid (completely evaporated or uninitialized)
+            if(isnan(parcel_cloud.radius[i_pc]) || parcel_cloud.radius[i_pc] < 1.0e-10)
+            {
+               printf("[EVAP_SKIP] Parcel i_pc=%d has invalid radius=%.3e m at ncyc=%ld - skipping entire parcel\n",
+                      (int)i_pc, parcel_cloud.radius[i_pc], CONVERGE_ncyc());
+               // Set all species evaporation terms to zero
+               for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+               {
+                  parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
+                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+               }
+               continue;  // Skip to next parcel
+            }
+            
             for(CONVERGE_index_t isp = 0, isp1 = CONVERGE_iterator_first(psp_it); isp < num_parcel_species;
                 isp++, isp1                    = CONVERGE_iterator_next(psp_it))
             {
@@ -995,14 +1010,6 @@ CONVERGE_precision_t user_radius = 0.0;
                      {
                         printf("[LK_SKIP] Invalid drdt_prev=%.3e at ncyc=%ld, i_pc=%d\n", 
                                drdt_prev, CONVERGE_ncyc(), (int)i_pc);
-                        skip_lk = 1;
-                     }
-                     
-                     // Check radius is valid
-                     if(isnan(parcel_cloud.radius[i_pc]) || parcel_cloud.radius[i_pc] < 1.0e-10)
-                     {
-                        printf("[LK_SKIP] Invalid radius=%.3e at ncyc=%ld, i_pc=%d\n", 
-                               parcel_cloud.radius[i_pc], CONVERGE_ncyc(), (int)i_pc);
                         skip_lk = 1;
                      }
                      
