@@ -125,7 +125,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    THERMAL_BREAKUP_FLAG = CONVERGE_lagrangian_field_id("thermal_breakup_flag");
    TBT      = CONVERGE_lagrangian_field_id("tbt");
    IS_CHILD = CONVERGE_lagrangian_field_id("is_child");
-   TIME_SINCE_INJECTION = CONVERGE_lagrangian_field_id("time_since_injection")
+   TIME_SINCE_INJECTION = CONVERGE_lagrangian_field_id("time_since_injection");
    CHILD_INDEX = CONVERGE_lagrangian_field_id("child_index");
    PBT      = CONVERGE_lagrangian_field_id("pbt");
    DGRE_COUNT = CONVERGE_lagrangian_field_id("dgre_cycle_count");
