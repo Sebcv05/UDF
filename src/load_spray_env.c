@@ -66,6 +66,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("cloud_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("tbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("is_child",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
+   CONVERGE_variable_register("time_since_injection",CONVERGE_DOUBLE,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("pbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
 
    // User defined component names, overrides automatic nameing for CONVERGE_VEC3
@@ -124,6 +125,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    THERMAL_BREAKUP_FLAG = CONVERGE_lagrangian_field_id("thermal_breakup_flag");
    TBT      = CONVERGE_lagrangian_field_id("tbt");
    IS_CHILD = CONVERGE_lagrangian_field_id("is_child");
+   TIME_SINCE_INJECTION = CONVERGE_lagrangian_field_id("time_since_injection")
    CHILD_INDEX = CONVERGE_lagrangian_field_id("child_index");
    PBT      = CONVERGE_lagrangian_field_id("pbt");
    DGRE_COUNT = CONVERGE_lagrangian_field_id("dgre_cycle_count");
@@ -470,6 +472,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->tbt              = (int *)CONVERGE_cloud_get_field_data(c,TBT);
    parcel_cloud_loc->is_child = (int *)CONVERGE_cloud_get_field_data(c,IS_CHILD);
+   parcel_cloud_loc->time_since_injection (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, TIME_SINCE_INJECT);
    parcel_cloud_loc->pbt              = (int *)CONVERGE_cloud_get_field_data(c,PBT);
    parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
    parcel_cloud_loc->thermal_breakup_flag = (int *)CONVERGE_cloud_get_field_data(c, THERMAL_BREAKUP_FLAG);
