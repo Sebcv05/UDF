@@ -170,6 +170,7 @@ CONVERGE_UDF(parcel_inject,
 
    
    parcel_cloud.is_child[passed_parcel_idx] = 0;
+   parcel_cloud.time_of_injection[passed_parcel_idx] = CONVERGE_simulation_time_sec();
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
    parcel_cloud.r_bubble_0[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];

@@ -29,7 +29,7 @@ CONVERGE_id_t CLOUD_INDEX;             // Cloud Index
 CONVERGE_id_t THERMAL_BREAKUP_FLAG;		//Flag to indicate that thermal breakup has taken place
 CONVERGE_id_t TBT;
 CONVERGE_id_t IS_CHILD;
-CONVERGE_id_t TIME_SINCE_INJECTION;
+CONVERGE_id_t TIME_OF_INJECTION;
 CONVERGE_id_t PBT;
 CONVERGE_id_t CHILD_INDEX;
 CONVERGE_id_t M0;
@@ -371,7 +371,7 @@ struct ParcelCloud
    CONVERGE_int_t* pbt;
    CONVERGE_int_t* child_index;
    CONVERGE_int_t* is_child;
-   CONVERGE_precision_t* time_since_injection;
+   CONVERGE_precision_t* time_of_injection;
    
    // Collapse recovery fields
    CONVERGE_precision_t* recovery_time;

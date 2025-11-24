@@ -677,7 +677,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          {
             printf("Error opening the file %s", filename1);
          }
-         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, parcel_cloud.is_child[0], sim_time);
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, parcel_cloud.is_child[0], sim_time, parcel_cloud.time_of_injection[0]);
          fclose(fp1);
          // ******************************************************************************************************//
       }
