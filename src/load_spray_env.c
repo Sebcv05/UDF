@@ -472,7 +472,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->tbt              = (int *)CONVERGE_cloud_get_field_data(c,TBT);
    parcel_cloud_loc->is_child = (int *)CONVERGE_cloud_get_field_data(c,IS_CHILD);
-   parcel_cloud_loc->time_since_injection (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, TIME_SINCE_INJECT);
+   parcel_cloud_loc->time_since_injection = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,TIME_SINCE_INJECT);
    parcel_cloud_loc->pbt              = (int *)CONVERGE_cloud_get_field_data(c,PBT);
    parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
    parcel_cloud_loc->thermal_breakup_flag = (int *)CONVERGE_cloud_get_field_data(c, THERMAL_BREAKUP_FLAG);
