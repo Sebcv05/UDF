@@ -579,6 +579,11 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
           );
           continue; // Skip to the next parcel
       }
+      
+      // Initialize temp_drop_0 if not already set (for parcels created before this field existed)
+      if(parcel_cloud.temp_drop_0[i_pc] < 1.0) {
+         parcel_cloud.temp_drop_0[i_pc] = parcel_cloud.temp[i_pc];
+      }
       // if((parcel_cloud.is_child[i_pc]==1 && parcel_cloud.lifetime[i_pc]<1.0e-5) || parcel_cloud.tbt[i_pc]){
       //    user_child_flag = 1;
       //    // continue;
