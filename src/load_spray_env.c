@@ -44,6 +44,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    CONVERGE_variable_register("r_bubble_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_bubble_tm1",CONVERGE_DOUBLE,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("r_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("T_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_therm", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("omega", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("omega_tm1", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
@@ -114,6 +115,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    V_DROP =    CONVERGE_lagrangian_field_id("v_drop");
    R_B_0    = CONVERGE_lagrangian_field_id("r_bubble_0");
    R_D_0    = CONVERGE_lagrangian_field_id("r_drop_0");
+   T_0      = CONVERGE_lagrangian_field_id("temp_drop_0");
    R_B_TM1 = CONVERGE_lagrangian_field_id("r_bubble_tm1");
    R_THERM = CONVERGE_lagrangian_field_id("r_therm");
    OMEGA    = CONVERGE_lagrangian_field_id("omega");
@@ -460,6 +462,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->r_bubble_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_B_TM1);
    parcel_cloud_loc->v_bubble_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, V_B_TM1);
    parcel_cloud_loc->r_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_D_0);
+   parcel_cloud_loc->temp_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, T_0);
    parcel_cloud_loc->r_therm = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_THERM);
    parcel_cloud_loc->omega = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, OMEGA);
    parcel_cloud_loc->omega_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, OMEGA_TM1);

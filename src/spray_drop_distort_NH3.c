@@ -346,12 +346,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       
       // Calculate Saturation Pressure from Antoine's Equation
       CONVERGE_precision_t P_sat;
-      if(Td > 300.0){
+      if(Td > old_parcel_cloud.temp_drop_0[p_idx] + 2.0){
          // FIX: Added diagnostic output and ensured parcel is properly disabled
          static int td_high_count = 0;
          if (td_high_count < 10) {
-            printf("[THERMAL_ABORT] p_idx=%li, Td=%.2f K > 300K, removing parcel (lifetime=%.3e s, radius=%.3e m)\n",
-                   p_idx, Td, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
+            printf("[THERMAL_ABORT] p_idx=%li, Td=%.2f K > temp_drop_0+2K=%.2f K, removing parcel (lifetime=%.3e s, radius=%.3e m)\n",
+                   p_idx, Td, old_parcel_cloud.temp_drop_0[p_idx] + 2.0, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
             td_high_count++;
          }
          reset_parcel_to_child(&old_parcel_cloud, p_idx, "Temperature too high");

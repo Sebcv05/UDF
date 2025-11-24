@@ -16,6 +16,7 @@ CONVERGE_id_t R_B_TM1;
 CONVERGE_id_t V_B_TM1;
 CONVERGE_id_t V_DROP;
 CONVERGE_id_t R_D_0;				//Droplet Radius when injected
+CONVERGE_id_t T_0;
 CONVERGE_id_t R_THERM;
 CONVERGE_id_t OMEGA;				//DGRE root
 CONVERGE_id_t OMEGA_TM1;
@@ -355,6 +356,7 @@ struct ParcelCloud
    CONVERGE_precision_t* r_bubble_0;
    CONVERGE_precision_t* v_bubble_tm1;
    CONVERGE_precision_t* r_drop_0;
+   CONVERGE_precision_t* temp_drop_0;
    CONVERGE_precision_t* r_therm;
    CONVERGE_precision_t* omega;
    CONVERGE_precision_t* omega_tm1;

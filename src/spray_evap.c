@@ -738,11 +738,12 @@ CONVERGE_precision_t user_radius = 0.0;
             tdrop_starm1                 = temp_prev_timestep;
          }
 
-         if(parcel_cloud.temp[i_pc] > 300.0 || parcel_cloud.temp_tm1[i_pc] > 300.0)
+         if(parcel_cloud.temp[i_pc] > parcel_cloud.temp_drop_0[i_pc] + 2.0 || parcel_cloud.temp_tm1[i_pc] > parcel_cloud.temp_drop_0[i_pc] + 2.0)
          {
-            printf("spray_evap: temp=%.3f temp_tm1=%.3f radius=%.3e num_drop=%lld is_child=%d lifetime=%.3e\n",
+            printf("spray_evap: temp=%.3f temp_tm1=%.3f temp_drop_0+2K=%.3f radius=%.3e num_drop=%lld is_child=%d lifetime=%.3e\n",
                    parcel_cloud.temp[i_pc],
                    parcel_cloud.temp_tm1[i_pc],
+                   parcel_cloud.temp_drop_0[i_pc] + 2.0,
                    parcel_cloud.radius[i_pc],
                    (long long)parcel_cloud.num_drop[i_pc],
                    (int)parcel_cloud.is_child[i_pc],

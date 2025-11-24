@@ -185,7 +185,7 @@ CONVERGE_UDF(parcel_inject,
 
    // R_D_0
    parcel_cloud.r_drop_0[passed_parcel_idx] = parcel_cloud.radius[passed_parcel_idx];
-
+   parcel_cloud.temp_drop_0[passed_parcel_idx] = parcel_cloud.temp[passed_parcel_idx];
    // Droplet radius for thermal breakup purposes
    parcel_cloud.r_therm[passed_parcel_idx] = parcel_cloud.radius[passed_parcel_idx];
    // Zero Omega and Eta (breakup variables)
