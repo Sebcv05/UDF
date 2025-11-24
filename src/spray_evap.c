@@ -1273,10 +1273,10 @@ CONVERGE_precision_t user_radius = 0.0;
                
                // Prevent evaporation for parent parcels (pre-breakup)
                // Thermal breakup takes precedence over evaporation
-               if(parcel_cloud.is_child[i_pc] == 0)
-               {
-                  parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
-               }
+               // if(parcel_cloud.is_child[i_pc] == 0)
+               // {
+               //    parcel_cloud.drdt[i_pc * num_parcel_species + isp] = 0.0;
+               // }
 
                // temperature can't be above critical temp
                const CONVERGE_precision_t isp_tcrit = CONVERGE_species_tcrit(sp, isp1);
