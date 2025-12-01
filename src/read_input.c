@@ -53,6 +53,10 @@ CONVERGE_INPUT(read_user,
                   VALUE(CONVERGE_path_t, passed_path),
                   VALUE(CONVERGE_flag_t, passed_reread_flag)))
 {
+   // DIAGNOSTIC: Print immediately to confirm this function is called
+   printf("[READ_INPUT] read_user function called! reread_flag=%d\n", passed_reread_flag);
+   fflush(stdout);
+   
    struct UserInputs* user_inputs;
    if(passed_reread_flag == 1)
    {
@@ -197,6 +201,11 @@ CONVERGE_INPUT(read_user,
    lk_diagnostic_flag = (CONVERGE_index_t)user_inputs->lk_diagnostic_flag;
    lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
    lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
+   
+   // DIAGNOSTIC: Print after setting globals
+   printf("[READ_INPUT] Parameters set: velocity_scale=%.3f radius_scale=%.3f kb=%.3f num_children=%d\n",
+          breakup_velocity_scale, breakup_radius_scale, kb_threshold, num_child_parcels);
+   fflush(stdout);
    
    // Initialize Rosin-Rammler distribution parameters
    init_RR_distribution(user_inputs->n_RR);

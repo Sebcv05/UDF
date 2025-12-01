@@ -3,7 +3,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#define MAX_NUM_CHILDREN 50  // Maximum allowed children per breakup event
+#define MAX_NUM_CHILDREN 150  // Maximum allowed children per breakup event
 
 // Global velocity variables
 extern CONVERGE_precision_t user_child_velocity_x;
