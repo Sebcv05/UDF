@@ -379,6 +379,11 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
  CONVERGE_precision_t  old_nd = old_parcel_cloud->num_drop[p_idx];
  CONVERGE_precision_t  old_r_bubble = old_parcel_cloud->r_bubble[p_idx];
  
+    // DIAGNOSTIC: Print parameters EVERY TIME breakup runs
+    printf("[PARAM_CHECK] breakup_velocity_scale=%.3f radius_scale=%.3f kb_threshold=%.3f num_children=%d\n",
+           breakup_velocity_scale, breakup_radius_scale, kb_threshold, num_child_parcels);
+    fflush(stdout);
+ 
     // DIAGNOSTIC: Check for large parcels entering breakup
     static FILE* breakup_log = NULL;
     if (!breakup_log) {
