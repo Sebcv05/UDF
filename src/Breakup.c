@@ -622,6 +622,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     {
         printf("\nBreakup.c: Error: calculated_radius is negative. Aborting.\n");
         printf("\nparent radius = %e",parent_radius);
+        printf("\n bubble radius = %e",old_parcel_cloud->r_bubble[p_idx]);
         printf("\nrad_denom = %e",rad_denom);
         printf("\nrad_term1 = %e",rad_term1);
         printf("\nrad_term2 = %e",rad_term2);
