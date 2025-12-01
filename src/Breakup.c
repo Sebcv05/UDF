@@ -630,7 +630,6 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("\nrad_term4 = %e",rad_term4);
         printf("\nrad_vel = %e",rad_vel);
         printf("\nrt3*(rt2*rd -rt4) = %e",rad_term3*(rad_term2*rad_denom - rad_term4));
-        printf("\n breakup_velocity_scale = %e",breakup_velocity_scale);
         CONVERGE_mpi_abort();
     }
     // printf("\ntbt=%i",old_parcel_cloud->tbt[p_idx]);
