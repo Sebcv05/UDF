@@ -621,6 +621,14 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     if (calculated_radius < 0.0)
     {
         printf("\nBreakup.c: Error: calculated_radius is negative. Aborting.\n");
+        printf("\nparent radius = %e",parent_radius);
+        printf("\nrad_denom = %e",rad_denom);
+        printf("\nrad_term1 = %e",rad_term1);
+        printf("\nrad_term2 = %e",rad_term2);
+        printf("\nrad_term3 = %e",rad_term3);
+        printf("\nrad_term4 = %e",rad_term4);
+        printf("\nrad_vel = %e",rad_vel);
+        printf("\nrt3*(rt2*rd -rt4) = %e",rad_term3*(rad_term2*rad_denom - rad_term4));
         CONVERGE_mpi_abort();
     }
     // printf("\ntbt=%i",old_parcel_cloud->tbt[p_idx]);
