@@ -319,7 +319,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          parcel_track_file = fopen("tracked_parcel.csv", "w");
          if (parcel_track_file) {
             fprintf(parcel_track_file, "time,lifetime,p_idx,R_drop,R_bubble,Rdot,T_drop,Pb,P_amb,thermal_breakup_flag,kb\n");
-            printf("[TRACKING] Started tracking parcel %d\n", tracked_parcel_id);
          }
       }
       
@@ -811,7 +810,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   fprintf(parcel_track_file, "# BREAKUP OCCURRED AT THIS TIMESTEP\n");
                   fclose(parcel_track_file);
                   parcel_track_file = NULL;
-                  printf("[TRACKING] Breakup detected for tracked parcel %d - tracking file closed\n", tracked_parcel_id);
               }
               
               // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
