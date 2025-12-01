@@ -608,7 +608,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
 
     //printf("\nrad term 3 = %e, den = %e, surten = %e", rad_term3, old_parcel_cloud->density[p_idx], old_parcel_cloud->radius[p_idx]);
     // printf("\nTERM 2 V_BUBBLE = %e R_BUBBLE = %e R_DROP = %e",old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],old_parcel_cloud->radius[p_idx]);
-    rad_term4 = CONVERGE_square(rad_vel) / 2.0;
+    rad_term4 = CONVERGE_square(breakup_velocity_scale*rad_vel) / 2.0;
     CONVERGE_precision_t B = breakup_radius_scale;           //Constant determining radius of children at breakup (1.0 is default)
 CONVERGE_precision_t radius_denominator = 2.0 * B * rad_denom * rad_term1 + rad_term3 * (rad_term2 * rad_denom - rad_term4);
 if (fabs(radius_denominator) < 1.0e-20) {
