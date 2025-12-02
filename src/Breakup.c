@@ -393,6 +393,15 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         }
     }
     
+    // CSV logger for breakup event data
+    static FILE* breakup_events_log = NULL;
+    if (!breakup_events_log) {
+        breakup_events_log = fopen("breakup_events.csv", "w");
+        if (breakup_events_log) {
+            fprintf(breakup_events_log, "time,ncyc,p_idx,parent_radius,r_bubble,v_bubble,child_radius\n");
+        }
+    }
+    
     // DON'T log entry yet - wait until we know child radii
     
     // printf("\nbreakup count %i",breakup_counter);
@@ -714,6 +723,21 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     // ============================================================================
     // END ROSIN-RAMMLER SAMPLING
     // ============================================================================
+    
+    // Log breakup event data for each child parcel
+    static FILE* breakup_events_log = NULL;
+    if (!breakup_events_log) {
+        breakup_events_log = fopen("breakup_events.csv", "a");
+    }
+    if (breakup_events_log) {
+        for (int i = 0; i < num_child_parcels; i++) {
+            fprintf(breakup_events_log, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e\n",
+                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                    parent_radius, old_parcel_cloud->r_bubble[p_idx], 
+                    old_parcel_cloud->v_bubble[p_idx], child_radii[i]);
+        }
+        fflush(breakup_events_log);
+    }
     
     // DIAGNOSTIC: Calculate mean child radius and log if > 80 μm
     CONVERGE_precision_t mean_child_radius = 0.0;
