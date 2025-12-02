@@ -380,7 +380,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
  CONVERGE_precision_t  old_r_bubble = old_parcel_cloud->r_bubble[p_idx];
  
     // DIAGNOSTIC: Print parameters EVERY TIME breakup runs
-    printf("[PARAM_CHECK] breakup_velocity_scale=%.3f radius_scale=%.3f kb_threshold=%.3f num_children=%d\n",
+    printf("[PARAM_CHECK] breakup_velocity_scale=%.3f radius_scale=%.3f kb_threshold=%.3f num_children=%ld\n",
            breakup_velocity_scale, breakup_radius_scale, kb_threshold, num_child_parcels);
     fflush(stdout);
  
@@ -725,18 +725,18 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     // ============================================================================
     
     // Log breakup event data for each child parcel
-    static FILE* breakup_events_log = NULL;
-    if (!breakup_events_log) {
-        breakup_events_log = fopen("breakup_events.csv", "a");
+    static FILE* breakup_events_log2 = NULL;
+    if (!breakup_events_log2) {
+        breakup_events_log2 = fopen("breakup_events.csv", "a");
     }
-    if (breakup_events_log) {
+    if (breakup_events_log2) {
         for (int i = 0; i < num_child_parcels; i++) {
-            fprintf(breakup_events_log, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e\n",
+            fprintf(breakup_events_log2, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e\n",
                     CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
                     parent_radius, old_parcel_cloud->r_bubble[p_idx], 
                     old_parcel_cloud->v_bubble[p_idx], child_radii[i]);
         }
-        fflush(breakup_events_log);
+        fflush(breakup_events_log2);
     }
     
     // DIAGNOSTIC: Calculate mean child radius and log if > 80 μm
