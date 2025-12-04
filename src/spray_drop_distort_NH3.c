@@ -517,6 +517,50 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                
                prof_bubble += CONVERGE_mpi_wtime() - t0;
                
+               // ============================================================================
+               // SONG MODEL: Check void fraction and trigger breakup directly
+               // ============================================================================
+               if (use_song_rpe) {
+                  // Calculate void fraction
+                  CONVERGE_precision_t R = old_parcel_cloud.r_bubble[p_idx];
+                  CONVERGE_precision_t Ro = old_parcel_cloud.r_drop_0[p_idx];
+                  CONVERGE_precision_t epsilon = (R*R*R) / (Ro*Ro*Ro);
+                  
+                  // Check for void fraction breakup criterion
+                  if (epsilon >= 0.55) {
+                     static int song_breakup_count = 0;
+                     if (song_breakup_count < 10) {
+                        printf("[SONG_BREAKUP] p_idx=%li, void=%.4f >= 0.55, triggering breakup\n", 
+                               p_idx, epsilon);
+                        printf("               R_bubble=%.3e m, R_drop_0=%.3e m, R_drop=%.3e m\n",
+                               R, Ro, old_parcel_cloud.radius[p_idx]);
+                        song_breakup_count++;
+                     }
+                     
+                     // Set breakup flag (same as thermal model uses)
+                     old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
+                     old_parcel_cloud.tbt[p_idx] = 1;
+                     old_parcel_cloud.pbt[p_idx] = 0;
+                     
+                     // Exit sub-timestep loop - breakup will happen after loop
+                     break;
+                  }
+                  
+                  // Check if bubble growth stopped
+                  if(old_parcel_cloud.v_bubble[p_idx] < 1.0e-10) {
+                     reset_parcel_to_child(&old_parcel_cloud, p_idx, "Song: v_bubble too small");
+                     break;
+                  }
+                  
+                  // Skip all Geometry/DGRE/kb logic for Song model
+                  // Continue to next sub-timestep
+                  continue;
+               }
+               
+               // ============================================================================
+               // THERMAL MODEL: Continue with existing logic (Geometry/DGRE/kb)
+               // ============================================================================
+               
                // Check if bubble growth stopped
                if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
                {

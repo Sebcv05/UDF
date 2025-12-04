@@ -152,13 +152,13 @@ void RPE_song_solver(
     // Safety checks on initial values
     if (Ro < 1e-9) {
         printf("[SONG_ERROR] Droplet radius too small: Ro=%.3e m\n", Ro);
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Droplet too small (Song)");
+        // Don't reset - just return, main loop will handle
         return;
     }
     
     if (R0 < 1e-12) {
         printf("[SONG_ERROR] Initial bubble radius too small: R0=%.3e m\n", R0);
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "R_bubble_0 too small (Song)");
+        // Don't reset - just return, main loop will handle
         return;
     }
     
@@ -172,23 +172,15 @@ void RPE_song_solver(
             printf("[SONG_ABORT] Not superheated: P_sat=%.2e Pa, P_amb=%.2e Pa\n", P_sat, P_amb);
             song_debug_count++;
         }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Not superheated (Song)");
+        // Don't reset - just return, main loop will handle
         return;
     }
     
     // Compute void fraction
     CONVERGE_precision_t epsilon = song_compute_void_fraction(R, Ro);
     
-    // Check termination criterion: void fraction = 0.55
-    if (epsilon >= VOID_TARGET) {
-        if (song_debug_count < SONG_DEBUG_MAX) {
-            printf("[SONG_COMPLETE] Void fraction target reached: ε=%.4f >= %.2f\n", 
-                   epsilon, VOID_TARGET);
-            song_debug_count++;
-        }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Void=0.55 (Song)");
-        return;
-    }
+    // NOTE: Void fraction check moved to main loop in spray_drop_distort_NH3.c
+    // Song solver just grows bubble, main loop checks epsilon and triggers breakup
     
     // Compute vapor density (ideal gas law)
     CONVERGE_precision_t rho_v = P_sat / (params.R_spec * T_drop);
@@ -217,7 +209,7 @@ void RPE_song_solver(
     // Check for collapse (negative velocity)
     if (Rdot < 0.0) {
         printf("[SONG_COLLAPSE] Bubble collapsing: Rdot=%.3e m/s at p_idx=%li\n", Rdot, p_idx);
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Bubble collapse (Song)");
+        // Don't reset - just return, main loop will handle
         return;
     }
     
