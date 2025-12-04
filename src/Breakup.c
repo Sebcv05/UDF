@@ -32,6 +32,9 @@ CONVERGE_index_t lk_diagnostic_flag = 0;
 CONVERGE_precision_t lk_chi_neq_min = 0.0;
 CONVERGE_precision_t lk_chi_neq_max = 0.9999;
 
+// Song RPE model selection (default: thermal model)
+CONVERGE_index_t use_song_rpe = 0;
+
 // Profiling accumulators
 static double prof_calcs = 0.0;
 static double prof_loop = 0.0;

@@ -22,4 +22,7 @@ extern CONVERGE_index_t lk_diagnostic_flag;
 extern CONVERGE_precision_t lk_chi_neq_min;
 extern CONVERGE_precision_t lk_chi_neq_max;
 
+// Song RPE model selection
+extern CONVERGE_index_t use_song_rpe;
+
 #endif

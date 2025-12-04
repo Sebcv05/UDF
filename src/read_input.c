@@ -21,6 +21,9 @@ struct UserInputs
    int lk_diagnostic_flag;
    double lk_chi_neq_min;
    double lk_chi_neq_max;
+   
+   // Song RPE model selection
+   int use_song_rpe;
 };
 
 /**********************************************************************************************************/
@@ -72,6 +75,9 @@ CONVERGE_INPUT(read_user,
       user_inputs->lk_diagnostic_flag = 0;     // Off by default
       user_inputs->lk_chi_neq_min = 0.0;
       user_inputs->lk_chi_neq_max = 0.9999;
+      
+      // Default RPE model selection
+      user_inputs->use_song_rpe = 0;           // 0=thermal (default), 1=Song isothermal
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -152,6 +158,11 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->lk_chi_neq_max = atof(vtoken);
       }
+      // Song RPE model selection
+      else if(strcmp(ktoken, "use_song_rpe") == 0)
+      {
+         user_inputs->use_song_rpe = atoi(vtoken);
+      }
    }
 
    CONVERGE_bool_t error = CONVERGE_FALSE;
@@ -198,6 +209,9 @@ CONVERGE_INPUT(read_user,
    lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
    lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
    
+   // Set Song RPE model selection
+   use_song_rpe = (CONVERGE_index_t)user_inputs->use_song_rpe;
+   
    // Initialize Rosin-Rammler distribution parameters
    init_RR_distribution(user_inputs->n_RR);
    
@@ -210,6 +224,7 @@ CONVERGE_INPUT(read_user,
    CONVERGE_logger_verbose("user_inputs->lk_diagnostic_flag: %d", user_inputs->lk_diagnostic_flag);
    CONVERGE_logger_verbose("user_inputs->lk_chi_neq_min: %f", user_inputs->lk_chi_neq_min);
    CONVERGE_logger_verbose("user_inputs->lk_chi_neq_max: %f", user_inputs->lk_chi_neq_max);
+   CONVERGE_logger_verbose("user_inputs->use_song_rpe: %d", user_inputs->use_song_rpe);
 
    // Write the echo file
    if(rank == 0)
@@ -223,6 +238,7 @@ CONVERGE_INPUT(read_user,
       CONVERGE_file_write(echo, "%-10d lk_diagnostic_flag\n", user_inputs->lk_diagnostic_flag);
       CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_min\n", user_inputs->lk_chi_neq_min);
       CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_max\n", user_inputs->lk_chi_neq_max);
+      CONVERGE_file_write(echo, "%-10d use_song_rpe\n", user_inputs->use_song_rpe);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);
    }
