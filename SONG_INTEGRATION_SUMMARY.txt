@@ -1,0 +1,105 @@
+SONG RPE CONVERGE UDF INTEGRATION - QUICK REFERENCE
+====================================================
+
+WHAT TO CREATE:
+--------------
+1. include/RPE_song.h       - Header with structures and declarations
+2. src/RPE_song.c           - Song solver implementation
+
+WHAT TO MODIFY:
+--------------
+1. src/spray_drop_distort_NH3.c  - Add call to RPE_song_solver (line ~505)
+2. src/read_input.c (or globals)  - Add USE_SONG_RPE flag
+3. include/globals.h              - Declare USE_SONG_RPE
+
+KEY FUNCTION SIGNATURE:
+----------------------
+void RPE_song_solver(
+    struct ParcelCloud* old_parcel_cloud,
+    CONVERGE_index_t p_idx,
+    CONVERGE_precision_t P_amb,
+    CONVERGE_precision_t dt_sub,
+    CONVERGE_table_t** hvap_table,
+    CONVERGE_table_t** cp_table,
+    CONVERGE_size_t num_parcel_species
+);
+
+DATA FLOW:
+---------
+READ from parcel_cloud[p_idx]:
+  - r_bubble, v_bubble, r_bubble_0, r_drop_0
+  - temp, density, viscosity, surf_ten
+
+WRITE to parcel_cloud[p_idx]:
+  - r_bubble (updated)
+  - v_bubble (updated)
+  - temp (UNCHANGED - isothermal)
+
+CORE ALGORITHM:
+--------------
+1. Read parameters from parcel
+2. Calculate P_sat (isothermal)
+3. Check superheat
+4. Compute void fraction ε = R³/Ro³
+5. Check if ε >= 0.99 (terminate)
+6. Compute mixture density ρ_m = ε·ρ_v + (1-ε)·ρ_l
+7. Compute acceleration from Song RPE
+8. Euler step: Rdot += Rddot·dt, R += Rdot·dt
+9. Safety checks
+10. Update parcel
+
+INTEGRATION POINT (spray_drop_distort_NH3.c, line ~505):
+--------------------------------------------------------
+// Current:
+RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, ...);
+
+// Modified:
+if (USE_SONG_RPE) {
+    RPE_song_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, ...);
+} else {
+    RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, ...);
+}
+
+USER INPUT (add to user_inputs.in):
+-----------------------------------
+USE_SONG_RPE = 0    # 0=thermal, 1=Song isothermal
+
+KEY DIFFERENCES vs THERMAL:
+---------------------------
+Thermal RPE:              Song RPE:
+- 4 ODEs (R,Rdot,T,m_b)  - 2 ODEs (R,Rdot)
+- Temperature evolves     - Temperature constant
+- Thermal limiting        - No thermal limiting
+- Multiple stop criteria  - Stop at void=0.99
+- Constant ρ_l           - Variable ρ_m(ε)
+
+HELPER FUNCTIONS TO COPY FROM test_song_rpe.c:
+----------------------------------------------
+- compute_void_fraction()
+- compute_mixture_density()
+- compute_song_acceleration()
+
+EXISTING FUNCTIONS TO USE:
+--------------------------
+- Saturation_PressureNH3()  (replaces Psat_from_Antoine)
+- reset_parcel_to_child()    (already used in thermal model)
+
+TESTING CHECKLIST:
+-----------------
+[ ] Compiles without errors
+[ ] Single parcel test runs
+[ ] No NaN/Inf values
+[ ] Bubble grows monotonically
+[ ] Reaches void=0.99 or converts to child
+[ ] Compare with thermal model
+[ ] Full spray test stable
+
+REFERENCE FILES:
+---------------
+- test_song_rpe.c              - Standalone implementation
+- RPE_euler.c                  - Current thermal model
+- SONG_INTEGRATION_PLAN.md     - Detailed integration guide
+- SONG_implement.md            - Physics documentation
+
+STATUS: Ready to implement
+BACKUP: v1.0.1 branch created
