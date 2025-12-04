@@ -76,8 +76,8 @@ CONVERGE_INPUT(read_user,
       user_inputs->lk_chi_neq_min = 0.0;
       user_inputs->lk_chi_neq_max = 0.9999;
       
-      // Default RPE model selection
-      user_inputs->use_song_rpe = 0;           // 0=thermal (default), 1=Song isothermal
+      // Default RPE model selection (set to sentinel value)
+      user_inputs->use_song_rpe = 999;         // Sentinel: MUST be read from file
    }
 
    CONVERGE_logger_concise("reading %*s data from file %s", 16, "user_inputs.in", "user_inputs.in");
@@ -209,8 +209,36 @@ CONVERGE_INPUT(read_user,
    lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
    lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
    
+   // VALIDATE: use_song_rpe MUST be read from file
+   if(user_inputs->use_song_rpe == 999)
+   {
+      CONVERGE_logger_fatal("CRITICAL ERROR: use_song_rpe not found in user_inputs.in!");
+      CONVERGE_logger_fatal("Add this line to user_inputs.in:");
+      CONVERGE_logger_fatal("    0     use_song_rpe     # 0=thermal RPE, 1=Song isothermal");
+   }
+   
+   // Validate range
+   if(user_inputs->use_song_rpe != 0 && user_inputs->use_song_rpe != 1)
+   {
+      CONVERGE_logger_fatal("ERROR: use_song_rpe must be 0 or 1, got %d", user_inputs->use_song_rpe);
+   }
+   
    // Set Song RPE model selection
    use_song_rpe = (CONVERGE_index_t)user_inputs->use_song_rpe;
+   
+   // Log which model was selected
+   if(use_song_rpe == 1)
+   {
+      CONVERGE_logger_concise("========================================");
+      CONVERGE_logger_concise("RPE MODEL: Song isothermal (use_song_rpe=1)");
+      CONVERGE_logger_concise("========================================");
+   }
+   else
+   {
+      CONVERGE_logger_concise("========================================");
+      CONVERGE_logger_concise("RPE MODEL: Thermal (use_song_rpe=0)");
+      CONVERGE_logger_concise("========================================");
+   }
    
    // Initialize Rosin-Rammler distribution parameters
    init_RR_distribution(user_inputs->n_RR);
