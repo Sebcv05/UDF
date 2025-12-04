@@ -1,0 +1,120 @@
+VOID FRACTION TERMINATION CRITERION UPDATE
+==========================================
+
+Date: 2025-12-04
+Change: Void fraction termination changed from 0.99 to 0.55
+
+WHAT WAS CHANGED:
+-----------------
+File: src/RPE_song.c
+
+1. VOID_TARGET definition:
+   OLD: #define VOID_TARGET 0.99
+   NEW: #define VOID_TARGET 0.55
+
+2. Termination check (line ~181):
+   Condition: if (epsilon >= 0.55)
+   Message: "Void=0.55 (Song)" instead of "Void=0.99 (Song)"
+
+3. Added header comments explaining Song/DGRE relationship
+
+WHY THIS CHANGE:
+----------------
+- Void fraction 0.55 represents the threshold where bubble has grown
+  sufficiently to trigger breakup
+- At this point, Song RPE growth phase ends
+- Parcel is reset to child, allowing DGRE to take over
+- DGRE handles bubble geometry evolution and final breakup
+
+RELATIONSHIP: SONG RPE vs DGRE
+-------------------------------
+
+Song RPE (this solver):
+  - Handles bubble GROWTH phase
+  - Computes R(t) and Rdot(t) using isothermal RPE
+  - Tracks void fraction ε = R³/Ro³
+  - Terminates at ε = 0.55
+  - Calls reset_parcel_to_child()
+
+DGRE (separate model in spray_drop_distort_NH3.c):
+  - Called when r_bubble > 0.02 * radius (line 706-708)
+  - Handles bubble GEOMETRY evolution
+  - Computes deformation, eccentricity
+  - Determines final breakup based on instability criteria
+  - Works with BreakupCriterion() to calculate kb
+
+Flow:
+  1. Song RPE grows bubble → ε reaches 0.55
+  2. reset_parcel_to_child() called
+  3. Parcel continues in simulation
+  4. DGRE evaluates bubble geometry (if r_bubble large enough)
+  5. BreakupCriterion() determines if/when breakup occurs
+  6. Breakup() creates child parcels
+
+IMPORTANT NOTES:
+----------------
+✓ Song RPE does NOT replace DGRE
+✓ Both models work together in the framework
+✓ Song: bubble growth (isothermal)
+✓ DGRE: bubble geometry + breakup decision
+✓ Void=0.55 is transition point between the two
+
+PHYSICS JUSTIFICATION:
+----------------------
+At void fraction 0.55:
+  - Bubble volume = 55% of droplet volume
+  - Sufficient growth for instabilities to develop
+  - Transition from growth-dominated to geometry-dominated phase
+  - DGRE criteria become more relevant
+
+DEBUGGING OUTPUT:
+-----------------
+When void=0.55 is reached, log will show:
+  [SONG_COMPLETE] Void fraction target reached: ε=0.5500 >= 0.55
+
+This is followed by reset_parcel_to_child() with reason "Void=0.55 (Song)"
+
+COMPARISON WITH THERMAL MODEL:
+-------------------------------
+Thermal RPE (RPE_euler.c):
+  - Uses multiple termination criteria
+  - Temperature evolution tracked
+  - No explicit void fraction criterion
+  - Has recovery logic for collapsed bubbles
+
+Song RPE (RPE_song.c):
+  - Single void fraction criterion (0.55)
+  - Temperature constant (isothermal)
+  - No recovery logic (simpler)
+  - Faster termination
+
+COMPILATION STATUS:
+-------------------
+✓ Compiles successfully
+✓ No warnings
+✓ Tested: void fraction check at 0.55 works
+
+GIT STATUS:
+-----------
+Commit: 42b5e31
+Branch: v3.1.12
+Status: Pushed to origin
+
+TESTING RECOMMENDATIONS:
+------------------------
+1. Run with use_song_rpe=1
+2. Check for [SONG_COMPLETE] messages at ε ≈ 0.55
+3. Verify DGRE is called after Song termination
+4. Compare breakup statistics with thermal model
+5. Monitor if 0.55 is appropriate threshold (may need tuning)
+
+POTENTIAL ADJUSTMENTS:
+----------------------
+If needed, void fraction can be parameterized:
+  - Add to user_inputs.in as "song_void_target"
+  - Read in read_input.c
+  - Pass as parameter instead of #define
+  - Allows runtime tuning without recompilation
+
+For now, hardcoded at 0.55 based on typical bubble breakup behavior.
+
