@@ -33,17 +33,26 @@ static int song_debug_count = 0;
 // ============================================================================
 // Helper Function: Compute void fraction
 // ============================================================================
+// Correct formula: ε = V_bubble / (V_bubble + V_liquid)
+//                    = R_bubble³ / (R_bubble³ + R_liquid³)
+// 
+// For a droplet: V_total = (4/3)π·R_drop³
+//                V_bubble = (4/3)π·R_bubble³
+//                V_liquid = V_total - V_bubble
+//
+// Therefore: R_liquid³ = R_drop³ - R_bubble³
+//            ε = R_bubble³ / R_drop³
 CONVERGE_precision_t song_compute_void_fraction(
-    CONVERGE_precision_t R,
-    CONVERGE_precision_t Ro
+    CONVERGE_precision_t R_bubble,
+    CONVERGE_precision_t R_drop
 ) {
-    // ε = R³ / Ro³
-    CONVERGE_precision_t R_cubed = R * R * R;
-    CONVERGE_precision_t Ro_cubed = Ro * Ro * Ro;
+    // ε = R_bubble³ / R_drop³
+    CONVERGE_precision_t R_bubble_cubed = R_bubble * R_bubble * R_bubble;
+    CONVERGE_precision_t R_drop_cubed = R_drop * R_drop * R_drop;
     
-    if (Ro_cubed < 1e-30) return 0.0;
+    if (R_drop_cubed < 1e-30) return 0.0;
     
-    CONVERGE_precision_t epsilon = R_cubed / Ro_cubed;
+    CONVERGE_precision_t epsilon = R_bubble_cubed / R_drop_cubed;
     
     // Clamp to [0, 1]
     if (epsilon < 0.0) epsilon = 0.0;
@@ -147,6 +156,7 @@ void RPE_song_solver(
     CONVERGE_precision_t Rdot = old_parcel_cloud->v_bubble[p_idx];
     CONVERGE_precision_t R0 = old_parcel_cloud->r_bubble_0[p_idx];
     CONVERGE_precision_t Ro = old_parcel_cloud->r_drop_0[p_idx];
+    CONVERGE_precision_t R_drop_current = old_parcel_cloud->radius[p_idx];  // Current droplet radius
     CONVERGE_precision_t T_drop = old_parcel_cloud->temp[p_idx];
     
     // Safety checks on initial values
@@ -176,8 +186,8 @@ void RPE_song_solver(
         return;
     }
     
-    // Compute void fraction
-    CONVERGE_precision_t epsilon = song_compute_void_fraction(R, Ro);
+    // Compute void fraction using CURRENT droplet radius
+    CONVERGE_precision_t epsilon = song_compute_void_fraction(R, R_drop_current);
     
     // NOTE: Void fraction check moved to main loop in spray_drop_distort_NH3.c
     // Song solver just grows bubble, main loop checks epsilon and triggers breakup

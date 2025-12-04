@@ -31,8 +31,8 @@ void RPE_song_solver(
 
 // Helper functions
 CONVERGE_precision_t song_compute_void_fraction(
-    CONVERGE_precision_t R,
-    CONVERGE_precision_t Ro
+    CONVERGE_precision_t R_bubble,
+    CONVERGE_precision_t R_drop_current
 );
 
 CONVERGE_precision_t song_compute_mixture_density(

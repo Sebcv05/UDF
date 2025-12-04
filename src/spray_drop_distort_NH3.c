@@ -521,10 +521,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // SONG MODEL: Check void fraction and trigger breakup directly
                // ============================================================================
                if (use_song_rpe) {
-                  // Calculate void fraction
-                  CONVERGE_precision_t R = old_parcel_cloud.r_bubble[p_idx];
-                  CONVERGE_precision_t Ro = old_parcel_cloud.r_drop_0[p_idx];
-                  CONVERGE_precision_t epsilon = (R*R*R) / (Ro*Ro*Ro);
+                  // Calculate void fraction: ε = R_bubble³ / R_drop³
+                  CONVERGE_precision_t R_bubble = old_parcel_cloud.r_bubble[p_idx];
+                  CONVERGE_precision_t R_drop = old_parcel_cloud.radius[p_idx];  // Current droplet radius
+                  CONVERGE_precision_t epsilon = (R_bubble*R_bubble*R_bubble) / (R_drop*R_drop*R_drop);
                   
                   // Check for void fraction breakup criterion
                   if (epsilon >= 0.55) {
@@ -532,8 +532,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      if (song_breakup_count < 10) {
                         printf("[SONG_BREAKUP] p_idx=%li, void=%.4f >= 0.55, triggering breakup\n", 
                                p_idx, epsilon);
-                        printf("               R_bubble=%.3e m, R_drop_0=%.3e m, R_drop=%.3e m\n",
-                               R, Ro, old_parcel_cloud.radius[p_idx]);
+                        printf("               R_bubble=%.3e m, R_drop=%.3e m, R_drop_0=%.3e m\n",
+                               R_bubble, R_drop, old_parcel_cloud.r_drop_0[p_idx]);
                         song_breakup_count++;
                      }
                      
