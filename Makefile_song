@@ -1,0 +1,22 @@
+# Makefile for Song RPE test program
+
+CC = gcc
+CFLAGS = -O2 -Wall -std=c99 -lm
+TARGET = test_song_rpe
+SRC = test_song_rpe.c
+
+all: $(TARGET)
+
+$(TARGET): $(SRC)
+	$(CC) $(SRC) -o $(TARGET) $(CFLAGS)
+
+run: $(TARGET)
+	./$(TARGET)
+
+plot: run
+	python3 plot_song_c_results.py
+
+clean:
+	rm -f $(TARGET) song_temp_sweep_c.csv *.pdf
+
+.PHONY: all run plot clean
