@@ -1,6 +1,12 @@
 //RPE_song.c
 // Song et al. Rayleigh-Plesset Equation solver (isothermal model)
 // Based on standalone test_song_rpe.c, adapted for CONVERGE UDF
+//
+// IMPORTANT: This solver handles bubble GROWTH only (void fraction criterion).
+// The DGRE model (called separately in spray_drop_distort_NH3.c) handles bubble
+// geometry evolution and determines final breakup based on its own criteria.
+//
+// Void fraction = 0.55 triggers reset_parcel_to_child, after which DGRE takes over.
 
 #include "lagrangian/env.h"
 #include <RPE_song.h>
@@ -17,7 +23,8 @@
 // Song model parameters
 #define P_R0_SONG 1.0e6   // Residual gas pressure (Pa)
 #define KAPPA_SONG 0.0    // Surface viscosity (negligible)
-#define VOID_TARGET 0.99  // Termination criterion
+#define VOID_TARGET 0.55  // Termination criterion: bubble reaches breakup threshold
+                          // After this, DGRE model determines final breakup geometry
 
 // Debug logging
 static int song_debug_count = 0;
@@ -172,14 +179,14 @@ void RPE_song_solver(
     // Compute void fraction
     CONVERGE_precision_t epsilon = song_compute_void_fraction(R, Ro);
     
-    // Check termination criterion: void fraction = 0.99
+    // Check termination criterion: void fraction = 0.55
     if (epsilon >= VOID_TARGET) {
         if (song_debug_count < SONG_DEBUG_MAX) {
             printf("[SONG_COMPLETE] Void fraction target reached: ε=%.4f >= %.2f\n", 
                    epsilon, VOID_TARGET);
             song_debug_count++;
         }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Void=0.99 (Song)");
+        reset_parcel_to_child(old_parcel_cloud, p_idx, "Void=0.55 (Song)");
         return;
     }
     
