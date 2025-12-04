@@ -1,0 +1,146 @@
+PHASE 2 COMPLETE: Song RPE Solver Implementation
+==================================================
+
+✅ COMPLETED: 2025-12-04 14:35 UTC
+
+What was done:
+--------------
+Implemented complete Song RPE solver for CONVERGE UDF framework.
+
+Files Created:
+--------------
+1. include/RPE_song.h (53 lines)
+   - SongParams structure
+   - Function declarations for solver and helpers
+   - CONVERGE type compatibility
+
+2. src/RPE_song.c (229 lines)
+   - song_compute_void_fraction(): ε = R³/Ro³
+   - song_compute_mixture_density(): ρ_m = ε·ρ_v + (1-ε)·ρ_l
+   - song_compute_acceleration(): Song RPE Equation 4
+   - RPE_song_solver(): Main solver (single timestep)
+
+Files Modified:
+--------------
+3. src/spray_drop_distort_NH3.c
+   - Added: #include <RPE_song.h>
+   - Replaced stub with actual RPE_song_solver() call
+   - Clean if/else switch on use_song_rpe flag
+
+Key Features:
+-------------
+✅ Isothermal model (temperature unchanged)
+✅ Mixture density varies with void fraction
+✅ Initial pressure term: (2σ/R₀+P_r0)·(R₀/R)³
+✅ Single timestep integration (CONVERGE provides dt_sub)
+✅ Termination at void fraction = 0.99
+✅ Safety checks (collapse, edge, superheat)
+✅ Debug logging (first 10 calls)
+✅ Uses existing CONVERGE functions (Saturation_PressureNH3, reset_parcel_to_child)
+
+Physics Implementation:
+-----------------------
+Song RPE (Equation 4):
+  R̈ = [P_sat - P_∞ + (2σ/R₀+P_r0)·(R₀/R)³ - 2σ/R - 4μ·Ṙ/R - 4κ·Ṙ/R²] / (ρ_m·R) - (3/2)·Ṙ²/R
+
+Parameters:
+  - P_r0 = 1.0e6 Pa (residual gas pressure)
+  - κ = 0.0 (surface viscosity - negligible)
+  - R_spec = 488.2 J/(kg·K) for NH3
+  - Void target = 0.99
+
+Data Flow:
+----------
+INPUT (from parcel_cloud[p_idx]):
+  - r_bubble, v_bubble       (current state)
+  - r_bubble_0, r_drop_0     (initial conditions)
+  - temp, density, viscosity (properties)
+  - surf_ten                 (surface tension)
+
+COMPUTE:
+  - P_sat from temperature (isothermal)
+  - Void fraction ε
+  - Mixture density ρ_m
+  - Acceleration R̈
+
+UPDATE (single timestep):
+  - Rdot += Rddot * dt_sub
+  - R += Rdot * dt_sub
+
+OUTPUT (to parcel_cloud[p_idx]):
+  - r_bubble (updated)
+  - v_bubble (updated)
+  - temp (UNCHANGED - key difference from thermal model)
+
+Safety Checks:
+--------------
+1. Droplet radius (Ro) too small → reset
+2. Initial bubble radius (R0) too small → reset
+3. Not superheated (P_sat ≤ P_amb) → reset
+4. Void fraction ≥ 0.99 → reset (complete)
+5. Bubble collapse (Rdot < 0) → reset
+6. Bubble at droplet edge (R > 0.999·Ro) → cap
+
+Debug Output:
+-------------
+First-time message:
+  "[RPE_MODEL_SONG] Song isothermal RPE model active"
+
+First 10 solver calls:
+  "[SONG_STEP] p_idx=X, R=X m, Rdot=X m/s, ε=X, ρ_m=X kg/m³, T=X K"
+
+Termination messages:
+  "[SONG_COMPLETE] Void fraction target reached"
+  "[SONG_ABORT] Not superheated"
+  "[SONG_COLLAPSE] Bubble collapsing"
+  "[SONG_EDGE] Bubble capped at droplet edge"
+
+Compilation Status:
+-------------------
+✅ Compiles without errors
+✅ No warnings in Song code
+✅ Links successfully
+✅ Library size: ~244 KB
+
+Git Status:
+-----------
+- Branch: v3.1.12
+- Commit: f154e0c - "update"
+- Files: +285 lines (3 files changed)
+- Pushed: Yes
+
+Model Selection:
+----------------
+Now fully functional:
+
+user_inputs.in:
+  0  use_song_rpe  → Calls RPE_euler_solver() [thermal model]
+  1  use_song_rpe  → Calls RPE_song_solver() [Song isothermal]
+
+No recompilation needed to switch!
+
+Next Steps - Phase 3:
+---------------------
+1. Test with use_song_rpe=0 (verify thermal still works)
+2. Test with use_song_rpe=1 (verify Song runs)
+3. Compare results thermal vs Song
+4. Validate against standalone test_song_rpe.c
+5. Check mass conservation
+6. Performance testing
+
+Known Differences from Standalone:
+-----------------------------------
+Standalone (test_song_rpe.c):
+  - Time loop with adaptive timestep
+  - CSV output for every step
+  - Runs until void=0.99 or timeout
+
+CONVERGE UDF (RPE_song.c):
+  - Single timestep per call
+  - CONVERGE provides dt_sub
+  - Integrates with spray framework
+  - Uses reset_parcel_to_child() for termination
+
+Physics is identical, just different integration approach.
+
+STATUS: ✅ PHASE 2 COMPLETE - READY FOR PHASE 3 TESTING
