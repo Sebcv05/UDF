@@ -202,6 +202,15 @@ void RPE_euler_solver(
     CONVERGE_table_t** cp_table,
     CONVERGE_size_t num_parcel_species
 ) {
+    // One-time logging to confirm thermal model is active
+    static int thermal_model_logged = 0;
+    if (!thermal_model_logged) {
+        printf("\n========================================\n");
+        printf("[RPE_MODEL_THERMAL] Thermal RPE model active\n");
+        printf("========================================\n\n");
+        thermal_model_logged = 1;
+    }
+    
     // Check if this parcel just recovered (flag = -999 from last timestep)
     static int post_recovery_print_count = 0;
     if (old_parcel_cloud->thermal_breakup_flag[p_idx] == -999 && post_recovery_print_count < 5) {
