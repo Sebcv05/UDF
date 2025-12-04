@@ -33,6 +33,7 @@
 //#include <DestroyTables.h>
 #include <Vb.h>
 #include <RPE_euler.h>
+#include <RPE_song.h>
 #include <globals.h>
 
 
@@ -506,16 +507,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // Model selection based on use_song_rpe flag
                if (use_song_rpe) {
                   // Song isothermal model
-                  static int song_model_logged = 0;
-                  if (!song_model_logged) {
-                     printf("\n========================================\n");
-                     printf("[RPE_MODEL_SONG] Song isothermal RPE model active\n");
-                     printf("========================================\n\n");
-                     song_model_logged = 1;
-                  }
-                  // RPE_song_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
-                  //                 hvap_table, cp_table, num_parcel_species);
-                  printf("[RPE_SONG_STUB] Song solver called but not yet implemented\n");
+                  RPE_song_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
+                                  hvap_table, cp_table, num_parcel_species);
                } else {
                   // Thermal model (default)
                   RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
