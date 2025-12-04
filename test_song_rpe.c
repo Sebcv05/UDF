@@ -45,10 +45,10 @@
 #define R_BUBBLE_MULTIPLIER 1.01 // R_bubble_0 = 1.01 * R_c
 
 // Numerical parameters
-#define DT_INITIAL 1e-9          // Initial timestep (s) - increased from 1e-10
-#define DT_MIN 1e-10
-#define DT_MAX 1e-7
-#define SAFETY_FACTOR 0.1        // More conservative - reduced from 0.9
+#define DT_INITIAL 1e-10         // Initial timestep (s) - reduced by 10x
+#define DT_MIN 1e-11             // Minimum timestep - also reduced by 10x
+#define DT_MAX 1e-8              // Maximum timestep - reduced by 10x
+#define SAFETY_FACTOR 0.05       // More conservative - reduced from 0.1
 #define TOLERANCE 1e-6
 
 // Temperature sweep conditions (at P=2bar)
