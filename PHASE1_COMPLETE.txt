@@ -1,0 +1,56 @@
+PHASE 1 COMPLETE: Runtime Flag Implementation
+==============================================
+
+✅ COMPLETED: 2025-12-04
+
+What was done:
+--------------
+Added use_song_rpe flag to enable runtime model selection without recompilation.
+
+Files Modified:
+--------------
+1. include/globals.h
+   - Added: extern CONVERGE_index_t use_song_rpe;
+
+2. src/Breakup.c  
+   - Added: CONVERGE_index_t use_song_rpe = 0;
+   - Default value: 0 (thermal model)
+
+3. src/read_input.c
+   - Added to UserInputs struct
+   - Set default value: 0
+   - Read from user_inputs.in file
+   - Assign to global variable
+   - Log value with CONVERGE_logger_verbose
+   - Echo to user_inputs.echo
+
+How to Use:
+-----------
+Add to user_inputs.in in case directory:
+
+    0          use_song_rpe             # 0=thermal RPE, 1=Song isothermal RPE
+
+Values:
+  0 = Thermal RPE model (current, default)
+  1 = Song isothermal RPE model (to be implemented)
+
+Testing:
+--------
+The flag will be read and logged, but Song model not yet implemented.
+Setting use_song_rpe=1 will cause linker error until Phase 2 complete.
+
+Next Steps - Phase 2:
+--------------------
+1. Create include/RPE_song.h (header file)
+2. Create src/RPE_song.c (Song solver implementation)
+3. Modify src/spray_drop_distort_NH3.c (add if/else switch)
+
+Status:
+-------
+✅ Phase 1 Complete - Runtime flag working
+⏳ Phase 2 Next - Song solver implementation
+⏳ Phase 3 After - Testing and validation
+
+Commit: c685ff0
+Branch: v3.1.12
+Pushed: Yes
