@@ -185,6 +185,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    mass_after = 0;
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
+      // Skip parcels that are too small (avoid numerical issues in breakup routines)
+      if (old_parcel_cloud.radius[p_idx] < 1.0e-6) {
+         static int skip_count = 0;
+         if (skip_count < 10) {
+            printf("[DISTORT_SKIP] Parcel too small: p_idx=%d, radius=%.3e m < 1e-6 m (skipping)\n",
+                   p_idx, old_parcel_cloud.radius[p_idx]);
+            skip_count++;
+         }
+         continue;  // Skip this parcel
+      }
+      
       // if(CONVERGE_simulation_time_sec() > 1.0e-4)
       // {
       //Timing 
