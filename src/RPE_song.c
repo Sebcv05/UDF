@@ -166,12 +166,6 @@ void RPE_song_solver(
         return;
     }
     
-    if (R0 < 1e-12) {
-        printf("[SONG_ERROR] Initial bubble radius too small: R0=%.3e m\n", R0);
-        // Don't reset - just return, main loop will handle
-        return;
-    }
-    
     // Calculate saturation pressure (isothermal - temperature is constant)
     CONVERGE_precision_t P_sat;
     Saturation_PressureNH3(T_drop, &P_sat);
@@ -184,6 +178,31 @@ void RPE_song_solver(
         }
         // Don't reset - just return, main loop will handle
         return;
+    }
+    
+    // CRITICAL FIX: Recalculate R_bubble_0 on first call with actual P_amb
+    // (parcel_prop.c uses default 2 bar since it doesn't have CFD mesh access)
+    if (R0 < 1e-12 || fabs(R - R0) < 1e-15) {
+        // This is the first call - recalculate critical radius with actual P_amb
+        CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
+        R0 = 1.1 * Rc;
+        R = R0;
+        Rdot = 0.001;  // Small positive initial velocity
+        
+        // Store corrected values
+        old_parcel_cloud->r_bubble_0[p_idx] = R0;
+        old_parcel_cloud->r_bubble[p_idx] = R;
+        old_parcel_cloud->v_bubble[p_idx] = Rdot;
+        
+        // Log correction
+        static int correction_logged = 0;
+        if (correction_logged < 5) {
+            printf("[SONG_INIT] Corrected R_bubble_0 with actual P_amb:\n");
+            printf("[SONG_INIT]   T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
+                   T_drop, P_sat, P_amb, P_sat - P_amb);
+            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
+            correction_logged++;
+        }
     }
     
     // Compute void fraction using CURRENT droplet radius

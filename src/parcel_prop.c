@@ -136,9 +136,9 @@ CONVERGE_UDF(parcel_inject,
              OUT(CONVERGE_VOID))
 {
    
-   // Get actual ambient pressure from CFD mesh
-   const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(passed_spray_cloud);
-   CONVERGE_precision_t ambient_pres = pressure[node_index];
+   // NOTE: Cannot access CFD mesh pressure here (parcel_inject called before drop_distort)
+   // Use a reasonable default - will be corrected in RPE solver on first call
+   CONVERGE_precision_t ambient_pres = 2.0e5;  // Default 2 bar, recalculated in RPE solver
 
    // printf("\n START OF PARCEL_PROP.C \n");
    struct ParcelCloud parcel_cloud;
@@ -153,24 +153,13 @@ CONVERGE_UDF(parcel_inject,
    // printf("PARCEL_PROP.C L70 P_sat = %f\n",P_sat);
    // printf("PARCEL_PROP.C L67\n");
 
-   // printf("\n ambient_pres = %f (from CFD mesh) \n",ambient_pres);
+   // printf("\n ambient_pres = %f \n",ambient_pres);
    // printf("\n r_bubble old = %f \n", parcel_cloud.r_bubble[passed_parcel_idx]);
-   // CONVERGE_precision_t ambient_pres = 2.0e5;  // OLD: hardcoded 2 bar - REMOVED
 
-   // Calculate critical radius Rc = 2*sigma / DeltaP
+   // Calculate critical radius Rc = 2*sigma / DeltaP (approximate, corrected in RPE)
    CONVERGE_precision_t Rc = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
    // Initialize bubble at 1.1 * Rc (10% above critical radius for stable growth)
    parcel_cloud.r_bubble[passed_parcel_idx] = 1.1 * Rc;
-   
-   // Diagnostic: print first few initializations
-   static int init_count = 0;
-   if (init_count < 5) {
-       printf("[INIT_BUBBLE] p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa\n",
-              passed_parcel_idx, Td, P_sat, ambient_pres);
-       printf("[INIT_BUBBLE]   Rc=%.3e m, R_bubble_0=%.3e m (1.1*Rc)\n",
-              Rc, parcel_cloud.r_bubble[passed_parcel_idx]);
-       init_count++;
-   }
    
    if (parcel_cloud.r_bubble[passed_parcel_idx] < 0.0)
    {
