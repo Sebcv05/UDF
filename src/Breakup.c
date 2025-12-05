@@ -609,6 +609,8 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     CONVERGE_precision_t denom = CONVERGE_cube(old_parcel_cloud->radius[p_idx]) - r_bubble_cube;
     if (fabs(denom) < 1.0e-20) {
         printf("\nBreakup.c: Error: Denominator in rad_denom calculation is close to zero. Aborting.\n");
+        printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
+        printf("\n rububble = %e",old_parcel_cloud->r_bubble[p_idx]);
         CONVERGE_mpi_abort();
     }
 
