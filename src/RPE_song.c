@@ -203,6 +203,8 @@ void RPE_song_solver(
     if (song_debug_count < SONG_DEBUG_MAX) {
         printf("[SONG_STEP] p_idx=%li, R=%.3e m, Rdot=%.3e m/s, ε=%.4f, ρ_m=%.1f kg/m³, T=%.2f K\n",
                p_idx, R, Rdot, epsilon, rho_m, T_drop);
+        printf("[SONG_STEP]   R0=%.3e m, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
+               R0, P_sat, P_amb, P_sat - P_amb);
         song_debug_count++;
     }
     
@@ -218,7 +220,21 @@ void RPE_song_solver(
     
     // Check for collapse (negative velocity)
     if (Rdot < 0.0) {
-        printf("[SONG_COLLAPSE] Bubble collapsing: Rdot=%.3e m/s at p_idx=%li\n", Rdot, p_idx);
+        static int collapse_detail_count = 0;
+        if (collapse_detail_count < 5) {
+            printf("[SONG_COLLAPSE] Bubble collapsing: Rdot=%.3e m/s at p_idx=%li\n", Rdot, p_idx);
+            printf("[SONG_COLLAPSE]   R=%.3e m, R0=%.3e m, Rddot=%.3e m/s²\n", R, R0, Rddot);
+            printf("[SONG_COLLAPSE]   P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n", P_sat, P_amb, P_sat - P_amb);
+            printf("[SONG_COLLAPSE]   T_drop=%.2f K, rho_m=%.1f kg/m³, ε=%.4f\n", T_drop, rho_m, epsilon);
+            
+            // Calculate individual pressure terms for diagnosis
+            CONVERGE_precision_t P_init_coeff = 2.0 * params.sigma / R0 + params.P_r0;
+            CONVERGE_precision_t R_ratio_cubed = pow(R0/R, 3.0);
+            CONVERGE_precision_t P_init = P_init_coeff * R_ratio_cubed;
+            CONVERGE_precision_t P_laplace = 2.0 * params.sigma / R;
+            printf("[SONG_COLLAPSE]   P_init=%.2e Pa, P_laplace=%.2e Pa\n", P_init, P_laplace);
+            collapse_detail_count++;
+        }
         // Don't reset - just return, main loop will handle
         return;
     }
