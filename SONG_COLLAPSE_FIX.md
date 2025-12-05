@@ -36,42 +36,75 @@ At **T=323K** (high superheat):
 
 ## Solution Applied
 
+### Key Insight
+`parcel_prop.c` (parcel_inject UDF) is called **before** `spray_drop_distort_NH3.c`, so it **cannot access CFD mesh data** like `pressure[node_index]`. The solution is to:
+1. Keep default 2 bar in parcel_prop.c (temporary placeholder)
+2. **Recalculate R_bubble_0** in RPE_song.c on first call using actual P_amb
+
 ### Files Modified in /home/apollo19/Desktop/Dan_B/UDF/
 
-#### 1. `src/parcel_prop.c` (lines 139-172)
+#### 1. `src/parcel_prop.c` (lines 139-163)
 
-**Changed FROM (WRONG):**
+**Kept default (with comment explaining why):**
 ```c
-// const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(passed_spray_cloud);
-// CONVERGE_precision_t ambient_pres = pressure[node_index];  // COMMENTED OUT
-CONVERGE_precision_t ambient_pres = 2.0e5;  // HARDCODED
-```
+// NOTE: Cannot access CFD mesh pressure here (parcel_inject called before drop_distort)
+// Use a reasonable default - will be corrected in RPE solver on first call
+CONVERGE_precision_t ambient_pres = 2.0e5;  // Default 2 bar, recalculated in RPE solver
 
-**Changed TO (CORRECT):**
-```c
-// Get actual ambient pressure from CFD mesh
-const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(passed_spray_cloud);
-CONVERGE_precision_t ambient_pres = pressure[node_index];  // NOW USES ACTUAL P_amb
-
-// Calculate critical radius Rc = 2*sigma / DeltaP
+// Calculate critical radius Rc = 2*sigma / DeltaP (approximate, corrected in RPE)
 CONVERGE_precision_t Rc = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
 // Initialize bubble at 1.1 * Rc (10% above critical radius for stable growth)
 parcel_cloud.r_bubble[passed_parcel_idx] = 1.1 * Rc;
+```
 
-// Diagnostic: print first few initializations
-static int init_count = 0;
-if (init_count < 5) {
-    printf("[INIT_BUBBLE] p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa\n",
-           passed_parcel_idx, Td, P_sat, ambient_pres);
-    printf("[INIT_BUBBLE]   Rc=%.3e m, R_bubble_0=%.3e m (1.1*Rc)\n",
-           Rc, parcel_cloud.r_bubble[passed_parcel_idx]);
-    init_count++;
+**Why this is OK:** The RPE solver will correct R_bubble_0 on first call (see below).
+
+#### 2. `src/RPE_song.c` (lines 155-210) **← THE REAL FIX**
+
+**Added R_bubble_0 recalculation on first call:**
+```c
+// Calculate saturation pressure (isothermal - temperature is constant)
+CONVERGE_precision_t P_sat;
+Saturation_PressureNH3(T_drop, &P_sat);
+
+// Check superheat condition
+if (P_sat <= P_amb) {
+    if (song_debug_count < SONG_DEBUG_MAX) {
+        printf("[SONG_ABORT] Not superheated: P_sat=%.2e Pa, P_amb=%.2e Pa\n", P_sat, P_amb);
+        song_debug_count++;
+    }
+    return;
+}
+
+// CRITICAL FIX: Recalculate R_bubble_0 on first call with actual P_amb
+// (parcel_prop.c uses default 2 bar since it doesn't have CFD mesh access)
+if (R0 < 1e-12 || fabs(R - R0) < 1e-15) {
+    // This is the first call - recalculate critical radius with actual P_amb
+    CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
+    R0 = 1.1 * Rc;
+    R = R0;
+    Rdot = 0.001;  // Small positive initial velocity
+    
+    // Store corrected values
+    old_parcel_cloud->r_bubble_0[p_idx] = R0;
+    old_parcel_cloud->r_bubble[p_idx] = R;
+    old_parcel_cloud->v_bubble[p_idx] = Rdot;
+    
+    // Log correction
+    static int correction_logged = 0;
+    if (correction_logged < 5) {
+        printf("[SONG_INIT] Corrected R_bubble_0 with actual P_amb:\n");
+        printf("[SONG_INIT]   T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
+               T_drop, P_sat, P_amb, P_sat - P_amb);
+        printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
+        correction_logged++;
+    }
 }
 ```
 
-#### 2. `src/RPE_song.c` (lines 203-237)
-
-**Added enhanced diagnostics:**
+**Detection logic:** 
+- `R0 < 1e-12`: Never initialized
+- `fabs(R - R0) < 1e-15`: R equals R0 exactly (first call, no growth yet)
 ```c
 // Debug logging for first few calls
 if (song_debug_count < SONG_DEBUG_MAX) {
@@ -103,7 +136,9 @@ if (Rdot < 0.0) {
 }
 ```
 
-#### 3. `/home/apollo19/Desktop/Dan_B/v3.1.12/Splitter/Dev/workflow.md`
+#### 3. `src/RPE_song.c` - Enhanced diagnostics (lines 203-240)
+
+**Added detailed logging:**
 
 **Updated to clarify UDF directory structure:**
 - Made it explicit that **ALL edits must be in /home/apollo19/Desktop/Dan_B/UDF/**
@@ -112,12 +147,19 @@ if (Rdot < 0.0) {
 
 ## Why This Fix Works
 
-Now both initialization and solver use the **same pressure**:
-1. Critical radius calculation: `Rc = 2σ / (P_sat - P_amb_actual)`
-2. Initial bubble radius: `R₀ = 1.1 × Rc`
-3. Song RPE term: `(2σ/R₀ + P_r0)·(R₀/R)³` - now **consistent** with initialization
+The solution uses a **two-stage initialization**:
 
-**Result:** The pressure balance in the Song RPE is correct, bubbles grow as expected.
+1. **Stage 1 (parcel_prop.c):** 
+   - Sets approximate R_bubble_0 with default P_amb = 2 bar
+   - This is a placeholder since CFD mesh isn't accessible yet
+
+2. **Stage 2 (RPE_song.c first call):**
+   - Detects first call: `R0 < 1e-12` or `R == R0` exactly
+   - Recalculates critical radius with **actual P_amb from CFD**
+   - Updates R_bubble_0, R, and Rdot with correct values
+   - Logs the correction for verification
+
+**Result:** By the time the Song RPE starts evolving the bubble, R_bubble_0 is correct and consistent with the pressure used in the Song equation terms.
 
 ## Expected Behavior After Fix
 
@@ -139,7 +181,7 @@ At **T=323K** with typical conditions:
 2. Run your 323K test case
 
 3. **Expected output:**
-   - `[INIT_BUBBLE]` messages showing correct P_amb from CFD mesh
+   - **`[SONG_INIT]` messages** showing R_bubble_0 correction with actual P_amb
    - `[SONG_STEP]` messages showing positive Rdot (growth)
    - **NO** `[SONG_COLLAPSE]` messages
    - Void fraction increasing smoothly toward 0.55
