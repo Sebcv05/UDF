@@ -34,6 +34,7 @@
 #include <Vb.h>
 #include <RPE_euler.h>
 #include <RPE_song.h>
+#include <Breakup_Song.h>
 #include <globals.h>
 
 
@@ -885,7 +886,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                CONVERGE_index_t cloud_size_before_break = CONVERGE_cloud_size(cloud);
                // printf("\nBreakup.cloud_size_before_break = %i", cloud_size_before_break);
               CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
-               Breakup(&old_parcel_cloud, p_idx, cloud);
+               
+               // Use Song breakup model if Song RPE solver is active
+               if (use_song_rpe) {
+                  Breakup_Song(&old_parcel_cloud, p_idx);
+               } else {
+                  Breakup(&old_parcel_cloud, p_idx, cloud);
+               }
+               
                prof_break += CONVERGE_mpi_wtime() - t0;
                // printf("\nBreakup.cloud_size_after_break = %i\n\n\n\n", CONVERGE_cloud_size(cloud));
                post_break = CONVERGE_mpi_wtime();
