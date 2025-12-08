@@ -533,6 +533,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // SONG MODEL: Check void fraction and trigger breakup directly
                // ============================================================================
                if (use_song_rpe) {
+                  // Update droplet radius using Geometry to conserve liquid mass
+                  CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
+                  Geometry(&old_parcel_cloud, p_idx, dt_sub);
+                  prof_geom += CONVERGE_mpi_wtime() - t0;
+                  
                   // Calculate void fraction: ε = R_bubble³ / R_drop³
                   CONVERGE_precision_t R_bubble = old_parcel_cloud.r_bubble[p_idx];
                   CONVERGE_precision_t R_drop = old_parcel_cloud.radius[p_idx];  // Current droplet radius
@@ -564,7 +569,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      break;
                   }
                   
-                  // Skip all Geometry/DGRE/kb logic for Song model
+                  // Skip DGRE/kb logic for Song model (Geometry already called above)
                   // Continue to next sub-timestep
                   continue;
                }

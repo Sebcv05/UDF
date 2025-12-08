@@ -25,8 +25,8 @@ static int song_breakup_logged = 0;
 // Song Breakup Function
 // ============================================================================
 // Randomly selects N_child ∈ {2, 3, 4, 5} with equal probability
-// Computes child radius: R_child = R_parent * cbrt(1 / N_child)
-// Volume conservation: N_child × V_child_physical = V_parent_physical
+// R_child = R_parent × cbrt(1 / N_child_droplets)
+// NOTE: Geometry() has already updated R_parent during growth to conserve liquid
 // Each computational parcel still represents N_parent physical drops
 // Updates parent parcel fields in-place (no new parcels created)
 // ============================================================================
@@ -41,8 +41,8 @@ void Breakup_Song(
         printf("\n========================================\n");
         printf("[BREAKUP_SONG] Song breakup model active\n");
         printf("[BREAKUP_SONG] Creates 2-5 droplets with equal probability\n");
-        printf("[BREAKUP_SONG] R_child = R_parent * cbrt(1/N_child)\n");
-        printf("[BREAKUP_SONG] Volume: N_child × V_child = V_parent\n");
+        printf("[BREAKUP_SONG] R_child = R_parent × cbrt(1/N_child)\n");
+        printf("[BREAKUP_SONG] Geometry() updates R during growth\n");
         printf("========================================\n\n");
     }
     
@@ -73,9 +73,10 @@ void Breakup_Song(
     }
     
     // Calculate child droplet radius
-    // When 1 parent breaks into N_child_droplets pieces, each piece is smaller
-    // Volume conservation: N_child_droplets × V_child_physical = V_parent_physical
-    // Therefore: R_child = R_parent × cbrt(1 / N_child_droplets)
+    // NOTE: Geometry() has already updated R_parent to conserve liquid mass
+    // during bubble growth, so R_parent already represents liquid-only radius
+    // We simply divide this among N_child_droplets
+    // Volume conservation: N_child_droplets × R_child³ = R_parent³
     CONVERGE_precision_t size_ratio = 1.0 / (CONVERGE_precision_t)N_child_droplets;
     CONVERGE_precision_t R_child = R_parent * cbrt(size_ratio);
     
@@ -154,14 +155,11 @@ void Breakup_Song(
                rad_vel, parent_vel_mag, child_vel_mag);
         
         // Verify volume conservation
-        // Each parcel represents N_parent drops, each with volume (4/3)πR³
-        // Parent: N_parent drops of radius R_parent
-        // Child: N_parent drops of radius R_child (smaller drops)
-        // Conservation check: N_child_droplets × R_child³ should equal R_parent³
-        CONVERGE_precision_t parent_vol_single = R_parent * R_parent * R_parent;
-        CONVERGE_precision_t child_vol_single = R_child * R_child * R_child;
-        CONVERGE_precision_t total_child_vol = N_child_droplets * child_vol_single;
-        CONVERGE_precision_t vol_error = fabs(total_child_vol - parent_vol_single) / parent_vol_single;
+        // Geometry has already set R_parent to liquid-only radius
+        // Check: N_child_droplets × R_child³ = R_parent³
+        CONVERGE_precision_t parent_vol = R_parent * R_parent * R_parent;
+        CONVERGE_precision_t total_child_vol = N_child_droplets * R_child * R_child * R_child;
+        CONVERGE_precision_t vol_error = fabs(total_child_vol - parent_vol) / (parent_vol + 1e-30);
         printf("[BREAKUP_SONG]   Volume conservation error: %.2e%%\n", vol_error * 100.0);
         
         song_breakup_logged++;

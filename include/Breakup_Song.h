@@ -12,8 +12,8 @@
 // ============================================================================
 // Performs breakup for Song et al. isothermal bubble growth model
 // - Randomly creates 2-5 child droplets (equal probability)
-// - Child radius: R_child = R_parent * cbrt(1 / N_child_droplets)
-// - Volume conservation: N_child_droplets × V_child = V_parent
+// - R_child = R_parent × cbrt(1 / N_child_droplets)
+// - Geometry() maintains liquid mass conservation during growth
 // - Updates parent parcel in-place (no new parcel creation)
 // - Calculates radial velocity from momentum balance
 // ============================================================================
