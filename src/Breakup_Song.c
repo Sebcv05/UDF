@@ -52,7 +52,8 @@ void Breakup_Song(
     CONVERGE_precision_t v_bubble = old_parcel_cloud->v_bubble[p_idx];
     
     // DIAGNOSTIC: Check if this parcel already broke up
-    if (old_parcel_cloud->is_child[p_idx] == 1 || old_parcel_cloud->pbt[p_idx] == 0) {
+    // NOTE: pbt=0 is set when triggering breakup, so check is_child and tbf instead
+    if (old_parcel_cloud->is_child[p_idx] == 1 || old_parcel_cloud->thermal_breakup_flag[p_idx] == 999) {
         static int double_breakup_count = 0;
         if (double_breakup_count < 10) {
             printf("[BREAKUP_SONG_ERROR] Called on already-broken parcel! p_idx=%li, is_child=%d, pbt=%d, tbf=%d\n",
