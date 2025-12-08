@@ -171,12 +171,15 @@ void Breakup_Song(
     old_parcel_cloud->uu[p_idx][1] = child_velocity[1];
     old_parcel_cloud->uu[p_idx][2] = child_velocity[2];
     
-    // Mark as child parcel
+    // Mark as child parcel and disable further thermal breakup
     old_parcel_cloud->is_child[p_idx] = 1;
+    old_parcel_cloud->pbt[p_idx] = 0;                        // Disable thermal breakup flag
+    old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;     // Mark as completed breakup
     
     // Reset bubble properties (bubble is destroyed during breakup)
     old_parcel_cloud->r_bubble[p_idx] = 0.0;
     old_parcel_cloud->v_bubble[p_idx] = 0.0;
+    old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
     
     // Update mass-related fields
     // m0 = (4/3) * π * R³ * num_drop (liquid mass only)
