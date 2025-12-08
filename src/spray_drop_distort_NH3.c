@@ -408,18 +408,23 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
       
          CONVERGE_precision_t P_sat_new;
-         Saturation_PressureNH3(old_parcel_cloud.temp[p_idx],&P_sat_new);
-         // old_parcel_cloud.r_bubble[p_idx]= 2.0 * old_parcel_cloud.surf_ten[p_idx] / (P_sat_new - global_pressure[node_index]);
-         if(old_parcel_cloud.r_bubble[p_idx]<0.0)     //not superheated anymore, deactivate thermal model for this parcel
+         Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
+         
+         // Superheat check: Parcel must be superheated to enter thermal breakup
+         // Condition: P_sat(T_drop) >= P_ambient
+         if (P_sat_new < P_amb)
          {
-            // FIX: Added diagnostic output
-            static int rbubble_neg_count = 0;
-            if (rbubble_neg_count < 10) {
-               printf("[THERMAL_ABORT] p_idx=%li, r_bubble<0 (subcooled), disabling thermal breakup (lifetime=%.3e s, Td=%.2f K)\n",
-                      p_idx, old_parcel_cloud.lifetime[p_idx], Td);
-               rbubble_neg_count++;
+            // Not superheated - disable thermal breakup for this parcel
+            static int not_superheated_count = 0;
+            if (not_superheated_count < 10) {
+               printf("[THERMAL_ABORT] p_idx=%li, not superheated: P_sat(T_drop)=%.3e < P_amb=%.3e Pa\n",
+                      p_idx, P_sat_new, P_amb);
+               printf("                T_drop=%.2f K, lifetime=%.3e s, disabling thermal breakup\n",
+                      old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
+               not_superheated_count++;
             }
-            reset_parcel_to_child(&old_parcel_cloud, p_idx, "r_bubble < 0");
+            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Not superheated");
+            continue;
          }
 
 
