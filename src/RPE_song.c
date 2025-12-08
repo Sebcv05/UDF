@@ -259,10 +259,14 @@ void RPE_song_solver(
     }
     
     // Check if bubble reached droplet edge
+    // Don't cap it - let epsilon calculation trigger breakup naturally
     if (R > 0.999 * Ro) {
-        R = 0.999 * Ro;
-        Rdot = 0.0;
-        printf("[SONG_EDGE] Bubble capped at droplet edge: R=%.3e m, Ro=%.3e m\n", R, Ro);
+        static int edge_approach_count = 0;
+        if (edge_approach_count < 5) {
+            printf("[SONG_EDGE] Bubble approaching droplet edge: R=%.3e m, Ro=%.3e m\n", R, Ro);
+            edge_approach_count++;
+        }
+        // Don't cap R or set Rdot=0 - let it continue and trigger breakup via epsilon check
     }
     
     // Update parcel state
