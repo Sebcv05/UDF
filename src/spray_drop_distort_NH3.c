@@ -457,9 +457,28 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             continue;  // Skip thermal breakup routine
          }
     
+     
+         // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
+         if (old_parcel_cloud.is_child[p_idx] == 1 && 
+             old_parcel_cloud.thermal_breakup_flag[p_idx] < 0 && 
+             old_parcel_cloud.pbt[p_idx] == 1) {
+            static int child_reentry_count = 0;
+            if (child_reentry_count < 10) {
+               printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, is_child=%d, pbt=%d, tbf=%d\n",
+                      p_idx, old_parcel_cloud.is_child[p_idx], 
+                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.thermal_breakup_flag[p_idx]);
+               printf("                         R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
+                      old_parcel_cloud.radius[p_idx], old_parcel_cloud.num_drop[p_idx],
+                      old_parcel_cloud.lifetime[p_idx]);
+               child_reentry_count++;
+            }
+         }
       
 
-         if (old_parcel_cloud.thermal_breakup_flag[p_idx] <0 && old_parcel_cloud.pbt[p_idx]==1)
+         // Entry condition for thermal breakup: must NOT be a child parcel
+         if (old_parcel_cloud.is_child[p_idx] == 0 &&
+             old_parcel_cloud.thermal_breakup_flag[p_idx] < 0 && 
+             old_parcel_cloud.pbt[p_idx] == 1)
          {
             
             // Continue with thermal breakup processing
