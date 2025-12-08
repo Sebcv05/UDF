@@ -154,16 +154,20 @@ void Breakup_Song(
         child_velocity[2] = 0.0;
     }
     
-    // Diagnostic logging for first few breakups
-    if (song_breakup_logged < SONG_BREAKUP_LOG_MAX) {
+    // Diagnostic logging for ALL breakups (increased from 10 to 50)
+    static int total_breakup_count = 0;
+    total_breakup_count++;
+    
+    if (song_breakup_logged < 50) {  // Increased logging
+        printf("\n[BREAKUP_SONG #%d] ==========================================\n", total_breakup_count);
         printf("[BREAKUP_SONG] p_idx=%li: N_child_droplets=%li, lifetime=%.3e s\n", 
                p_idx, N_child_droplets, old_parcel_cloud->lifetime[p_idx]);
-        printf("[BREAKUP_SONG]   Parent: R=%.3e m, N=%.3e drops\n", R_parent, N_parent);
-        printf("[BREAKUP_SONG]   Child:  R=%.3e m, N=%.3e drops/parcel\n", R_child, N_child);
+        printf("[BREAKUP_SONG]   BEFORE: R=%.6e m, num_drop=%.6e\n", R_parent, N_parent);
+        printf("[BREAKUP_SONG]   AFTER:  R=%.6e m, num_drop=%.6e\n", R_child, N_child);
         printf("[BREAKUP_SONG]   r_bubble=%.3e m, v_bubble=%.3e m/s\n", r_bubble, v_bubble);
         printf("[BREAKUP_SONG]   rad_vel=%.3e m/s, parent_vel=%.3e m/s, child_vel=%.3e m/s\n",
                rad_vel, parent_vel_mag, child_vel_mag);
-        printf("[BREAKUP_SONG]   pbt=%d, tbf=%d, is_child=%d\n",
+        printf("[BREAKUP_SONG]   FLAGS BEFORE: pbt=%d, tbf=%d, is_child=%d\n",
                old_parcel_cloud->pbt[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx],
                old_parcel_cloud->is_child[p_idx]);
         
@@ -173,6 +177,10 @@ void Breakup_Song(
         CONVERGE_precision_t vol_child = N_child * R_child * R_child * R_child;
         CONVERGE_precision_t vol_error = fabs(vol_child - vol_parent) / (vol_parent + 1e-30);
         printf("[BREAKUP_SONG]   Volume conservation error: %.2e%%\n", vol_error * 100.0);
+        
+        // Calculate reduction ratios
+        printf("[BREAKUP_SONG]   Radius ratio: %.4f (child/parent)\n", R_child/R_parent);
+        printf("[BREAKUP_SONG]   num_drop ratio: %.4f (child/parent)\n", N_child/N_parent);
         
         song_breakup_logged++;
     }
@@ -194,6 +202,14 @@ void Breakup_Song(
     old_parcel_cloud->pbt[p_idx] = 0;                        // Disable thermal breakup flag
     old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;     // Mark as completed breakup
     
+    // DIAGNOSTIC: Confirm flags were set
+    if (song_breakup_logged <= 50) {
+        printf("[BREAKUP_SONG]   FLAGS AFTER:  pbt=%d, tbf=%d, is_child=%d\n",
+               old_parcel_cloud->pbt[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx],
+               old_parcel_cloud->is_child[p_idx]);
+        printf("[BREAKUP_SONG] ==========================================\n\n");
+    }
+    
     // Reset bubble properties (bubble is destroyed during breakup)
     old_parcel_cloud->r_bubble[p_idx] = 0.0;
     old_parcel_cloud->v_bubble[p_idx] = 0.0;
@@ -202,6 +218,16 @@ void Breakup_Song(
     // Update mass-related fields
     // m0 = (4/3) * π * R³ * num_drop (liquid mass only)
     old_parcel_cloud->m0[p_idx] = (4.0/3.0) * PI * R_child * R_child * R_child * N_child;
+    
+    // DIAGNOSTIC: Final state summary
+    if (song_breakup_logged <= 50) {
+        CONVERGE_precision_t m0_parent = (4.0/3.0) * PI * R_parent * R_parent * R_parent * N_parent;
+        CONVERGE_precision_t m0_child = old_parcel_cloud->m0[p_idx];
+        printf("[BREAKUP_SONG] FINAL STATE: R=%.6e m, num_drop=%.6e, m0=%.6e\n", 
+               old_parcel_cloud->radius[p_idx], old_parcel_cloud->num_drop[p_idx], m0_child);
+        printf("[BREAKUP_SONG] m0 conservation: parent=%.6e, child=%.6e, error=%.2e%%\n\n",
+               m0_parent, m0_child, fabs(m0_child - m0_parent)/m0_parent * 100.0);
+    }
     
     // Optional: Update film_flag for diagnostic tracking (if not using film model)
     // old_parcel_cloud->film_flag[p_idx] = 1;  // Uncomment if needed for diagnostics

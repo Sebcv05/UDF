@@ -563,9 +563,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      break;
                   }
                   
-                  // Check if bubble growth stopped
-                  if(old_parcel_cloud.v_bubble[p_idx] < 1.0e-10) {
-                     reset_parcel_to_child(&old_parcel_cloud, p_idx, "Song: v_bubble too small");
+                  // Check if bubble growth stopped ONLY if bubble is still small
+                  // If epsilon > 0.4, we're close to breakup, so allow v_bubble = 0
+                  if(old_parcel_cloud.v_bubble[p_idx] < 1.0e-10 && epsilon < 0.4) {
+                     static int song_abort_count = 0;
+                     if (song_abort_count < 10) {
+                        printf("[SONG_ABORT] v_bubble too small with small bubble: v=%.3e, epsilon=%.4f\n",
+                               old_parcel_cloud.v_bubble[p_idx], epsilon);
+                        song_abort_count++;
+                     }
+                     reset_parcel_to_child(&old_parcel_cloud, p_idx, "Song: v_bubble too small (epsilon < 0.4)");
                      break;
                   }
                   
