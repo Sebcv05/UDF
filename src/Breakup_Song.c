@@ -71,6 +71,20 @@ void Breakup_Song(
         return;
     }
     
+    // CRITICAL CHECK: Prevent breakup of already-small parcels
+    if (R_parent < 5e-6) {
+        static int tiny_parent_count = 0;
+        if (tiny_parent_count < 20) {
+            printf("[BREAKUP_SONG_ABORT] Parent too small! R_parent=%.6e m (< 5 µm)\n", R_parent);
+            printf("                      This indicates multiple breakups occurred!\n");
+            printf("                      p_idx=%li, is_child=%d, pbt=%d, tbf=%d, lifetime=%.3e s\n",
+                   p_idx, old_parcel_cloud->is_child[p_idx], old_parcel_cloud->pbt[p_idx],
+                   old_parcel_cloud->thermal_breakup_flag[p_idx], old_parcel_cloud->lifetime[p_idx]);
+            tiny_parent_count++;
+        }
+        // Still allow breakup for now, but this is a bug indicator
+    }
+    
     // Randomly select number of child droplets: 2, 3, 4, or 5 (equal probability)
     CONVERGE_precision_t rand_val = CONVERGE_random_precision();
     CONVERGE_index_t N_child_droplets;
