@@ -543,6 +543,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   CONVERGE_precision_t R_drop = old_parcel_cloud.radius[p_idx];  // Current droplet radius
                   CONVERGE_precision_t epsilon = (R_bubble*R_bubble*R_bubble) / (R_drop*R_drop*R_drop);
                   
+                  // DIAGNOSTIC: Check if we're stuck at edge without breaking up
+                  static int edge_check_count = 0;
+                  if (R_bubble > 0.99 * R_drop && edge_check_count < 10) {
+                     printf("[SONG_EDGE_DEBUG] p_idx=%li, R_bubble=%.6e, R_drop=%.6e, epsilon=%.6f\n",
+                            p_idx, R_bubble, R_drop, epsilon);
+                     printf("                   v_bubble=%.3e, R_drop_0=%.6e, tbf=%d, tbt=%d\n",
+                            old_parcel_cloud.v_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
+                            old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.tbt[p_idx]);
+                     edge_check_count++;
+                  }
+                  
                   // Check for void fraction breakup criterion
                   if (epsilon >= 0.55) {
                      static int song_breakup_count = 0;
