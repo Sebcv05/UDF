@@ -214,6 +214,7 @@ void Breakup_Song(
     // Mark as child parcel and disable further thermal breakup
     old_parcel_cloud->is_child[p_idx] = 1;
     old_parcel_cloud->pbt[p_idx] = 0;                        // Disable thermal breakup flag
+    old_parcel_cloud->tbt[p_idx] = 0;                        // CRITICAL: Reset breakup trigger!
     old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;     // Mark as completed breakup
     
     // DIAGNOSTIC: Confirm flags were set
