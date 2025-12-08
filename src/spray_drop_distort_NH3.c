@@ -480,6 +480,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
              old_parcel_cloud.thermal_breakup_flag[p_idx] < 0 && 
              old_parcel_cloud.pbt[p_idx] == 1)
          {
+            static int thermal_entry_count = 0;
+            thermal_entry_count++;
+            if (thermal_entry_count <= 20) {
+               printf("[THERMAL_ENTRY #%d] p_idx=%li entering thermal breakup loop\n", 
+                      thermal_entry_count, p_idx);
+               printf("                    T_drop=%.2f K, lifetime=%.3e s, R=%.3e m\n",
+                      old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx], 
+                      old_parcel_cloud.radius[p_idx]);
+            }
             
             // Continue with thermal breakup processing
             // Note: 2x expansion check is inside sub-timestep loop after Geometry() call
@@ -600,10 +609,27 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      if (song_abort_count < 10) {
                         printf("[SONG_ABORT] v_bubble too small with small bubble: v=%.3e, epsilon=%.4f\n",
                                old_parcel_cloud.v_bubble[p_idx], epsilon);
+                        printf("              p_idx=%li, R_bubble=%.3e, R_drop=%.3e, lifetime=%.3e s\n",
+                               p_idx, old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.radius[p_idx],
+                               old_parcel_cloud.lifetime[p_idx]);
+                        printf("              T_drop=%.2f K, P_amb=%.3e Pa\n",
+                               old_parcel_cloud.temp[p_idx], P_amb);
                         song_abort_count++;
                      }
                      reset_parcel_to_child(&old_parcel_cloud, p_idx, "Song: v_bubble too small (epsilon < 0.4)");
                      break;
+                  }
+                  
+                  // DIAGNOSTIC: Track parcels that are stuck with medium epsilon
+                  static int stuck_parcel_count = 0;
+                  if (epsilon > 0.3 && epsilon < 0.5 && old_parcel_cloud.v_bubble[p_idx] < 1.0e-8 && 
+                      stuck_parcel_count < 10) {
+                     printf("[SONG_STUCK] Parcel stuck at epsilon=%.4f, v_bubble=%.3e\n", 
+                            epsilon, old_parcel_cloud.v_bubble[p_idx]);
+                     printf("             p_idx=%li, R_bubble=%.3e, R_drop=%.3e, lifetime=%.3e s\n",
+                            p_idx, old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.radius[p_idx],
+                            old_parcel_cloud.lifetime[p_idx]);
+                     stuck_parcel_count++;
                   }
                   
                   // Skip DGRE/kb logic for Song model (Geometry already called above)
