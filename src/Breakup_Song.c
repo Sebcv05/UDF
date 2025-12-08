@@ -51,6 +51,20 @@ void Breakup_Song(
     CONVERGE_precision_t r_bubble = old_parcel_cloud->r_bubble[p_idx];
     CONVERGE_precision_t v_bubble = old_parcel_cloud->v_bubble[p_idx];
     
+    // DIAGNOSTIC: Check if this parcel already broke up
+    if (old_parcel_cloud->is_child[p_idx] == 1 || old_parcel_cloud->pbt[p_idx] == 0) {
+        static int double_breakup_count = 0;
+        if (double_breakup_count < 10) {
+            printf("[BREAKUP_SONG_ERROR] Called on already-broken parcel! p_idx=%li, is_child=%d, pbt=%d, tbf=%d\n",
+                   p_idx, old_parcel_cloud->is_child[p_idx], old_parcel_cloud->pbt[p_idx],
+                   old_parcel_cloud->thermal_breakup_flag[p_idx]);
+            printf("                      R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
+                   R_parent, N_parent, old_parcel_cloud->lifetime[p_idx]);
+            double_breakup_count++;
+        }
+        // Still proceed with breakup but this indicates a logic error
+    }
+    
     // Safety checks
     if (R_parent < 1e-12 || N_parent < 1e-6) {
         printf("[BREAKUP_SONG_ERROR] Invalid parent: R=%.3e m, N=%.3e\n", R_parent, N_parent);
@@ -142,12 +156,16 @@ void Breakup_Song(
     
     // Diagnostic logging for first few breakups
     if (song_breakup_logged < SONG_BREAKUP_LOG_MAX) {
-        printf("[BREAKUP_SONG] p_idx=%li: N_child_droplets=%li\n", p_idx, N_child_droplets);
+        printf("[BREAKUP_SONG] p_idx=%li: N_child_droplets=%li, lifetime=%.3e s\n", 
+               p_idx, N_child_droplets, old_parcel_cloud->lifetime[p_idx]);
         printf("[BREAKUP_SONG]   Parent: R=%.3e m, N=%.3e drops\n", R_parent, N_parent);
         printf("[BREAKUP_SONG]   Child:  R=%.3e m, N=%.3e drops/parcel\n", R_child, N_child);
         printf("[BREAKUP_SONG]   r_bubble=%.3e m, v_bubble=%.3e m/s\n", r_bubble, v_bubble);
         printf("[BREAKUP_SONG]   rad_vel=%.3e m/s, parent_vel=%.3e m/s, child_vel=%.3e m/s\n",
                rad_vel, parent_vel_mag, child_vel_mag);
+        printf("[BREAKUP_SONG]   pbt=%d, tbf=%d, is_child=%d\n",
+               old_parcel_cloud->pbt[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx],
+               old_parcel_cloud->is_child[p_idx]);
         
         // Verify volume conservation
         // Volume balance: num_drop_parent × R_parent³ = num_drop_child × R_child³
