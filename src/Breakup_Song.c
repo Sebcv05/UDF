@@ -124,7 +124,8 @@ void Breakup_Song(
     
     // Get droplet temperature and calculate saturation pressure
     CONVERGE_precision_t T_drop = old_parcel_cloud->temp[p_idx];
-    CONVERGE_precision_t P_sat = PsatNH3(T_drop);
+    CONVERGE_precision_t P_sat;
+    Saturation_PressureNH3(T_drop, &P_sat);
     
     // Get material properties from parcel cloud
     CONVERGE_precision_t sigma = old_parcel_cloud->surf_ten[p_idx];        // Surface tension
