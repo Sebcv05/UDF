@@ -28,7 +28,7 @@ CONVERGE_OUTPUT(write_parcel_data,
    }
    
    // Write header
-   fprintf(fp, "time,parcel_id,cell_id,x,y,z,radius,temp,velocity_mag,num_drop,is_child,r_bubble,pbt,from_injector\n");
+   fprintf(fp, "time,parcel_id,cell_id,x,y,z,radius,temp,velocity_mag,num_drop,is_child,r_bubble,pbt,breakup_phase,from_injector\n");
    
    // Get spray cloud list
    CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
@@ -62,7 +62,7 @@ CONVERGE_OUTPUT(write_parcel_data,
             parcel_cloud.uu[p_idx][2] * parcel_cloud.uu[p_idx][2]
          );
          
-         fprintf(fp, "%.6e,%d,%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.0f,%d,%.6e,%d,%d\n",
+         fprintf(fp, "%.6e,%d,%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.6e,%.0f,%d,%.6e,%d,%d,%d\n",
             sim_time,
             parcel_count,
             node_index,
@@ -73,9 +73,10 @@ CONVERGE_OUTPUT(write_parcel_data,
             parcel_cloud.temp[p_idx],
             vel_mag,
             parcel_cloud.num_drop[p_idx],
-            parcel_cloud.is_child[p_idx],
+            (parcel_cloud.breakup_phase[p_idx] == 5) ? 1 : 0,  // is_child (legacy)
             parcel_cloud.r_bubble[p_idx],
-            parcel_cloud.pbt[p_idx],
+            (parcel_cloud.breakup_phase[p_idx] >= 1 && parcel_cloud.breakup_phase[p_idx] <= 4) ? 1 : 0,  // pbt (legacy)
+            parcel_cloud.breakup_phase[p_idx],  // New field
             parcel_cloud.from_injector[p_idx]
          );
          

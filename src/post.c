@@ -112,9 +112,9 @@ CONVERGE_POST(user_is_child, IN(VALUE(CONVERGE_mesh_t, mesh)))
       
       CONVERGE_index_t num_parcels = CONVERGE_cloud_size(cloud);
       
-      // Store first parcel's is_child flag
+      // Store first parcel's breakup phase (convert to is_child: 1 if phase==5, else 0)
       if(num_parcels > 0) {
-         user_is_child[node_index] = (CONVERGE_precision_t)parcel_cloud.is_child[0];
+         user_is_child[node_index] = (parcel_cloud.breakup_phase[0] == 5) ? 1.0 : 0.0;
       }
    }
    
@@ -187,8 +187,10 @@ CONVERGE_POST(user_pbt, IN(VALUE(CONVERGE_mesh_t, mesh)))
       
       CONVERGE_index_t num_parcels = CONVERGE_cloud_size(cloud);
       
+      // Store first parcel's breakup phase (in thermal breakup if phase 1-4)
       if(num_parcels > 0) {
-         user_pbt[node_index] = (CONVERGE_precision_t)parcel_cloud.pbt[0];
+         user_pbt[node_index] = (parcel_cloud.breakup_phase[0] >= 1 && 
+                                  parcel_cloud.breakup_phase[0] <= 4) ? 1.0 : 0.0;
       }
    }
    
