@@ -19,7 +19,8 @@
 // ============================================================================
 void Breakup_Song(
     struct ParcelCloud* old_parcel_cloud,
-    CONVERGE_index_t p_idx
+    CONVERGE_index_t p_idx,
+    CONVERGE_precision_t P_amb
 );
 
 #endif // BREAKUP_SONG_H

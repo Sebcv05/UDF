@@ -41,7 +41,8 @@ static int song_breakup_logged = 0;
 // ============================================================================
 void Breakup_Song(
     struct ParcelCloud* old_parcel_cloud,
-    CONVERGE_index_t p_idx
+    CONVERGE_index_t p_idx,
+    CONVERGE_precision_t P_amb
 ) {
     static int breakup_count = 0;
     
@@ -120,10 +121,6 @@ void Breakup_Song(
     // ========================================================================
     // ENERGY-BASED VELOCITY CALCULATION (Song et al. model)
     // ========================================================================
-    
-    // Get ambient pressure from gas phase (read from node where parcel resides)
-    CONVERGE_index_t node_index = old_parcel_cloud->node_index[p_idx];
-    CONVERGE_precision_t P_amb = global_pressure[node_index];
     
     // Get droplet temperature and calculate saturation pressure
     CONVERGE_precision_t T_drop = old_parcel_cloud->temp[p_idx];

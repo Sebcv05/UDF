@@ -909,7 +909,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                
                // Use Song breakup model if Song RPE solver is active
                if (use_song_rpe) {
-                  Breakup_Song(&old_parcel_cloud, p_idx);
+                  Breakup_Song(&old_parcel_cloud, p_idx, P_amb);
                } else {
                   Breakup(&old_parcel_cloud, p_idx, cloud);
                }
