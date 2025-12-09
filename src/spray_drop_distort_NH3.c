@@ -308,10 +308,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       
       // DIAGNOSTIC: Check radius at very start of loop
       static int radius_diag_count = 0;
-      if (radius_diag_count < 5 && old_parcel_cloud.is_child[p_idx] == 0) {
-         printf("[DISTORT_START] p_idx=%d, radius=%.6e m, lifetime=%.6e s, Td=%.2f K, is_child=%d\n",
+      if (radius_diag_count < 5 && old_parcel_cloud.breakup_phase[p_idx] < 5) {  // Is a parent
+         printf("[DISTORT_START] p_idx=%d, radius=%.6e m, lifetime=%.6e s, Td=%.2f K, breakup_phase=%d\n",
                 p_idx, old_parcel_cloud.radius[p_idx], old_parcel_cloud.lifetime[p_idx], 
-                Td, old_parcel_cloud.is_child[p_idx]);
+                Td, old_parcel_cloud.breakup_phase[p_idx]);
          radius_diag_count++;
       }
       
@@ -364,7 +364,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                  Td,
                  Pb_track,
                  P_amb,
-                 old_parcel_cloud.thermal_breakup_flag[p_idx],
+                 old_parcel_cloud.breakup_phase[p_idx],
                  -1.0);  // kb not yet calculated
          fflush(parcel_track_file);
       }
@@ -609,9 +609,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   if (R_bubble > 0.99 * R_drop && edge_check_count < 10) {
                      printf("[SONG_EDGE_DEBUG] p_idx=%li, R_bubble=%.6e, R_drop=%.6e, epsilon=%.6f\n",
                             p_idx, R_bubble, R_drop, epsilon);
-                     printf("                   v_bubble=%.3e, R_drop_0=%.6e, tbf=%d, tbt=%d\n",
+                     printf("                   v_bubble=%.3e, R_drop_0=%.6e, breakup_phase=%d\n",
                             old_parcel_cloud.v_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
-                            old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.tbt[p_idx]);
+                            old_parcel_cloud.breakup_phase[p_idx]);
                      edge_check_count++;
                   }
                   
@@ -703,7 +703,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             if (Rb < 0.0)
             {
                Rb = 0.0;
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+               old_parcel_cloud.breakup_phase[p_idx] = 5;  // Error: abort after marking as child
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                printf("Rb negative after RPE solver\n");
                CONVERGE_mpi_abort();
@@ -711,8 +711,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             
             if (Rb > old_parcel_cloud.radius[p_idx])
                {
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;
-                  old_parcel_cloud.tbt[p_idx]=1;
+                  old_parcel_cloud.breakup_phase[p_idx] = 4;  // Bubble exceeded droplet - READY to break
                   old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
                   break;
                }
@@ -752,10 +751,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                   old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save);
                           fprintf(bubble_log, "%.6f,%.6e,%.6e,%.6f,%.6e,",
                                   Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
-                          fprintf(bubble_log, "%.6e,%.6e,%d,%d,%d\n",
+                          fprintf(bubble_log, "%.6e,%.6e,%d\n",
                                   old_parcel_cloud.density[p_idx], sigma,
-                                  old_parcel_cloud.film_flag[p_idx], old_parcel_cloud.pbt[p_idx],
-                                  old_parcel_cloud.thermal_breakup_flag[p_idx]);
+                                  old_parcel_cloud.breakup_phase[p_idx]);
                           fflush(bubble_log);
                           
                           printf("BUBBLE_SHRINK: t=%.6e, p_idx=%d, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
@@ -879,8 +877,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             if (kb > kb_threshold)
             {
                // printf("\n Breakup happening due to kb > 1.0, kb = %e, rb = %e, r_drop = %e, vb = %e\n",kb,Rb,old_parcel_cloud.radius[p_idx],old_parcel_cloud.v_bubble[p_idx]);
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
-               old_parcel_cloud.tbt[p_idx] = 1;
+               old_parcel_cloud.breakup_phase[p_idx] = 4;  // Breakup criterion met - READY
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                old_parcel_cloud.eta_drop[p_idx] = kb;  // Store final kb value for diagnostic
                break;
@@ -905,30 +902,25 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          else
          {
             // FIX: Large parent parcels that did NOT enter thermal breakup
-            // Catch parcels with is_child=0, large radius, but not in thermal breakup routine
-            if (old_parcel_cloud.is_child[p_idx] == 0 && old_parcel_cloud.radius[p_idx] > 70e-6) {
+            // Catch parcels that are parents (phase < 5), large radius, but didn't enter thermal
+            if (old_parcel_cloud.breakup_phase[p_idx] < 5 && old_parcel_cloud.radius[p_idx] > 70e-6) {
                static int stuck_count = 0;
                if (stuck_count < 20) {
-                  printf("[STUCK_NO_THERMAL] p_idx=%d, r=%.2e m, pbt=%d, tbt=%d, tbf=%d, T=%.2f K, lifetime=%.2e s\n",
+                  printf("[STUCK_NO_THERMAL] p_idx=%d, r=%.2e m, breakup_phase=%d, T=%.2f K, lifetime=%.2e s\n",
                          p_idx, old_parcel_cloud.radius[p_idx],
-                         old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
-                         old_parcel_cloud.thermal_breakup_flag[p_idx], Td, old_parcel_cloud.lifetime[p_idx]);
-                  printf("              Reason: Did not enter thermal breakup (tbf=%d, pbt=%d)\n",
-                         old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.pbt[p_idx]);
+                         old_parcel_cloud.breakup_phase[p_idx], Td, old_parcel_cloud.lifetime[p_idx]);
+                  printf("              Reason: Did not enter thermal breakup (breakup_phase=%d)\n",
+                         old_parcel_cloud.breakup_phase[p_idx]);
                   stuck_count++;
                }
                // Convert to child
-               old_parcel_cloud.is_child[p_idx] = 1;
-               old_parcel_cloud.film_flag[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
-               old_parcel_cloud.pbt[p_idx] = 0;
-               old_parcel_cloud.tbt[p_idx] = 0;
+               reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck: never entered thermal");
             }
          }
          //********************** BREAKUP ROUTINE ***************************************//
          // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
          post_pbr = CONVERGE_mpi_wtime();
-         if (old_parcel_cloud.tbt[p_idx] && old_parcel_cloud.thermal_breakup_flag[p_idx]!=4)
+         if (old_parcel_cloud.breakup_phase[p_idx] == 4)  // READY to break
          {
               breakups_this_call++;  // Count breakup event
               
@@ -954,7 +946,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   // Recalculate kb if not already stored
                   kb_final = BreakupCriterion(&old_parcel_cloud, p_idx, dt);
               }
-              CONVERGE_int_t breakup_flag = old_parcel_cloud.thermal_breakup_flag[p_idx];
+              CONVERGE_int_t breakup_flag = old_parcel_cloud.breakup_phase[p_idx];
               
               // printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
               //        p_idx,
