@@ -61,15 +61,15 @@ void Breakup_Song(
     CONVERGE_precision_t r_bubble = old_parcel_cloud->r_bubble[p_idx];
     CONVERGE_precision_t v_bubble = old_parcel_cloud->v_bubble[p_idx];
     
-    // DIAGNOSTIC: Check if this parcel already broke up
-    if (old_parcel_cloud->breakup_phase[p_idx] == 5) {
-        static int double_breakup_count = 0;
-        if (double_breakup_count < 10) {
-            printf("[BREAKUP_SONG_ERROR] Called on already-broken parcel! p_idx=%li, breakup_phase=%d\n",
+    // DIAGNOSTIC: Check if parcel is in correct state for breakup (must be READY = 4)
+    if (old_parcel_cloud->breakup_phase[p_idx] != 4) {
+        static int wrong_phase_count = 0;
+        if (wrong_phase_count < 5) {
+            printf("[BREAKUP_SONG_ERROR] Called on parcel NOT in READY state! p_idx=%li, breakup_phase=%d\n",
                    p_idx, old_parcel_cloud->breakup_phase[p_idx]);
             printf("                      R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
                    R_parent, N_parent, old_parcel_cloud->lifetime[p_idx]);
-            double_breakup_count++;
+            wrong_phase_count++;
         }
         // Still proceed with breakup but this indicates a logic error
     }

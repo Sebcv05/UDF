@@ -384,8 +384,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\nBreakup.c: child_uu at p_idx %ld is NULL\n", p_idx);
         CONVERGE_mpi_abort();
     }
-    if(old_parcel_cloud->breakup_phase[p_idx] == 5){
-    printf("\n ERROR, breakup routine being triggered on child parcel (breakup_phase = 5), phase = %i",old_parcel_cloud->breakup_phase[p_idx]);
+    if(old_parcel_cloud->breakup_phase[p_idx] != 4){
+    printf("\n ERROR, breakup routine being triggered on parcel NOT in READY state, breakup_phase = %i",old_parcel_cloud->breakup_phase[p_idx]);
     CONVERGE_mpi_abort();
 }
  CONVERGE_precision_t   old_r = old_parcel_cloud->radius[p_idx];
