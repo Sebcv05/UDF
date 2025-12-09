@@ -323,17 +323,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       CONVERGE_precision_t r = old_parcel_cloud.radius[p_idx];
       
       if (r > 80.0e-6 && dist > 0.010) {
-         CONVERGE_precision_t vx = old_parcel_cloud.uu[p_idx][0];
-         CONVERGE_precision_t vy = old_parcel_cloud.uu[p_idx][1];
-         CONVERGE_precision_t vz = old_parcel_cloud.uu[p_idx][2];
-         CONVERGE_precision_t vmag = sqrt(vx*vx + vy*vy + vz*vz);
-         CONVERGE_precision_t Weber = 610.0 * vmag * vmag * (2.0*r) / 0.0214;
+         CONVERGE_precision_t time_since_injection = CONVERGE_simulation_time_sec() - old_parcel_cloud.time_of_injection[p_idx];
+         CONVERGE_precision_t lifetime = old_parcel_cloud.lifetime[p_idx];
+         int phase = old_parcel_cloud.breakup_phase[p_idx];
          
-         printf("ROGUE_PARCEL,%.6e,%d,%.6f,%.6f,%.3f,%.3e,%.3f,%.3f,%.3f,%.3f,%d,%d\n",
-                CONVERGE_simulation_time_sec(), p_idx, 
-                dist*1000.0, r*1e6, Td, old_parcel_cloud.num_drop[p_idx],
-                x*1000.0, y*1000.0, z*1000.0, vmag,
-                old_parcel_cloud.film_flag[p_idx], (int)Weber);
+         printf("ROGUE_PARCEL:  phase=%d  t_inj=%.3e  lifetime=%.3e  R=%.3e  T=%.3e\n",
+                phase, time_since_injection, lifetime, r, Td);
       }
       
       // Initialize single parcel tracking
