@@ -673,7 +673,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          {
             printf("Error opening the file %s", filename1);
          }
-         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, parcel_cloud.is_child[0], sim_time, parcel_cloud.time_of_injection[0]);
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] == 5) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
          fclose(fp1);
          // ******************************************************************************************************//
       }
@@ -736,13 +736,13 @@ CONVERGE_precision_t user_radius = 0.0;
 
          if(parcel_cloud.temp[i_pc] > parcel_cloud.temp_drop_0[i_pc] + 2.0 || parcel_cloud.temp_tm1[i_pc] > parcel_cloud.temp_drop_0[i_pc] + 2.0)
          {
-            printf("spray_evap: temp=%.3f temp_tm1=%.3f temp_drop_0+2K=%.3f radius=%.3e num_drop=%lld is_child=%d lifetime=%.3e\n",
+            printf("spray_evap: temp=%.3f temp_tm1=%.3f temp_drop_0+2K=%.3f radius=%.3e num_drop=%lld breakup_phase=%d lifetime=%.3e\n",
                    parcel_cloud.temp[i_pc],
                    parcel_cloud.temp_tm1[i_pc],
                    parcel_cloud.temp_drop_0[i_pc] + 2.0,
                    parcel_cloud.radius[i_pc],
                    (long long)parcel_cloud.num_drop[i_pc],
-                   (int)parcel_cloud.is_child[i_pc],
+                   (int)parcel_cloud.breakup_phase[i_pc],
                    parcel_cloud.lifetime[i_pc]);
          }
 
@@ -978,8 +978,8 @@ CONVERGE_precision_t user_radius = 0.0;
                                temp1, vapor_pres, global_pressure[node_index]);
                         printf("  radius=%.3e m, drdt_prev=%.3e m/s\n", 
                                parcel_cloud.radius[i_pc], drdt_prev);
-                        printf("  is_child=%d, lifetime=%.3e s\n", 
-                               parcel_cloud.is_child[i_pc], parcel_cloud.lifetime[i_pc]);
+                        printf("  breakup_phase=%d, lifetime=%.3e s\n", 
+                               parcel_cloud.breakup_phase[i_pc], parcel_cloud.lifetime[i_pc]);
                         printf("  isnan(temp1)=%d, isinf(temp1)=%d, isnan(drdt)=%d, isinf(drdt)=%d\n",
                                isnan(temp1), isinf(temp1), isnan(drdt_prev), isinf(drdt_prev));
                      }
@@ -1435,7 +1435,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   last_temp_clamp_warn_cycle = current_cycle;
                   CONVERGE_logger_warn(
                      "spray_evap.c: Temperature clamp applied for parcel %ld (cloud %ld) at ncyc %ld. "
-                     "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f, temp = %.2f K, temp_tm1 = %.2f K, radius = %.2e, is_child = %d",
+                     "DeltaT request=%.2f -> %.2f K, clamp_ratio=%.3f, temp = %.2f K, temp_tm1 = %.2f K, radius = %.2e, breakup_phase = %d",
                      i_pc,
                      parcel_cloud.cloud_index[i_pc],
                      current_cycle,
@@ -1445,7 +1445,7 @@ CONVERGE_precision_t user_radius = 0.0;
                      parcel_cloud.temp[i_pc],
                      parcel_cloud.temp_tm1[i_pc],
                      parcel_cloud.radius[i_pc],
-                     parcel_cloud.is_child[i_pc]);
+                     parcel_cloud.breakup_phase[i_pc]);
                }
 
                CONVERGE_precision_t *local_mfrac =
@@ -1932,8 +1932,8 @@ CONVERGE_precision_t user_radius = 0.0;
       if (radius_new[i_pc] < 1.0e-18) {
          static int clamp_count = 0;
          if (clamp_count < 5) {
-            printf("[EVAP_CLAMP] p_idx=%ld, radius_new=%.3e < 1e-18, clamping to 1e-18, is_child=%d\n",
-                   i_pc, radius_new[i_pc], parcel_cloud.is_child[i_pc]);
+            printf("[EVAP_CLAMP] p_idx=%ld, radius_new=%.3e < 1e-18, clamping to 1e-18, breakup_phase=%d\n",
+                   i_pc, radius_new[i_pc], parcel_cloud.breakup_phase[i_pc]);
             clamp_count++;
          }
          radius_new[i_pc] = 1.0e-18;
