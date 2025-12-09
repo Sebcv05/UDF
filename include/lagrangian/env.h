@@ -30,6 +30,7 @@ CONVERGE_id_t CLOUD_INDEX;             // Cloud Index
 CONVERGE_id_t THERMAL_BREAKUP_FLAG;		//Flag to indicate that thermal breakup has taken place
 CONVERGE_id_t TBT;
 CONVERGE_id_t IS_CHILD;
+CONVERGE_id_t BREAKUP_PHASE;			//Single flag: 0=disabled, 1=eligible, 2=active, 3=recovery, 4=ready, 5=complete(child)
 CONVERGE_id_t TIME_OF_INJECTION;
 CONVERGE_id_t PBT;
 CONVERGE_id_t CHILD_INDEX;
@@ -371,6 +372,7 @@ struct ParcelCloud
    CONVERGE_int_t* dgre_cycle_count;
    CONVERGE_int_t* tbt;
    CONVERGE_int_t* pbt;
+   CONVERGE_int_t* breakup_phase;		// 0=disabled, 1=eligible, 2=active, 3=recovery, 4=ready, 5=complete(child)
    CONVERGE_int_t* child_index;
    CONVERGE_int_t* is_child;
    CONVERGE_precision_t* time_of_injection;
