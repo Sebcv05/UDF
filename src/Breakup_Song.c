@@ -4,6 +4,16 @@
 // Modifies parent parcel in-place (no new parcel creation)
 // Based on Song et al. paper breakup methodology
 
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <user_header.h>
 #include <CONVERGE/udf.h>
@@ -52,13 +62,11 @@ void Breakup_Song(
     CONVERGE_precision_t v_bubble = old_parcel_cloud->v_bubble[p_idx];
     
     // DIAGNOSTIC: Check if this parcel already broke up
-    // NOTE: pbt=0 is set when triggering breakup, so check is_child and tbf instead
-    if (old_parcel_cloud->is_child[p_idx] == 1 || old_parcel_cloud->thermal_breakup_flag[p_idx] == 999) {
+    if (old_parcel_cloud->breakup_phase[p_idx] == 5) {
         static int double_breakup_count = 0;
         if (double_breakup_count < 10) {
-            printf("[BREAKUP_SONG_ERROR] Called on already-broken parcel! p_idx=%li, is_child=%d, pbt=%d, tbf=%d\n",
-                   p_idx, old_parcel_cloud->is_child[p_idx], old_parcel_cloud->pbt[p_idx],
-                   old_parcel_cloud->thermal_breakup_flag[p_idx]);
+            printf("[BREAKUP_SONG_ERROR] Called on already-broken parcel! p_idx=%li, breakup_phase=%d\n",
+                   p_idx, old_parcel_cloud->breakup_phase[p_idx]);
             printf("                      R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
                    R_parent, N_parent, old_parcel_cloud->lifetime[p_idx]);
             double_breakup_count++;
@@ -78,9 +86,8 @@ void Breakup_Song(
         if (tiny_parent_count < 20) {
             printf("[BREAKUP_SONG_ABORT] Parent too small! R_parent=%.6e m (< 5 µm)\n", R_parent);
             printf("                      This indicates multiple breakups occurred!\n");
-            printf("                      p_idx=%li, is_child=%d, pbt=%d, tbf=%d, lifetime=%.3e s\n",
-                   p_idx, old_parcel_cloud->is_child[p_idx], old_parcel_cloud->pbt[p_idx],
-                   old_parcel_cloud->thermal_breakup_flag[p_idx], old_parcel_cloud->lifetime[p_idx]);
+            printf("                      p_idx=%li, breakup_phase=%d, lifetime=%.3e s\n",
+                   p_idx, old_parcel_cloud->breakup_phase[p_idx], old_parcel_cloud->lifetime[p_idx]);
             tiny_parent_count++;
         }
         // Still allow breakup for now, but this is a bug indicator
@@ -182,9 +189,8 @@ void Breakup_Song(
         printf("[BREAKUP_SONG]   r_bubble=%.3e m, v_bubble=%.3e m/s\n", r_bubble, v_bubble);
         printf("[BREAKUP_SONG]   rad_vel=%.3e m/s, parent_vel=%.3e m/s, child_vel=%.3e m/s\n",
                rad_vel, parent_vel_mag, child_vel_mag);
-        printf("[BREAKUP_SONG]   FLAGS BEFORE: pbt=%d, tbf=%d, is_child=%d\n",
-               old_parcel_cloud->pbt[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx],
-               old_parcel_cloud->is_child[p_idx]);
+        printf("[BREAKUP_SONG]   FLAGS BEFORE: breakup_phase=%d\n",
+               old_parcel_cloud->breakup_phase[p_idx]);
         
         // Verify volume conservation
         // Volume balance: num_drop_parent × R_parent³ = num_drop_child × R_child³
@@ -212,17 +218,15 @@ void Breakup_Song(
     old_parcel_cloud->uu[p_idx][1] = child_velocity[1];
     old_parcel_cloud->uu[p_idx][2] = child_velocity[2];
     
-    // Mark as child parcel and disable further thermal breakup
-    old_parcel_cloud->is_child[p_idx] = 1;
-    old_parcel_cloud->pbt[p_idx] = 0;                        // Disable thermal breakup flag
-    old_parcel_cloud->tbt[p_idx] = 0;                        // CRITICAL: Reset breakup trigger!
-    old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;     // Mark as completed breakup
+    // Mark as child parcel (phase 5) and reset bubble
+    old_parcel_cloud->breakup_phase[p_idx] = 5;  // COMPLETE (child)
+    old_parcel_cloud->r_bubble[p_idx] = 0.0;
+    old_parcel_cloud->v_bubble[p_idx] = 0.0;
     
-    // DIAGNOSTIC: Confirm flags were set
+    // DIAGNOSTIC: Confirm phase was set
     if (song_breakup_logged <= 50) {
-        printf("[BREAKUP_SONG]   FLAGS AFTER:  pbt=%d, tbf=%d, is_child=%d\n",
-               old_parcel_cloud->pbt[p_idx], old_parcel_cloud->thermal_breakup_flag[p_idx],
-               old_parcel_cloud->is_child[p_idx]);
+        printf("[BREAKUP_SONG]   FLAGS AFTER:  breakup_phase=%d\n",
+               old_parcel_cloud->breakup_phase[p_idx]);
         printf("[BREAKUP_SONG] ==========================================\n\n");
     }
     

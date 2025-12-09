@@ -1,5 +1,15 @@
 // Breakup.c
 
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <user_header.h>
 #include <CONVERGE/udf.h>
@@ -374,8 +384,8 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\nBreakup.c: child_uu at p_idx %ld is NULL\n", p_idx);
         CONVERGE_mpi_abort();
     }
-    if(old_parcel_cloud->thermal_breakup_flag[p_idx]==4){
-    printf("\n ERROR, breakup routine being triggered on parcel with tbf = 4, tbf = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
+    if(old_parcel_cloud->breakup_phase[p_idx] == 5){
+    printf("\n ERROR, breakup routine being triggered on child parcel (breakup_phase = 5), phase = %i",old_parcel_cloud->breakup_phase[p_idx]);
     CONVERGE_mpi_abort();
 }
  CONVERGE_precision_t   old_r = old_parcel_cloud->radius[p_idx];
@@ -492,9 +502,7 @@ void Breakup(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVE
         printf("\n r_bubble = %e",old_parcel_cloud->r_bubble[p_idx]);
         printf("\n radius = %e",old_parcel_cloud->radius[p_idx]);
         printf("\n v_bubble = %e",old_parcel_cloud->v_bubble[p_idx]);   
-        printf("\n thermal_breakup_flag = %i",old_parcel_cloud->thermal_breakup_flag[p_idx]);
-        printf("\n tbt = %i",old_parcel_cloud->tbt[p_idx]);
-        printf("\n pbt = %i",old_parcel_cloud->pbt[p_idx]);
+        printf("\n breakup_phase = %i",old_parcel_cloud->breakup_phase[p_idx]);
         CONVERGE_mpi_abort();
     }
 
@@ -665,14 +673,13 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("\nr_old = %e r_new = %e rb = %e vb = %e", parent_radius, old_parcel_cloud->radius[p_idx], old_parcel_cloud->r_bubble[p_idx], old_parcel_cloud->v_bubble[p_idx]);
        
         printf("\nrad_term1 = %e rt2 = %e rt3 = %e rt4 = %e rd = %e", rad_term1, rad_term2, rad_term3, rad_term4, rad_denom);
-        printf("\ntbf = %i tbt = %i", old_parcel_cloud->thermal_breakup_flag[p_idx], old_parcel_cloud->tbt[p_idx]);
+        printf("\nbreakup_phase = %i", old_parcel_cloud->breakup_phase[p_idx]);
         printf("\n vb = %e ",old_parcel_cloud->v_bubble[p_idx]);
         printf("\n Vc = %e rho/sigma = %e", rad_vel, 3.0 * rad_term3);
         printf("\nrt1*rd = %e", rad_term1 * rad_denom);
         printf("\nrt2*rt3*rd = %e", rad_term2 * rad_term3 * rad_denom);
         printf("\nrt4*rt3 = %e", rad_term4 * rad_term3);
         printf("\n DGRE cycle count = %i",old_parcel_cloud->dgre_cycle_count[p_idx]);
-        printf("\ntbt = %i", old_parcel_cloud->tbt[p_idx]);
         CONVERGE_precision_t P_sat;
         CONVERGE_precision_t Td = old_parcel_cloud->temp[p_idx];
         Saturation_PressureNH3(Td,&P_sat);
@@ -862,8 +869,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("\nBreakup Model has increased droplet mass!!!\n m_old = %e m_new = %e\nnd_old = %e nd_new = %e\nr_old = %e r_new = %e\n Aborting!!!!!!!!\n",old_parcel_cloud->m0[p_idx],mnew,old_nd,old_parcel_cloud->num_drop[p_idx],old_r,old_parcel_cloud->radius[p_idx]);
         CONVERGE_mpi_abort();
     }
-    old_parcel_cloud->thermal_breakup_flag[p_idx] = 4;
-    old_parcel_cloud->tbt[p_idx] = 0;
+    old_parcel_cloud->breakup_phase[p_idx] = 5;  // Mark as child (COMPLETE)
     // old_parcel_cloud->kb[p_idx]=0;
     old_parcel_cloud->int_omega[p_idx]=0.0;
     old_parcel_cloud->r_bubble[p_idx]=0.0;
