@@ -427,6 +427,35 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             continue;
          }
 
+         // INVERSE CHECK: Re-enable thermal breakup for stuck superheated parcels
+         // Catch parcels that ARE superheated but have wrong flags preventing thermal breakup
+         if (old_parcel_cloud.is_child[p_idx] == 0 && 
+             P_sat_new >= P_amb &&  // Parcel IS superheated
+             old_parcel_cloud.lifetime[p_idx] > 1.0e-5 && // Has existed for > 10 μs
+             (old_parcel_cloud.pbt[p_idx] == 0 || 
+              old_parcel_cloud.thermal_breakup_flag[p_idx] >= 0)) {
+            // This parcel should be in thermal breakup but isn't - reset flags to enable it
+            static int stuck_superheat_count = 0;
+            if (stuck_superheat_count < 10) {
+               printf("[STUCK_SUPERHEATED_FIX] p_idx=%li, superheated but not in thermal breakup - resetting flags\n", p_idx);
+               printf("                         P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, lifetime=%.3e s\n",
+                      P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
+               printf("                         OLD: pbt=%d, tbt=%d, tbf=%d, R=%.3e m\n",
+                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
+                      old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.radius[p_idx]);
+               stuck_superheat_count++;
+            }
+            // Reset flags to enable thermal breakup entry
+            old_parcel_cloud.pbt[p_idx] = 1;  // Enable pre-breakup tag
+            old_parcel_cloud.tbt[p_idx] = 0;  // Reset thermal breakup tag
+            old_parcel_cloud.thermal_breakup_flag[p_idx] = -1;  // Enable active breakup mode
+            if (stuck_superheat_count <= 10) {
+               printf("                         NEW: pbt=%d, tbt=%d, tbf=%d (ready for thermal breakup)\n",
+                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
+                      old_parcel_cloud.thermal_breakup_flag[p_idx]);
+            }
+         }
+
 
    
 
