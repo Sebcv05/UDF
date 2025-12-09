@@ -117,64 +117,96 @@ void Breakup_Song(
     // Therefore: num_drop_child = num_drop_parent × (R_parent/R_child)³ = num_drop_parent × N_child_droplets
     CONVERGE_precision_t N_child = N_parent * (CONVERGE_precision_t)N_child_droplets;
     
-    // Calculate radial velocity using momentum balance from existing DGRE model
-    // rad_vel = 3 * v_bubble * r_bubble² * (R_parent - r_bubble) / (R_parent³ - r_bubble³)
-    CONVERGE_precision_t rad_vel = 0.0;
+    // ========================================================================
+    // ENERGY-BASED VELOCITY CALCULATION (Song et al. model)
+    // ========================================================================
     
-    if (r_bubble > 1e-12 && fabs(v_bubble) > 1e-12) {
-        CONVERGE_precision_t r_bubble_sq = r_bubble * r_bubble;
-        CONVERGE_precision_t R_parent_cubed = R_parent * R_parent * R_parent;
-        CONVERGE_precision_t r_bubble_cubed = r_bubble * r_bubble * r_bubble;
-        CONVERGE_precision_t denominator = R_parent_cubed - r_bubble_cubed;
-        
-        if (fabs(denominator) > 1e-20) {
-            rad_vel = 3.0 * v_bubble * r_bubble_sq * (R_parent - r_bubble) / denominator;
-        }
+    // Get ambient pressure from gas phase (read from node where parcel resides)
+    CONVERGE_index_t node_index = old_parcel_cloud->node_index[p_idx];
+    CONVERGE_precision_t P_amb = global_pressure[node_index];
+    
+    // Get droplet temperature and calculate saturation pressure
+    CONVERGE_precision_t T_drop = old_parcel_cloud->temp[p_idx];
+    CONVERGE_precision_t P_sat = PsatNH3(T_drop);
+    
+    // Get material properties from parcel cloud
+    CONVERGE_precision_t sigma = old_parcel_cloud->surf_ten[p_idx];        // Surface tension
+    CONVERGE_precision_t rho_l = old_parcel_cloud->density[p_idx];         // Liquid density
+    CONVERGE_precision_t rho_g = old_parcel_cloud->gas_density[p_idx];     // Gas density
+    
+    // Calculate bubble volume
+    CONVERGE_precision_t Vb = (4.0/3.0) * PI * r_bubble * r_bubble * r_bubble;
+    
+    // Calculate void fraction: ε = R_bubble³ / R_drop³
+    CONVERGE_precision_t epsilon = (r_bubble * r_bubble * r_bubble) / (R_parent * R_parent * R_parent);
+    if (epsilon > 1.0) epsilon = 1.0;
+    if (epsilon < 0.0) epsilon = 0.0;
+    
+    // Calculate surface energy change
+    // ΔE_surf = 4πσ(R² - (N1/N)*R1²)
+    CONVERGE_precision_t surface_parent = 4.0 * PI * sigma * R_parent * R_parent;
+    CONVERGE_precision_t surface_child = 4.0 * PI * sigma * R_child * R_child * (N_child / N_parent);
+    CONVERGE_precision_t DeltaE_surf = surface_parent - surface_child;
+    
+    // Calculate pressure energy release
+    // ΔE_p = (P_bubble - P_ambient) * V_bubble
+    CONVERGE_precision_t DeltaE_p = (P_sat - P_amb) * Vb;
+    
+    // Calculate mixture density factor (from Song paper: 0.45*(ε*ρ_g + (1-ε)*ρ_l))
+    CONVERGE_precision_t rho_m = 0.45 * (epsilon * rho_g + (1.0 - epsilon) * rho_l);
+    
+    // Safety check on mixture density
+    if (rho_m < 1e-6) {
+        rho_m = rho_l * 0.45;  // Fallback to liquid density
+    }
+    
+    // Calculate velocity increment magnitude
+    // ΔU = sqrt(2*(ΔE_surf + ΔE_p) / (ρ_m * V_b))
+    CONVERGE_precision_t energy_sum = DeltaE_surf + DeltaE_p;
+    CONVERGE_precision_t DeltaU = 0.0;
+    
+    if (energy_sum > 0.0 && Vb > 1e-30 && rho_m > 1e-6) {
+        DeltaU = sqrt(2.0 * energy_sum / (rho_m * Vb));
+    }
+    
+    // Safety clamp on velocity increment (max 500 m/s)
+    const CONVERGE_precision_t max_delta_v = 500.0;
+    if (DeltaU > max_delta_v) {
+        DeltaU = max_delta_v;
     }
     
     // Get parent velocity vector
     CONVERGE_vec3_t parent_velocity;
     CONVERGE_vec3_dup(old_parcel_cloud->uu[p_idx], &parent_velocity);
     
-    // Safety check on parent velocity
-    CONVERGE_precision_t parent_vel_mag = sqrt(parent_velocity[0] * parent_velocity[0] +
-                                               parent_velocity[1] * parent_velocity[1] +
-                                               parent_velocity[2] * parent_velocity[2]);
+    // Calculate parent velocity magnitude
+    CONVERGE_precision_t ux = parent_velocity[0];
+    CONVERGE_precision_t uy = parent_velocity[1];
+    CONVERGE_precision_t uz = parent_velocity[2];
+    CONVERGE_precision_t ud = sqrt(ux*ux + uy*uy + uz*uz);
     
-    const CONVERGE_precision_t parent_vel_limit = 1.0e3;
-    if (parent_vel_mag > parent_vel_limit) {
-        printf("[BREAKUP_SONG_WARNING] Parent velocity too large (%.3e m/s). Clamping.\n", parent_vel_mag);
-        for (int i = 0; i < 3; i++) {
-            if (fabs(parent_velocity[i]) > parent_vel_limit) {
-                parent_velocity[i] = (parent_velocity[i] > 0) ? parent_vel_limit : -parent_vel_limit;
-            }
-        }
-        parent_vel_mag = parent_vel_limit;
+    // Calculate directional velocity increments (along parent velocity direction)
+    CONVERGE_precision_t DeltaUx = 0.0;
+    CONVERGE_precision_t DeltaUy = 0.0;
+    CONVERGE_precision_t DeltaUz = 0.0;
+    
+    if (ud > 1e-12) {
+        // Direction is along parent velocity
+        DeltaUx = (ux / ud) * DeltaU;
+        DeltaUy = (uy / ud) * DeltaU;
+        DeltaUz = (uz / ud) * DeltaU;
     }
     
-    // Clamp radial velocity if it exceeds parent velocity magnitude
-    if (rad_vel > parent_vel_mag) {
-        rad_vel = parent_vel_mag;
-    }
-    
-    // Compute child velocity magnitude using Pythagorean theorem
-    // v_child² = v_parent² + v_radial²
-    CONVERGE_precision_t child_vel_mag_sq = parent_vel_mag * parent_vel_mag + rad_vel * rad_vel;
-    CONVERGE_precision_t child_vel_mag = sqrt(child_vel_mag_sq);
-    
-    // Scale child velocity vector by ratio of magnitudes
+    // Calculate child velocity by adding increment to parent velocity
     CONVERGE_vec3_t child_velocity;
-    if (parent_vel_mag > 1e-12) {
-        CONVERGE_precision_t scale_factor = child_vel_mag / parent_vel_mag;
-        child_velocity[0] = parent_velocity[0] * scale_factor;
-        child_velocity[1] = parent_velocity[1] * scale_factor;
-        child_velocity[2] = parent_velocity[2] * scale_factor;
-    } else {
-        // If parent velocity is near zero, set child velocity to zero
-        child_velocity[0] = 0.0;
-        child_velocity[1] = 0.0;
-        child_velocity[2] = 0.0;
-    }
+    child_velocity[0] = ux + DeltaUx;
+    child_velocity[1] = uy + DeltaUy;
+    child_velocity[2] = uz + DeltaUz;
+    
+    // Calculate child velocity magnitude for diagnostics
+    CONVERGE_precision_t child_vel_mag = sqrt(child_velocity[0]*child_velocity[0] + 
+                                              child_velocity[1]*child_velocity[1] + 
+                                              child_velocity[2]*child_velocity[2]);
     
     // Diagnostic logging for ALL breakups (increased from 10 to 50)
     static int total_breakup_count = 0;
@@ -187,8 +219,11 @@ void Breakup_Song(
         printf("[BREAKUP_SONG]   BEFORE: R=%.6e m, num_drop=%.6e\n", R_parent, N_parent);
         printf("[BREAKUP_SONG]   AFTER:  R=%.6e m, num_drop=%.6e\n", R_child, N_child);
         printf("[BREAKUP_SONG]   r_bubble=%.3e m, v_bubble=%.3e m/s\n", r_bubble, v_bubble);
-        printf("[BREAKUP_SONG]   rad_vel=%.3e m/s, parent_vel=%.3e m/s, child_vel=%.3e m/s\n",
-               rad_vel, parent_vel_mag, child_vel_mag);
+        printf("[BREAKUP_SONG]   ENERGY: DeltaE_surf=%.3e J, DeltaE_p=%.3e J\n", DeltaE_surf, DeltaE_p);
+        printf("[BREAKUP_SONG]   MIXTURE: epsilon=%.4f, rho_m=%.3e kg/m³\n", epsilon, rho_m);
+        printf("[BREAKUP_SONG]   PRESSURE: P_sat=%.3e Pa, P_amb=%.3e Pa, dP=%.3e Pa\n", P_sat, P_amb, P_sat - P_amb);
+        printf("[BREAKUP_SONG]   VELOCITY: parent=%.3e m/s, DeltaU=%.3e m/s, child=%.3e m/s\n",
+               ud, DeltaU, child_vel_mag);
         printf("[BREAKUP_SONG]   FLAGS BEFORE: breakup_phase=%d\n",
                old_parcel_cloud->breakup_phase[p_idx]);
         
