@@ -208,14 +208,20 @@ NEVER RE-ENTERS THERMAL BREAKUP
 
 ## Remaining Old Flag Usage
 
-**Note:** The following files still reference old flags but ONLY for diagnostic output or post-processing. They do NOT affect simulation logic:
+**ALL LEGACY FLAGS HAVE BEEN REMOVED! ✅**
 
-1. **post.c** - UDF output functions (user_is_child, user_pbt)
-2. **parcel_output.c** - Diagnostic file output
-3. **spray_evap.c** - Some diagnostic prints and checks
-4. **spray_drop_distort_NH3.c** - One commented-out code block
+The codebase no longer contains ANY references to:
+- `parcel_cloud.is_child[...]`
+- `parcel_cloud.pbt[...]`
+- `parcel_cloud.tbt[...]`
+- `parcel_cloud.thermal_breakup_flag[...]`
 
-These can be updated later if needed, but they won't cause simulation errors.
+**Backward Compatibility:**
+Output functions maintain compatibility by deriving legacy values from breakup_phase:
+- `is_child` → `(breakup_phase == 5) ? 1 : 0`
+- `pbt` → `(breakup_phase >= 1 && <= 4) ? 1 : 0`
+
+This allows existing Tecplot scripts and post-processing tools to continue working without modification.
 
 ---
 
