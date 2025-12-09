@@ -51,6 +51,7 @@ void reset_parcel_to_child(struct ParcelCloud* parcel_cloud,
     parcel_cloud->r_bubble_0[p_idx] = 0.0;
     parcel_cloud->v_bubble[p_idx] = 0.0;
     parcel_cloud->breakup_phase[p_idx] = 5;  // Mark as child (COMPLETE)
+    parcel_cloud->film_flag[p_idx] = 5;  // Hijack: mirror breakup_phase
     
     // Optional: log the reset (can be disabled if too verbose)
     static int reset_count = 0;

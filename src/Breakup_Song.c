@@ -220,6 +220,7 @@ void Breakup_Song(
     
     // Mark as child parcel (phase 5) and reset bubble
     old_parcel_cloud->breakup_phase[p_idx] = 5;  // COMPLETE (child)
+    old_parcel_cloud->film_flag[p_idx] = 5;  // Hijack: mirror breakup_phase
     old_parcel_cloud->r_bubble[p_idx] = 0.0;
     old_parcel_cloud->v_bubble[p_idx] = 0.0;
     

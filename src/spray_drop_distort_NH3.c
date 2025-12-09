@@ -454,6 +454,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   reenable_count++;
                }
                old_parcel_cloud.breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
+               old_parcel_cloud.film_flag[p_idx] = 1;  // Hijack: mirror breakup_phase
             } else {
                // Parcel is NOT superheated and disabled - force to child
                static int forced_child_count = 0;
@@ -613,6 +614,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      
                      // Set breakup phase to READY (4)
                      old_parcel_cloud.breakup_phase[p_idx] = 4;
+                     old_parcel_cloud.film_flag[p_idx] = 4;  // Hijack: mirror breakup_phase
                      
                      // Exit sub-timestep loop - breakup will happen after loop
                      break;
@@ -689,6 +691,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             {
                Rb = 0.0;
                old_parcel_cloud.breakup_phase[p_idx] = 5;  // Error: abort after marking as child
+               old_parcel_cloud.film_flag[p_idx] = 5;  // Hijack: mirror breakup_phase
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                printf("Rb negative after RPE solver\n");
                CONVERGE_mpi_abort();
@@ -697,6 +700,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             if (Rb > old_parcel_cloud.radius[p_idx])
                {
                   old_parcel_cloud.breakup_phase[p_idx] = 4;  // Bubble exceeded droplet - READY to break
+                  old_parcel_cloud.film_flag[p_idx] = 4;  // Hijack: mirror breakup_phase
                   old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
                   break;
                }
@@ -826,6 +830,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             {
                // printf("\n Breakup happening due to kb > 1.0, kb = %e, rb = %e, r_drop = %e, vb = %e\n",kb,Rb,old_parcel_cloud.radius[p_idx],old_parcel_cloud.v_bubble[p_idx]);
                old_parcel_cloud.breakup_phase[p_idx] = 4;  // Breakup criterion met - READY
+               old_parcel_cloud.film_flag[p_idx] = 4;  // Hijack: mirror breakup_phase
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                old_parcel_cloud.eta_drop[p_idx] = kb;  // Store final kb value for diagnostic
                break;

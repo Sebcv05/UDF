@@ -870,6 +870,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         CONVERGE_mpi_abort();
     }
     old_parcel_cloud->breakup_phase[p_idx] = 5;  // Mark as child (COMPLETE)
+    old_parcel_cloud->film_flag[p_idx] = 5;  // Hijack: mirror breakup_phase
     // old_parcel_cloud->kb[p_idx]=0;
     old_parcel_cloud->int_omega[p_idx]=0.0;
     old_parcel_cloud->r_bubble[p_idx]=0.0;

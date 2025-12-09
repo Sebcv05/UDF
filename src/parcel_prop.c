@@ -184,9 +184,6 @@ CONVERGE_UDF(parcel_inject,
 
    // printf("\n\n r_bubble = %e <seg_60> r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parcel_idx], parcel_cloud.r_bubble_0[passed_parcel_idx]);
 
-   // DIAGNOSTIC: Hijack film_flag to store breakup_phase (safe if not using film model)
-   parcel_cloud.film_flag[passed_parcel_idx] = parcel_cloud.breakup_phase[passed_parcel_idx];  // Store breakup phase
-   
    // DIAGNOSTIC: Hijack film_thickness for r_bubble output (safe if not using film model)
    parcel_cloud.film_thickness[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
 
@@ -227,6 +224,7 @@ CONVERGE_UDF(parcel_inject,
 
    parcel_cloud.dgre_cycle_count[passed_parcel_idx] = 0;
    parcel_cloud.breakup_phase[passed_parcel_idx] = 1;  // ELIGIBLE - ready to enter thermal breakup
+   parcel_cloud.film_flag[passed_parcel_idx] = parcel_cloud.breakup_phase[passed_parcel_idx];  // Hijack: mirror breakup_phase
    parcel_cloud.m0[passed_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parcel_idx]) * parcel_cloud.num_drop[passed_parcel_idx]);
    parcel_cloud.parcel_index[passed_parcel_idx] = user_parcel_counter;
    parcel_cloud.cloud_index[passed_parcel_idx] = -1;
@@ -304,13 +302,11 @@ CONVERGE_UDF(parcel_child,
       
       // Mark as child (COMPLETE) - will never enter thermal breakup
       parcel_cloud.breakup_phase[passed_child_parcel_idx] = 5;
+      parcel_cloud.film_flag[passed_child_parcel_idx] = 5;  // Hijack: mirror breakup_phase
       
       parcel_cloud.temp[passed_child_parcel_idx] = parcel_cloud.temp[passed_parent_parcel_idx];
       parcel_cloud.temp_tm1[passed_child_parcel_idx] = parcel_cloud.temp_tm1[passed_parent_parcel_idx];
 
-      // DIAGNOSTIC: Hijack film_flag to store breakup_phase (safe if not using film model)
-      parcel_cloud.film_flag[passed_child_parcel_idx] = parcel_cloud.breakup_phase[passed_child_parcel_idx];  // Store breakup phase
-      
       // DIAGNOSTIC: Hijack film_thickness for r_bubble output (safe if not using film model)
       parcel_cloud.film_thickness[passed_child_parcel_idx] = parcel_cloud.r_bubble[passed_child_parcel_idx];
 
