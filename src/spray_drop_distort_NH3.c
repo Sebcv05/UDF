@@ -8,6 +8,17 @@
  * is strictly forbidden unless prior written permission is obtained from       *
  * Convergent Science.                                                          *
  *******************************************************************************/
+
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <spray_break.h>
 #include <CONVERGE/udf.h>
@@ -326,7 +337,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       }
       
       // Initialize single parcel tracking
-      if (!tracking_initialized && old_parcel_cloud.is_child[p_idx] == 0 && old_parcel_cloud.pbt[p_idx] == 1) {
+      if (!tracking_initialized && 
+          old_parcel_cloud.breakup_phase[p_idx] >= 1 && 
+          old_parcel_cloud.breakup_phase[p_idx] < 5) {
          tracked_parcel_id = p_idx;
          tracking_initialized = 1;
          parcel_track_file = fopen("tracked_parcel.csv", "w");
@@ -366,7 +379,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, Td, old_parcel_cloud.temp_drop_0[p_idx] + 2.0, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
             td_high_count++;
          }
-         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Temperature too high");
+         old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
          // Also zero out the parcel for complete removal
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
@@ -399,7 +412,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
             psat_low_count++;
          }
-         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Pre-check: P_sat < P_amb");
+         old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
          continue;
 
       }
@@ -423,36 +436,30 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                       old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
                not_superheated_count++;
             }
-            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Not superheated");
+            old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
             continue;
          }
 
          // INVERSE CHECK: Re-enable thermal breakup for stuck superheated parcels
          // Catch parcels that ARE superheated but have wrong flags preventing thermal breakup
-         if (old_parcel_cloud.is_child[p_idx] == 0 && 
+         if (old_parcel_cloud.breakup_phase[p_idx] == 0 &&  // Disabled parent
              P_sat_new >= P_amb &&  // Parcel IS superheated
-             old_parcel_cloud.lifetime[p_idx] > 1.0e-5 && // Has existed for > 10 μs
-             (old_parcel_cloud.pbt[p_idx] == 0 || 
-              old_parcel_cloud.thermal_breakup_flag[p_idx] >= 0)) {
-            // This parcel should be in thermal breakup but isn't - reset flags to enable it
+             old_parcel_cloud.lifetime[p_idx] > 1.0e-5) { // Has existed for > 10 μs
+            // This parcel should be in thermal breakup but isn't - reset to eligible
             static int stuck_superheat_count = 0;
             if (stuck_superheat_count < 10) {
-               printf("[STUCK_SUPERHEATED_FIX] p_idx=%li, superheated but not in thermal breakup - resetting flags\n", p_idx);
+               printf("[STUCK_SUPERHEATED_FIX] p_idx=%li, superheated but not in thermal breakup - resetting phase\n", p_idx);
                printf("                         P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, lifetime=%.3e s\n",
                       P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
-               printf("                         OLD: pbt=%d, tbt=%d, tbf=%d, R=%.3e m\n",
-                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
-                      old_parcel_cloud.thermal_breakup_flag[p_idx], old_parcel_cloud.radius[p_idx]);
+               printf("                         OLD: breakup_phase=%d, R=%.3e m\n",
+                      old_parcel_cloud.breakup_phase[p_idx], old_parcel_cloud.radius[p_idx]);
                stuck_superheat_count++;
             }
-            // Reset flags to enable thermal breakup entry
-            old_parcel_cloud.pbt[p_idx] = 1;  // Enable pre-breakup tag
-            old_parcel_cloud.tbt[p_idx] = 0;  // Reset thermal breakup tag
-            old_parcel_cloud.thermal_breakup_flag[p_idx] = -1;  // Enable active breakup mode
+            // Reset phase to enable thermal breakup entry
+            old_parcel_cloud.breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
             if (stuck_superheat_count <= 10) {
-               printf("                         NEW: pbt=%d, tbt=%d, tbf=%d (ready for thermal breakup)\n",
-                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
-                      old_parcel_cloud.thermal_breakup_flag[p_idx]);
+               printf("                         NEW: breakup_phase=%d (ready for thermal breakup)\n",
+                      old_parcel_cloud.breakup_phase[p_idx]);
             }
          }
 
@@ -469,38 +476,31 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          pre_pbr = CONVERGE_mpi_wtime();
 
          // FIX: Convert stuck parcels to children
-         // These are large parent parcels (is_child=0) that are NOT in thermal breakup
-         // (thermal_breakup_flag >= 0). They should have entered breakup but thermal model
-         // was disabled or they never met conditions. Force them to children.
-         if (old_parcel_cloud.is_child[p_idx] == 0 && 
-             old_parcel_cloud.radius[p_idx] > 70e-6 &&
-             old_parcel_cloud.thermal_breakup_flag[p_idx] >= 0) {
+         // These are large parent parcels that are NOT in thermal breakup (phase 0)
+         // They should have entered breakup but thermal model was disabled
+         // Convert them to children so KH-RT and evaporation can proceed
+         if (old_parcel_cloud.breakup_phase[p_idx] == 0 &&  // Disabled parent
+             old_parcel_cloud.radius[p_idx] > 70e-6) {
             static int stuck_parcel_count = 0;
             if (stuck_parcel_count < 20) {
-               printf("[STUCK_PARCEL_FIX] p_idx=%li, lifetime=%.3e s, radius=%.3e m, pbt=%d, tbt=%d, tbf=%d, Td=%.2f K\n",
+               printf("[STUCK_PARCEL_FIX] p_idx=%li, lifetime=%.3e s, radius=%.3e m, breakup_phase=%d, Td=%.2f K\n",
                       p_idx, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx],
-                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.tbt[p_idx],
-                      old_parcel_cloud.thermal_breakup_flag[p_idx], Td);
+                      old_parcel_cloud.breakup_phase[p_idx], Td);
                printf("               Converting to child to enable KH-RT/evaporation\n");
                stuck_parcel_count++;
             }
             // Convert to child so KH-RT and evaporation can proceed
-            old_parcel_cloud.is_child[p_idx] = 1;
-            old_parcel_cloud.film_flag[p_idx] = 1;  // Update hijacked variable
-            old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
+            old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
             continue;  // Skip thermal breakup routine
          }
     
      
          // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
-         if (old_parcel_cloud.is_child[p_idx] == 1 && 
-             old_parcel_cloud.thermal_breakup_flag[p_idx] < 0 && 
-             old_parcel_cloud.pbt[p_idx] == 1) {
+         if (old_parcel_cloud.breakup_phase[p_idx] == 5) {  // Is a child
             static int child_reentry_count = 0;
             if (child_reentry_count < 10) {
-               printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, is_child=%d, pbt=%d, tbf=%d\n",
-                      p_idx, old_parcel_cloud.is_child[p_idx], 
-                      old_parcel_cloud.pbt[p_idx], old_parcel_cloud.thermal_breakup_flag[p_idx]);
+               printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, breakup_phase=%d (child)\n",
+                      p_idx, old_parcel_cloud.breakup_phase[p_idx]);
                printf("                         R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
                       old_parcel_cloud.radius[p_idx], old_parcel_cloud.num_drop[p_idx],
                       old_parcel_cloud.lifetime[p_idx]);
@@ -509,16 +509,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          }
       
 
-         // Entry condition for thermal breakup: must NOT be a child parcel
-         if (old_parcel_cloud.is_child[p_idx] == 0 &&
-             old_parcel_cloud.thermal_breakup_flag[p_idx] < 0 && 
-             old_parcel_cloud.pbt[p_idx] == 1)
+         // Entry condition for thermal breakup: must be parent in eligible states (1-4)
+         if (old_parcel_cloud.breakup_phase[p_idx] >= 1 &&
+             old_parcel_cloud.breakup_phase[p_idx] <= 4)
          {
             static int thermal_entry_count = 0;
             thermal_entry_count++;
             if (thermal_entry_count <= 20) {
-               printf("[THERMAL_ENTRY #%d] p_idx=%li entering thermal breakup loop\n", 
-                      thermal_entry_count, p_idx);
+               printf("[THERMAL_ENTRY #%d] p_idx=%li entering thermal breakup loop, breakup_phase=%d\n", 
+                      thermal_entry_count, p_idx, old_parcel_cloud.breakup_phase[p_idx]);
                printf("                    T_drop=%.2f K, lifetime=%.3e s, R=%.3e m\n",
                       old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx], 
                       old_parcel_cloud.radius[p_idx]);
