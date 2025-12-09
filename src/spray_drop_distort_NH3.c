@@ -379,7 +379,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, Td, old_parcel_cloud.temp_drop_0[p_idx] + 2.0, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
             td_high_count++;
          }
-         old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
+         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Temperature too high");
          // Also zero out the parcel for complete removal
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
@@ -412,7 +412,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
             psat_low_count++;
          }
-         old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
+         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Pre-check: P_sat < P_amb");
          continue;
 
       }
@@ -436,7 +436,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                       old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
                not_superheated_count++;
             }
-            old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
+            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Not superheated");
             continue;
          }
 
@@ -490,7 +490,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                stuck_parcel_count++;
             }
             // Convert to child so KH-RT and evaporation can proceed
-            old_parcel_cloud.breakup_phase[p_idx] = 5;  // Mark as child (complete)
+            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck parcel fix");
             continue;  // Skip thermal breakup routine
          }
     
@@ -626,10 +626,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                         song_breakup_count++;
                      }
                      
-                     // Set breakup flag (same as thermal model uses)
-                     old_parcel_cloud.thermal_breakup_flag[p_idx] = 3;
-                     old_parcel_cloud.tbt[p_idx] = 1;
-                     old_parcel_cloud.pbt[p_idx] = 0;
+                     // Set breakup phase to READY (4)
+                     old_parcel_cloud.breakup_phase[p_idx] = 4;
                      
                      // Exit sub-timestep loop - breakup will happen after loop
                      break;
@@ -681,12 +679,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   break;
                }
                
-               // Check if collapse recovery was attempted (tbf=888)
-               if(old_parcel_cloud.thermal_breakup_flag[p_idx] == 888)
+               // Check if collapse recovery was attempted (phase=3)
+               if(old_parcel_cloud.breakup_phase[p_idx] == 3)
                {
-                  // Recovery attempted, skip rest of this timestep
-                  // Reset flag so next timestep can try again
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = -999;
+                  // In recovery, skip rest of this timestep
+                  // Phase stays at 3 (RECOVERY) so next timestep can continue
                   break;
                }
 

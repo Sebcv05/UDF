@@ -50,9 +50,7 @@ void reset_parcel_to_child(struct ParcelCloud* parcel_cloud,
     parcel_cloud->r_bubble[p_idx] = 0.0;
     parcel_cloud->r_bubble_0[p_idx] = 0.0;
     parcel_cloud->v_bubble[p_idx] = 0.0;
-    parcel_cloud->pbt[p_idx] = 0;
-    parcel_cloud->is_child[p_idx] = 1;
-    parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+    parcel_cloud->breakup_phase[p_idx] = 5;  // Mark as child (COMPLETE)
     
     // Optional: log the reset (can be disabled if too verbose)
     static int reset_count = 0;
@@ -63,7 +61,7 @@ void reset_parcel_to_child(struct ParcelCloud* parcel_cloud,
                Nd_old, Nd_new, volume_ratio);
         printf("               r_bubble: %.3e -> 0.00e+00 m (zeroed)\n", 
                parcel_cloud->r_bubble[p_idx]);
-        printf("               pbt: 1 -> 0, is_child: 0 -> 1, tbf: -> 999\n");
+        printf("               breakup_phase: -> 5 (child/complete)\n");
         reset_count++;
     }
 }
