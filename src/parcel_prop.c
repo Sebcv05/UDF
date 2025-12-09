@@ -8,6 +8,17 @@
  * is strictly forbidden unless prior written permission is obtained from       *
  * Convergent Science.                                                          *
  *******************************************************************************/
+
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 
 #include <CONVERGE/udf.h>
@@ -39,11 +50,8 @@ void print_all_parcel_fields(FILE *fp, const char* parcel_type, int parcel_idx, 
     fprintf(fp, "eta_drop: %e\n", parcel_cloud->eta_drop[parcel_idx]);
     fprintf(fp, "eta_drop_0: %e\n", parcel_cloud->eta_drop_0[parcel_idx]);
     fprintf(fp, "user_lag_var_i: %d\n", parcel_cloud->user_lag_var_i[parcel_idx]);
-    fprintf(fp, "tbt: %d\n", parcel_cloud->tbt[parcel_idx]);
-    fprintf(fp, "is_child: %d\n", parcel_cloud->is_child[parcel_idx]);
-    fprintf(fp, "pbt: %d\n", parcel_cloud->pbt[parcel_idx]);
+    fprintf(fp, "breakup_phase: %d\n", parcel_cloud->breakup_phase[parcel_idx]);
     fprintf(fp, "child_index: %d\n", parcel_cloud->child_index[parcel_idx]);
-    fprintf(fp, "thermal_breakup_flag: %d\n", parcel_cloud->thermal_breakup_flag[parcel_idx]);
     fprintf(fp, "dgre_cycle_count: %d\n", parcel_cloud->dgre_cycle_count[parcel_idx]);
     fprintf(fp, "parcel_index: %d\n", parcel_cloud->parcel_index[parcel_idx]);
     fprintf(fp, "cloud_index: %d\n", parcel_cloud->cloud_index[parcel_idx]);
@@ -169,7 +177,6 @@ CONVERGE_UDF(parcel_inject,
 
 
    
-   parcel_cloud.is_child[passed_parcel_idx] = 0;
    parcel_cloud.time_of_injection[passed_parcel_idx] = CONVERGE_simulation_time_sec();
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
@@ -219,11 +226,8 @@ CONVERGE_UDF(parcel_inject,
 
 
    parcel_cloud.dgre_cycle_count[passed_parcel_idx] = 0;
-   parcel_cloud.tbt[passed_parcel_idx] = 0;
-   parcel_cloud.pbt[passed_parcel_idx] = 1;
+   parcel_cloud.breakup_phase[passed_parcel_idx] = 1;  // ELIGIBLE - ready to enter thermal breakup
    parcel_cloud.m0[passed_parcel_idx] = (1.33333 * PI * CONVERGE_cube(parcel_cloud.radius[passed_parcel_idx]) * parcel_cloud.num_drop[passed_parcel_idx]);
-   // Set breakup flag to 0
-   parcel_cloud.thermal_breakup_flag[passed_parcel_idx] = -1;
    parcel_cloud.parcel_index[passed_parcel_idx] = user_parcel_counter;
    parcel_cloud.cloud_index[passed_parcel_idx] = -1;
    
@@ -289,7 +293,7 @@ CONVERGE_UDF(parcel_child,
 
 
    
-   if (parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx] > 0)
+   if (parcel_cloud.breakup_phase[passed_parent_parcel_idx] != 0)  // Parent underwent some form of breakup
    {
 
       //Zero Breakup Properties
@@ -297,10 +301,10 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
       parcel_cloud.v_bubble[passed_child_parcel_idx] = 0.0;
       parcel_cloud.r_bubble_0[passed_child_parcel_idx] = 0.0;
-      //Set pbt to 0 , tbt to 0 and thermal_breakupflag = 4
-      parcel_cloud.pbt[passed_child_parcel_idx] = 0;
-      parcel_cloud.tbt[passed_child_parcel_idx] = 0;
-      parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx] = 4;   
+      
+      // Mark as child (COMPLETE) - will never enter thermal breakup
+      parcel_cloud.breakup_phase[passed_child_parcel_idx] = 5;
+      
       parcel_cloud.temp[passed_child_parcel_idx] = parcel_cloud.temp[passed_parent_parcel_idx];
       parcel_cloud.temp_tm1[passed_child_parcel_idx] = parcel_cloud.temp_tm1[passed_parent_parcel_idx];
 
@@ -322,7 +326,6 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.radius_tm1[passed_child_parcel_idx] = parcel_cloud.radius[passed_child_parcel_idx];
       // In the parcel_child function, add this line where other parcel properties are being set:
       parcel_cloud.lifetime[passed_child_parcel_idx] = 0.0;  // Reset lifetime for new child droplets 
-      parcel_cloud.is_child[passed_child_parcel_idx] = 1;   //Field to identify whether parent has undrgone breakup 
       
       // Initialize collapse counter to 0
       parcel_cloud.user_lag_var_i[passed_child_parcel_idx] = 0;
@@ -380,16 +383,16 @@ CONVERGE_UDF(parcel_child,
    //        parcel_cloud.radius[passed_parent_parcel_idx], parcel_cloud.num_drop[passed_parent_parcel_idx]);
 
    // --- GEMINI EDIT: Add validation check for newly created child parcel ---
-   int child_flag = parcel_cloud.thermal_breakup_flag[passed_child_parcel_idx];
-   // A new child should have a flag of 4 (if from thermal breakup) or 0 (default for other breakup, e.g., KH-RT).
-   // Any other value at the moment of creation indicates the memory was corrupted *before* or *during* allocation.
-   if (child_flag != 4 && child_flag != 0) {
-       CONVERGE_logger_fatal("MEMORY CORRUPTION DETECTED in parcel_prop.c! New child (idx: %d) created with invalid thermal_breakup_flag: %d",
-                              passed_child_parcel_idx, child_flag);
+   int child_phase = parcel_cloud.breakup_phase[passed_child_parcel_idx];
+   // A new child should have phase=5 (COMPLETE). 
+   // Any other value indicates memory corruption or logic error.
+   if (child_phase != 5) {
+       CONVERGE_logger_fatal("MEMORY CORRUPTION DETECTED in parcel_prop.c! New child (idx: %d) created with invalid breakup_phase: %d (expected 5)",
+                              passed_child_parcel_idx, child_phase);
        
        // Also print the parent's data, as it might provide clues.
-       CONVERGE_logger_fatal("Parent (idx: %d) has flag: %d, radius: %e, temp: %f",
-                              passed_parent_parcel_idx, parcel_cloud.thermal_breakup_flag[passed_parent_parcel_idx],
+       CONVERGE_logger_fatal("Parent (idx: %d) has breakup_phase: %d, radius: %e, temp: %f",
+                              passed_parent_parcel_idx, parcel_cloud.breakup_phase[passed_parent_parcel_idx],
                               parcel_cloud.radius[passed_parent_parcel_idx], parcel_cloud.temp[passed_parent_parcel_idx]);
 
        CONVERGE_mpi_abort();
