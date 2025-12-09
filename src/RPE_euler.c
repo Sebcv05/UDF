@@ -1,6 +1,16 @@
 //RPE_euler.c
 // Rayleigh-Plesset Equation solver with Explicit Euler integration
 
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <RPE_euler.h>
 #include <PsatNH3.h>
@@ -211,13 +221,6 @@ void RPE_euler_solver(
         thermal_model_logged = 1;
     }
     
-    // Check if this parcel just recovered (flag = -999 from last timestep)
-    static int post_recovery_print_count = 0;
-    if (old_parcel_cloud->thermal_breakup_flag[p_idx] == -999 && post_recovery_print_count < 5) {
-        printf("[RPE_POST_RECOVERY] Parcel entering RPE again after recovery, flag=-999, Rdot will be checked\n");
-        post_recovery_print_count++;
-    }
-    
     // Check if parcel is in recovery mode and print status
     if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
         CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
@@ -364,8 +367,8 @@ void RPE_euler_solver(
         CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
         
         if (recovery_start_time > 0.0) {
-            // This parcel was already recovered and converted to child
-            // It shouldn't be in RPE anymore (pbt=0, is_child=1)
+            // This parcel was already recovered and converted to child (breakup_phase=5)
+            // It shouldn't be in RPE anymore
             printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
                    p_idx, recovery_start_time);
             reset_parcel_to_child(old_parcel_cloud, p_idx, "Recovered parcel in RPE");
@@ -481,7 +484,8 @@ void RPE_euler_solver(
     static int first_log = 1;
     
     CONVERGE_precision_t lifetime = old_parcel_cloud->lifetime[p_idx];
-    int in_thermal_breakup = (old_parcel_cloud->pbt[p_idx] == 1);
+    int in_thermal_breakup = (old_parcel_cloud->breakup_phase[p_idx] >= 1 && 
+                              old_parcel_cloud->breakup_phase[p_idx] <= 4);
     
     // Initialize file and track oldest parcel
     if (in_thermal_breakup && lifetime > max_lifetime_seen) {
