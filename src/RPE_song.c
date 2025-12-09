@@ -8,6 +8,16 @@
 //
 // Void fraction = 0.55 triggers reset_parcel_to_child, after which DGRE takes over.
 
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <RPE_song.h>
 #include <PsatNH3.h>
