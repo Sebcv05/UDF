@@ -1621,14 +1621,13 @@ CONVERGE_precision_t user_radius = 0.0;
             {
                if(omega < (CONVERGE_precision_t)(1.0 / 16.0))
                {
-                  CONVERGE_logger_warn("spray_evap.c: RECOVERY in inner loop for parcel %ld, cloud %ld at ncyc %ld. tdrop=%.2f, temp_gas=%.2f, tbf=%d, is_child=%d, radius=%e, radius_tm1=%e",
+                  CONVERGE_logger_warn("spray_evap.c: RECOVERY in inner loop for parcel %ld, cloud %ld at ncyc %ld. tdrop=%.2f, temp_gas=%.2f, breakup_phase=%d, radius=%e, radius_tm1=%e",
                                        i_pc,
                                        parcel_cloud.cloud_index[i_pc],
                                        CONVERGE_ncyc(),
                                        tdrop,
                                        temp_gas,
-                                       parcel_cloud.thermal_breakup_flag[i_pc],
-                                       parcel_cloud.is_child[i_pc],
+                                       parcel_cloud.breakup_phase[i_pc],
                                        parcel_cloud.radius[i_pc],
                                        parcel_cloud.radius_tm1[i_pc]);
                   CONVERGE_logger_warn("spray_evap.c: RECOVERY diagnostics: tdrop_starm1=%.4f, omega=%.4f, csubp_liquid=%.4e, mass_drop_new=%.4e, mass_drop_tm1=%.4e, vaporization_term=%.4e, cond_term1=%.4e, denom=%.4e",

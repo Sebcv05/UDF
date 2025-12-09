@@ -1,5 +1,15 @@
 // Geometry.c
 
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ */
+
 #include "lagrangian/env.h"
 #include <user_header.h>
 #include <CONVERGE/udf.h>
@@ -10,6 +20,7 @@
 #include <assert.h>
 #include <complex.h>
 #include <Geometry.h>
+#include <parcel_reset.h>
 
 void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_precision_t dt)
 {
@@ -43,8 +54,8 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
    
    if (dRd < 0.0)
    {
-      printf("\n[GEOMETRY] dRd<0, setting tbt to 999 and continuing");
-      old_parcel_cloud->thermal_breakup_flag[p_idx] = 999;
+      printf("\n[GEOMETRY] dRd<0 (negative liquid velocity), converting to child");
+      reset_parcel_to_child(old_parcel_cloud, p_idx, "Geometry: negative dRd");
       return;
    }
    if (old_parcel_cloud->r_therm[p_idx] + dRd > 0 && dRd < old_parcel_cloud->radius[p_idx])
