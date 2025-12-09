@@ -440,26 +440,31 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             continue;
          }
 
-         // INVERSE CHECK: Re-enable thermal breakup for stuck superheated parcels
-         // Catch parcels that ARE superheated but have wrong flags preventing thermal breakup
-         if (old_parcel_cloud.breakup_phase[p_idx] == 0 &&  // Disabled parent
-             P_sat_new >= P_amb &&  // Parcel IS superheated
-             old_parcel_cloud.lifetime[p_idx] > 1.0e-5) { // Has existed for > 10 μs
-            // This parcel should be in thermal breakup but isn't - reset to eligible
-            static int stuck_superheat_count = 0;
-            if (stuck_superheat_count < 10) {
-               printf("[STUCK_SUPERHEATED_FIX] p_idx=%li, superheated but not in thermal breakup - resetting phase\n", p_idx);
-               printf("                         P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, lifetime=%.3e s\n",
-                      P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
-               printf("                         OLD: breakup_phase=%d, R=%.3e m\n",
-                      old_parcel_cloud.breakup_phase[p_idx], old_parcel_cloud.radius[p_idx]);
-               stuck_superheat_count++;
-            }
-            // Reset phase to enable thermal breakup entry
-            old_parcel_cloud.breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
-            if (stuck_superheat_count <= 10) {
-               printf("                         NEW: breakup_phase=%d (ready for thermal breakup)\n",
-                      old_parcel_cloud.breakup_phase[p_idx]);
+         // UNIFIED STUCK PARCEL FIX: Re-enable or disable thermal breakup for phase=0 parcels
+         // If parcel is DISABLED (phase=0), check if it should be re-enabled or forced to child
+         if (old_parcel_cloud.breakup_phase[p_idx] == 0) {
+            // Check if parcel IS actually superheated - if so, re-enable thermal breakup
+            if (P_sat_new >= P_amb) {
+               // Parcel IS superheated but was disabled - re-enable
+               static int reenable_count = 0;
+               if (reenable_count < 10) {
+                  printf("[STUCK_REENABLE] p_idx=%li, superheated but disabled - re-enabling\n", p_idx);
+                  printf("                 P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+                         P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.radius[p_idx]);
+                  reenable_count++;
+               }
+               old_parcel_cloud.breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
+            } else {
+               // Parcel is NOT superheated and disabled - force to child
+               static int forced_child_count = 0;
+               if (forced_child_count < 20) {
+                  printf("[STUCK_FORCE_CHILD] p_idx=%li, not superheated and disabled - forcing to child\n", p_idx);
+                  printf("                    P_sat=%.3e < P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+                         P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.radius[p_idx]);
+                  forced_child_count++;
+               }
+               reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck: disabled and not superheated");
+               continue;  // Skip rest of loop
             }
          }
 
@@ -475,26 +480,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          // Pre-breakup routine
          pre_pbr = CONVERGE_mpi_wtime();
 
-         // FIX: Convert stuck parcels to children
-         // These are large parent parcels that are NOT in thermal breakup (phase 0)
-         // They should have entered breakup but thermal model was disabled
-         // Convert them to children so KH-RT and evaporation can proceed
-         if (old_parcel_cloud.breakup_phase[p_idx] == 0 &&  // Disabled parent
-             old_parcel_cloud.radius[p_idx] > 70e-6) {
-            static int stuck_parcel_count = 0;
-            if (stuck_parcel_count < 20) {
-               printf("[STUCK_PARCEL_FIX] p_idx=%li, lifetime=%.3e s, radius=%.3e m, breakup_phase=%d, Td=%.2f K\n",
-                      p_idx, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx],
-                      old_parcel_cloud.breakup_phase[p_idx], Td);
-               printf("               Converting to child to enable KH-RT/evaporation\n");
-               stuck_parcel_count++;
-            }
-            // Convert to child so KH-RT and evaporation can proceed
-            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck parcel fix");
-            continue;  // Skip thermal breakup routine
-         }
-    
-     
          // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
          if (old_parcel_cloud.breakup_phase[p_idx] == 5) {  // Is a child
             static int child_reentry_count = 0;
@@ -898,25 +883,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          } // Delimiter for sub cycle loop
 
 
-         } // Delimiter for if thermal_breakup_flag=0
-         else
-         {
-            // FIX: Large parent parcels that did NOT enter thermal breakup
-            // Catch parcels that are parents (phase < 5), large radius, but didn't enter thermal
-            if (old_parcel_cloud.breakup_phase[p_idx] < 5 && old_parcel_cloud.radius[p_idx] > 70e-6) {
-               static int stuck_count = 0;
-               if (stuck_count < 20) {
-                  printf("[STUCK_NO_THERMAL] p_idx=%d, r=%.2e m, breakup_phase=%d, T=%.2f K, lifetime=%.2e s\n",
-                         p_idx, old_parcel_cloud.radius[p_idx],
-                         old_parcel_cloud.breakup_phase[p_idx], Td, old_parcel_cloud.lifetime[p_idx]);
-                  printf("              Reason: Did not enter thermal breakup (breakup_phase=%d)\n",
-                         old_parcel_cloud.breakup_phase[p_idx]);
-                  stuck_count++;
-               }
-               // Convert to child
-               reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck: never entered thermal");
-            }
-         }
+         } // Delimiter for entry condition
          //********************** BREAKUP ROUTINE ***************************************//
          // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
          post_pbr = CONVERGE_mpi_wtime();
