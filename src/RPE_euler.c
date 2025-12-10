@@ -405,12 +405,12 @@ void RPE_euler_solver(
         printf("               R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
                state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
         
-        // NEW RECOVERY STRATEGY: Reset to injection state and convert to child parcel
-        // This allows KH-RT and evaporation to handle the parcel naturally
+        // NEW RECOVERY STRATEGY: Set to RECOVERY state (3) with timed recovery period
+        // After recovery period, parcel will be re-evaluated for thermal breakup eligibility
         
-        // Apply recovery: reset to injection state
-        old_parcel_cloud->breakup_phase[p_idx] = 15;  // Bubble collapse Rdot < 0
-        old_parcel_cloud->film_flag[p_idx] = 15;
+        // Apply recovery: reset bubble and enter recovery state
+        old_parcel_cloud->breakup_phase[p_idx] = 3;  // RECOVERY (bubble collapsed)
+        old_parcel_cloud->film_flag[p_idx] = 3;
         old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
         old_parcel_cloud->r_bubble[p_idx] = 0.0;
         old_parcel_cloud->v_bubble[p_idx] = 0.0;

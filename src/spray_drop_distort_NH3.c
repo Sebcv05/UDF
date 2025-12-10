@@ -442,6 +442,39 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          CONVERGE_precision_t P_sat_new;
          Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
          
+         // Handle RECOVERY state (3) - check if recovery period has elapsed
+         if (old_parcel_cloud.breakup_phase[p_idx] == 3) {
+            CONVERGE_precision_t recovery_time = old_parcel_cloud.recovery_time[p_idx];
+            CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+            CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
+            
+            const CONVERGE_precision_t RECOVERY_PERIOD = 20.0e-6;  // 20 μs recovery wait
+            
+            if (time_since_recovery < RECOVERY_PERIOD) {
+               // Still in recovery wait period - skip this timestep
+               static int recovery_wait_count = 0;
+               if (recovery_wait_count < 10) {
+                  printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
+                         p_idx, time_since_recovery, RECOVERY_PERIOD, 
+                         100.0 * time_since_recovery / RECOVERY_PERIOD);
+                  recovery_wait_count++;
+               }
+               continue;
+            } else {
+               // Recovery period complete - reset to ELIGIBLE for re-evaluation
+               static int recovery_complete_count = 0;
+               if (recovery_complete_count < 10) {
+                  printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
+                  printf("                    Time since recovery: %.3e s, will re-check superheat\n",
+                         time_since_recovery);
+                  recovery_complete_count++;
+               }
+               old_parcel_cloud.breakup_phase[p_idx] = 1;  // Back to ELIGIBLE
+               old_parcel_cloud.film_flag[p_idx] = 1;
+               // Continue to superheat check below - don't skip this parcel
+            }
+         }
+         
          // Skip children and diagnostic bypass states (5+) from re-evaluation
          // These parcels are either post-breakup children or have been permanently disabled
          if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
@@ -728,11 +761,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   break;  // Exit sub-timestep loop, preserve diagnostic state
                }
                
-               // Check if collapse recovery was attempted (phase=3)
+               // Check if parcel just entered recovery state (phase=3) during this sub-timestep
+               // This can happen if RPE_euler detected collapse in this sub-cycle
                if(old_parcel_cloud.breakup_phase[p_idx] == 3)
                {
-                  // In recovery, skip rest of this timestep
-                  // Phase stays at 3 (RECOVERY) so next timestep can continue
+                  // Just entered recovery in this sub-timestep - exit loop immediately
+                  // Recovery wait period check happens at top of next main timestep
+                  static int recovery_substep_exit_count = 0;
+                  if (recovery_substep_exit_count < 5) {
+                     printf("[RECOVERY_SUBSTEP_EXIT] p_idx=%li entered recovery, exiting sub-timestep loop\n", p_idx);
+                     recovery_substep_exit_count++;
+                  }
                   break;
                }
 
