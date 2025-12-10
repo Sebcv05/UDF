@@ -741,37 +741,38 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // THERMAL MODEL: Continue with existing logic (Geometry/DGRE/kb)
                // ============================================================================
                
-               // Check if bubble growth stopped
-               // Guard: Skip if parcel is already in diagnostic/bypass state (≥5)
-               // This prevents overwriting collapse (15) or other diagnostic states
-               if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10 && 
-                  old_parcel_cloud.breakup_phase[p_idx] < 5)
-               {
-                  printf("\n\n\n\n=========================================\nSTSATE 11 : phase %d, Pa %e\n=========================================\n\n\n\n", old_parcel_cloud.breakup_phase[p_idx], P_amb);
-                  old_parcel_cloud.breakup_phase[p_idx] = 11;  // Post-RPE: v_bubble too small
-                  old_parcel_cloud.film_flag[p_idx] = 11;
-                  old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
-                  old_parcel_cloud.r_bubble[p_idx] = 0.0;
-                  old_parcel_cloud.v_bubble[p_idx] = 0.0;
-                  break;
-               }
-               
-               // If parcel is in diagnostic/bypass state, exit sub-timestep loop
-               if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
-                  break;  // Exit sub-timestep loop, preserve diagnostic state
-               }
-               
-               // Check if parcel just entered recovery state (phase=3) during this sub-timestep
-               // This can happen if RPE_euler detected collapse in this sub-cycle
+               // FIRST: Check if parcel just entered recovery state (phase=3) during this sub-timestep
+               // This MUST be checked before v_bubble check to prevent overwriting state 3
                if(old_parcel_cloud.breakup_phase[p_idx] == 3)
                {
                   // Just entered recovery in this sub-timestep - exit loop immediately
                   // Recovery wait period check happens at top of next main timestep
                   static int recovery_substep_exit_count = 0;
                   if (recovery_substep_exit_count < 5) {
-                     printf("[RECOVERY_SUBSTEP_EXIT] p_idx=%li entered recovery, exiting sub-timestep loop\n", p_idx);
+                     printf("[RECOVERY_SUBSTEP_EXIT] p_idx=%li entered recovery (phase=3), exiting sub-timestep loop\n", p_idx);
+                     printf("                         v_bubble=%.3e, will wait for recovery period\n",
+                            old_parcel_cloud.v_bubble[p_idx]);
                      recovery_substep_exit_count++;
                   }
+                  break;
+               }
+               
+               // If parcel is in diagnostic/bypass state (≥5), exit sub-timestep loop
+               if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
+                  break;  // Exit sub-timestep loop, preserve diagnostic state
+               }
+               
+               // Check if bubble growth stopped (only for active thermal breakup states 1,2,4)
+               // Guard: Skip if parcel is in RECOVERY (3) or diagnostic/bypass state (≥5)
+               // This prevents overwriting recovery or other diagnostic states
+               if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
+               {
+                  printf("\n\n\n\n=========================================\nSTATE 11 : phase %d, Pa %e\n=========================================\n\n\n\n", old_parcel_cloud.breakup_phase[p_idx], P_amb);
+                  old_parcel_cloud.breakup_phase[p_idx] = 11;  // Post-RPE: v_bubble too small
+                  old_parcel_cloud.film_flag[p_idx] = 11;
+                  old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                  old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                  old_parcel_cloud.v_bubble[p_idx] = 0.0;
                   break;
                }
 
