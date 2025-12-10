@@ -455,13 +455,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             
             static int not_superheated_count = 0;
             if (not_superheated_count < 20) {
-               printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  Vel=%.3e\n",
+               printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  T_tm1 =%0.3f  Vel=%.3e\n",
                       8,
                       old_parcel_cloud.lifetime[p_idx],
                       old_parcel_cloud.lifetime[p_idx],  // Same as time since injection
                       old_parcel_cloud.radius[p_idx],
                       old_parcel_cloud.r_bubble[p_idx],
                       old_parcel_cloud.temp[p_idx],
+                      old_parcel_cloud.temp_tm1[p_idx],
                       vel_mag);
                not_superheated_count++;
             }
