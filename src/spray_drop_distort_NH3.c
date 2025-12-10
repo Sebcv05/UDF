@@ -16,7 +16,8 @@
  *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
  *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
  *   4 = READY     (parent, bubble at threshold, ready to fragment)
- *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ *   5 = COMPLETE  (child - result of actual breakup)
+ *   6 = BYPASSED  (child - breakup bypassed, reset to injection state)
  */
 
 #include "lagrangian/env.h"
@@ -477,7 +478,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          pre_pbr = CONVERGE_mpi_wtime();
 
          // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
-         if (old_parcel_cloud.breakup_phase[p_idx] == 5) {  // Is a child
+         if (old_parcel_cloud.breakup_phase[p_idx] == 5 || old_parcel_cloud.breakup_phase[p_idx] == 6) {  // Is a child
             static int child_reentry_count = 0;
             if (child_reentry_count < 10) {
                printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, breakup_phase=%d (child)\n",
@@ -685,8 +686,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             if (Rb < 0.0)
             {
                Rb = 0.0;
-               old_parcel_cloud.breakup_phase[p_idx] = 5;  // Error: abort after marking as child
-               old_parcel_cloud.film_flag[p_idx] = 5;  // Hijack: mirror breakup_phase
+               old_parcel_cloud.breakup_phase[p_idx] = 6;  // Error: mark as bypassed before abort
+               old_parcel_cloud.film_flag[p_idx] = 6;  // Hijack: mirror breakup_phase
                old_parcel_cloud.r_bubble[p_idx] = Rb;
                printf("Rb negative after RPE solver\n");
                CONVERGE_mpi_abort();

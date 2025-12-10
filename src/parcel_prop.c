@@ -16,7 +16,8 @@
  *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
  *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
  *   4 = READY     (parent, bubble at threshold, ready to fragment)
- *   5 = COMPLETE  (child - result of breakup, any mechanism)
+ *   5 = COMPLETE  (child - result of actual breakup)
+ *   6 = BYPASSED  (child - breakup bypassed, reset to injection state)
  */
 
 #include "lagrangian/env.h"
