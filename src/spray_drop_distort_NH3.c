@@ -17,7 +17,22 @@
  *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
  *   4 = READY     (parent, bubble at threshold, ready to fragment)
  *   5 = COMPLETE  (child - result of actual breakup)
- *   6 = BYPASSED  (child - breakup bypassed, reset to injection state)
+ *   
+ *   DIAGNOSTIC STATES (bypassed breakup):
+ *   6  = Temperature too high (spray_drop_distort line 378)
+ *   7  = Pre-check: P_sat < P_amb (spray_drop_distort line 411)
+ *   8  = Not superheated (spray_drop_distort line 435)
+ *   9  = Stuck: disabled and not superheated (spray_drop_distort line 463)
+ *   10 = Song: v_bubble too small (epsilon < 0.4) (spray_drop_distort line 633)
+ *   11 = Post-RPE: v_bubble too small (spray_drop_distort line 661)
+ *   12 = Droplet too small (RPE_euler line 258)
+ *   13 = P_sat < P_amb subcooled (RPE_euler line 339)
+ *   14 = Recovered parcel in RPE (RPE_euler line 375)
+ *   15 = Bubble collapse Rdot < 0 (RPE_euler line 393)
+ *   16 = Subcooled T < T_sat (RPE_euler line 426)
+ *   17 = Rdot too small (RPE_euler line 460)
+ *   18 = Geometry: negative dRd (Geometry line 59)
+ *   19 = Vb calc: P_sat < P_amb (Vb line 22)
  */
 
 #include "lagrangian/env.h"
@@ -375,7 +390,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, Td, old_parcel_cloud.temp_drop_0[p_idx] + 2.0, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
             td_high_count++;
          }
-         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Temperature too high");
+         old_parcel_cloud.breakup_phase[p_idx] = 6;  // Temperature too high
+         old_parcel_cloud.film_flag[p_idx] = 6;
+         old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+         old_parcel_cloud.r_bubble[p_idx] = 0.0;
+         old_parcel_cloud.v_bubble[p_idx] = 0.0;
          // Also zero out the parcel for complete removal
          old_parcel_cloud.num_drop[p_idx] = 0.0;
          old_parcel_cloud.radius[p_idx] = 0.0;
@@ -408,7 +427,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                    p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
             psat_low_count++;
          }
-         reset_parcel_to_child(&old_parcel_cloud, p_idx, "Pre-check: P_sat < P_amb");
+         old_parcel_cloud.breakup_phase[p_idx] = 7;  // Pre-check: P_sat < P_amb
+         old_parcel_cloud.film_flag[p_idx] = 7;
+         old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+         old_parcel_cloud.r_bubble[p_idx] = 0.0;
+         old_parcel_cloud.v_bubble[p_idx] = 0.0;
          continue;
 
       }
@@ -432,7 +455,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                       old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
                not_superheated_count++;
             }
-            reset_parcel_to_child(&old_parcel_cloud, p_idx, "Not superheated");
+            old_parcel_cloud.breakup_phase[p_idx] = 8;  // Not superheated
+            old_parcel_cloud.film_flag[p_idx] = 8;
+            old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+            old_parcel_cloud.r_bubble[p_idx] = 0.0;
+            old_parcel_cloud.v_bubble[p_idx] = 0.0;
             continue;
          }
 
@@ -460,7 +487,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                          P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.radius[p_idx]);
                   forced_child_count++;
                }
-               reset_parcel_to_child(&old_parcel_cloud, p_idx, "Stuck: disabled and not superheated");
+               old_parcel_cloud.breakup_phase[p_idx] = 9;  // Stuck: disabled and not superheated
+               old_parcel_cloud.film_flag[p_idx] = 9;
+               old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+               old_parcel_cloud.r_bubble[p_idx] = 0.0;
+               old_parcel_cloud.v_bubble[p_idx] = 0.0;
                continue;  // Skip rest of loop
             }
          }
@@ -478,7 +509,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          pre_pbr = CONVERGE_mpi_wtime();
 
          // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
-         if (old_parcel_cloud.breakup_phase[p_idx] == 5 || old_parcel_cloud.breakup_phase[p_idx] == 6) {  // Is a child
+         if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {  // Is a child (state 5 or any diagnostic state >= 6)
             static int child_reentry_count = 0;
             if (child_reentry_count < 10) {
                printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, breakup_phase=%d (child)\n",
@@ -630,7 +661,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                old_parcel_cloud.temp[p_idx], P_amb);
                         song_abort_count++;
                      }
-                     reset_parcel_to_child(&old_parcel_cloud, p_idx, "Song: v_bubble too small (epsilon < 0.4)");
+                     old_parcel_cloud.breakup_phase[p_idx] = 10;  // Song: v_bubble too small (epsilon < 0.4)
+                     old_parcel_cloud.film_flag[p_idx] = 10;
+                     old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                     old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                     old_parcel_cloud.v_bubble[p_idx] = 0.0;
                      break;
                   }
                   
@@ -658,7 +693,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // Check if bubble growth stopped
                if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
                {
-                  reset_parcel_to_child(&old_parcel_cloud, p_idx, "Post-RPE: v_bubble too small");
+                  old_parcel_cloud.breakup_phase[p_idx] = 11;  // Post-RPE: v_bubble too small
+                  old_parcel_cloud.film_flag[p_idx] = 11;
+                  old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                  old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                  old_parcel_cloud.v_bubble[p_idx] = 0.0;
                   break;
                }
                

@@ -8,7 +8,9 @@
  *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
  *   4 = READY     (parent, bubble at threshold, ready to fragment)
  *   5 = COMPLETE  (child - result of actual breakup)
- *   6 = BYPASSED  (child - breakup bypassed, reset to injection state)
+ *   
+ *   DIAGNOSTIC STATES (bypassed breakup):
+ *   18 = Geometry: negative dRd (Geometry line 59)
  */
 
 #include "lagrangian/env.h"
@@ -56,7 +58,11 @@ void Geometry(struct ParcelCloud *old_parcel_cloud, CONVERGE_index_t p_idx, CONV
    if (dRd < 0.0)
    {
       printf("\n[GEOMETRY] dRd<0 (negative liquid velocity), converting to child");
-      reset_parcel_to_child(old_parcel_cloud, p_idx, "Geometry: negative dRd");
+      old_parcel_cloud->breakup_phase[p_idx] = 18;  // Geometry: negative dRd
+      old_parcel_cloud->film_flag[p_idx] = 18;
+      old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+      old_parcel_cloud->r_bubble[p_idx] = 0.0;
+      old_parcel_cloud->v_bubble[p_idx] = 0.0;
       return;
    }
    if (old_parcel_cloud->r_therm[p_idx] + dRd > 0 && dRd < old_parcel_cloud->radius[p_idx])

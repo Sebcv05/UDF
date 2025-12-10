@@ -673,7 +673,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          {
             printf("Error opening the file %s", filename1);
          }
-         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] == 5 || parcel_cloud.breakup_phase[0] == 6) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
+         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
          fclose(fp1);
          // ******************************************************************************************************//
       }
@@ -1004,7 +1004,7 @@ CONVERGE_precision_t user_radius = 0.0;
                      }
                      
                      // Skip LK for child parcels in their first timesteps (drdt not yet established)
-                     if((parcel_cloud.breakup_phase[i_pc] == 5 || parcel_cloud.breakup_phase[i_pc] == 6) && parcel_cloud.lifetime[i_pc] < 1.0e-6)
+                     if(parcel_cloud.breakup_phase[i_pc] >= 5 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
                      {
                         if(debug_print_count < 10)
                         {
@@ -1169,7 +1169,7 @@ CONVERGE_precision_t user_radius = 0.0;
                }
                //printf("\n spray_evap_cell L815 ");
                //Zero for first 1e-6 s of child's lifetime to improve stability 
-               if((parcel_cloud.breakup_phase[i_pc] == 5 || parcel_cloud.breakup_phase[i_pc] == 6) && parcel_cloud.lifetime[i_pc] < 1.0e-6)
+               if(parcel_cloud.breakup_phase[i_pc] >= 5 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] = -1.0e-7;
                }

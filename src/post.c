@@ -114,7 +114,7 @@ CONVERGE_POST(user_is_child, IN(VALUE(CONVERGE_mesh_t, mesh)))
       
       // Store first parcel's breakup phase (convert to is_child: 1 if phase==5 or 6, else 0)
       if(num_parcels > 0) {
-         user_is_child[node_index] = (parcel_cloud.breakup_phase[0] == 5 || parcel_cloud.breakup_phase[0] == 6) ? 1.0 : 0.0;
+         user_is_child[node_index] = (parcel_cloud.breakup_phase[0] >= 5) ? 1.0 : 0.0;
       }
    }
    

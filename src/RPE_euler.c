@@ -9,7 +9,14 @@
  *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
  *   4 = READY     (parent, bubble at threshold, ready to fragment)
  *   5 = COMPLETE  (child - result of actual breakup)
- *   6 = BYPASSED  (child - breakup bypassed, reset to injection state)
+ *   
+ *   DIAGNOSTIC STATES (bypassed breakup):
+ *   12 = Droplet too small (RPE_euler line 258)
+ *   13 = P_sat < P_amb subcooled (RPE_euler line 339)
+ *   14 = Recovered parcel in RPE (RPE_euler line 375)
+ *   15 = Bubble collapse Rdot < 0 (RPE_euler line 393)
+ *   16 = Subcooled T < T_sat (RPE_euler line 426)
+ *   17 = Rdot too small (RPE_euler line 460)
  */
 
 #include "lagrangian/env.h"
@@ -255,7 +262,11 @@ void RPE_euler_solver(
                    p_idx, params.Ro, old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
         }
         printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m\n", params.Ro);
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Droplet too small");
+        old_parcel_cloud->breakup_phase[p_idx] = 12;  // Droplet too small
+        old_parcel_cloud->film_flag[p_idx] = 12;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
         return;
     }
     
@@ -336,7 +347,11 @@ void RPE_euler_solver(
             printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Negative P_sat-P_amb (%.3e Pa), recovery_time=%.3e s, recovery_count=%d\n",
                    p_idx, (P_sat - P_amb), old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
         }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "P_sat < P_amb (subcooled)");
+        old_parcel_cloud->breakup_phase[p_idx] = 13;  // P_sat < P_amb subcooled
+        old_parcel_cloud->film_flag[p_idx] = 13;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
         return;
     }
     
@@ -372,7 +387,11 @@ void RPE_euler_solver(
             // It shouldn't be in RPE anymore
             printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
                    p_idx, recovery_start_time);
-            reset_parcel_to_child(old_parcel_cloud, p_idx, "Recovered parcel in RPE");
+            old_parcel_cloud->breakup_phase[p_idx] = 14;  // Recovered parcel in RPE
+            old_parcel_cloud->film_flag[p_idx] = 14;
+            old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+            old_parcel_cloud->r_bubble[p_idx] = 0.0;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
             return;
         }
         
@@ -390,7 +409,11 @@ void RPE_euler_solver(
         // This allows KH-RT and evaporation to handle the parcel naturally
         
         // Apply recovery: reset to injection state
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Bubble collapse (Rdot < 0)");
+        old_parcel_cloud->breakup_phase[p_idx] = 15;  // Bubble collapse Rdot < 0
+        old_parcel_cloud->film_flag[p_idx] = 15;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->recovery_time[p_idx] = current_time;
         old_parcel_cloud->recovery_count[p_idx]++;
         int recovery_count = old_parcel_cloud->recovery_count[p_idx];
@@ -423,7 +446,11 @@ void RPE_euler_solver(
                    state.T_drop, T_sat_check);
             subcool_count++;
         }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Subcooled (T < T_sat)");
+        old_parcel_cloud->breakup_phase[p_idx] = 16;  // Subcooled T < T_sat
+        old_parcel_cloud->film_flag[p_idx] = 16;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
         return;
     }
     
@@ -457,7 +484,11 @@ void RPE_euler_solver(
                    state.Rdot);
             small_vel_count++;
         }
-        reset_parcel_to_child(old_parcel_cloud, p_idx, "Rdot too small");
+        old_parcel_cloud->breakup_phase[p_idx] = 17;  // Rdot too small
+        old_parcel_cloud->film_flag[p_idx] = 17;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
         return;
     }
     

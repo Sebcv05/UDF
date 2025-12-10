@@ -73,7 +73,7 @@ CONVERGE_OUTPUT(write_parcel_data,
             parcel_cloud.temp[p_idx],
             vel_mag,
             parcel_cloud.num_drop[p_idx],
-            (parcel_cloud.breakup_phase[p_idx] == 5 || parcel_cloud.breakup_phase[p_idx] == 6) ? 1 : 0,  // is_child (legacy)
+            (parcel_cloud.breakup_phase[p_idx] >= 5) ? 1 : 0,  // is_child (state 5+ = child)
             parcel_cloud.r_bubble[p_idx],
             (parcel_cloud.breakup_phase[p_idx] >= 1 && parcel_cloud.breakup_phase[p_idx] <= 4) ? 1 : 0,  // pbt (legacy)
             parcel_cloud.breakup_phase[p_idx],  // New field
