@@ -709,7 +709,10 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                // ============================================================================
                
                // Check if bubble growth stopped
-               if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
+               // Guard: Skip if parcel is already in diagnostic/bypass state (≥5)
+               // This prevents overwriting collapse (15) or other diagnostic states
+               if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10 && 
+                  old_parcel_cloud.breakup_phase[p_idx] < 5)
                {
                   printf("\n\n\n\n=========================================\nSTSATE 11 : phase %d, Pa %e\n=========================================\n\n\n\n", old_parcel_cloud.breakup_phase[p_idx], P_amb);
                   old_parcel_cloud.breakup_phase[p_idx] = 11;  // Post-RPE: v_bubble too small
@@ -718,6 +721,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   old_parcel_cloud.r_bubble[p_idx] = 0.0;
                   old_parcel_cloud.v_bubble[p_idx] = 0.0;
                   break;
+               }
+               
+               // If parcel is in diagnostic/bypass state, exit sub-timestep loop
+               if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
+                  break;  // Exit sub-timestep loop, preserve diagnostic state
                }
                
                // Check if collapse recovery was attempted (phase=3)
