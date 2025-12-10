@@ -344,10 +344,30 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.uu_tm1[passed_child_parcel_idx][2] = user_child_velocity_z;
 
     
-      // Update positions based on the velocity
-      parcel_cloud.xx[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_parent_parcel_idx][0] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_x;
-      parcel_cloud.xx[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_parent_parcel_idx][1] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_y;
-      parcel_cloud.xx[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_parent_parcel_idx][2] + parcel_cloud.radius[passed_parent_parcel_idx] * user_child_velocity_z;
+      // Update positions based on normalized velocity direction
+      // Displace child by parent_radius in the direction of child velocity
+      CONVERGE_precision_t vel_mag = sqrt(user_child_velocity_x * user_child_velocity_x +
+                                           user_child_velocity_y * user_child_velocity_y +
+                                           user_child_velocity_z * user_child_velocity_z);
+      
+      // Only apply displacement if velocity is non-zero
+      if (vel_mag > 1.0e-10) {
+         // Normalize velocity to get unit vector
+         CONVERGE_precision_t unit_x = user_child_velocity_x / vel_mag;
+         CONVERGE_precision_t unit_y = user_child_velocity_y / vel_mag;
+         CONVERGE_precision_t unit_z = user_child_velocity_z / vel_mag;
+         
+         // Displace by parent radius in the direction of normalized velocity
+         CONVERGE_precision_t displacement = parcel_cloud.radius[passed_parent_parcel_idx];
+         parcel_cloud.xx[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_parent_parcel_idx][0] + displacement * unit_x;
+         parcel_cloud.xx[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_parent_parcel_idx][1] + displacement * unit_y;
+         parcel_cloud.xx[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_parent_parcel_idx][2] + displacement * unit_z;
+      } else {
+         // Zero velocity - place at same location as parent
+         parcel_cloud.xx[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_parent_parcel_idx][0];
+         parcel_cloud.xx[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_parent_parcel_idx][1];
+         parcel_cloud.xx[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_parent_parcel_idx][2];
+      }
       parcel_cloud.xx_tm1[passed_child_parcel_idx][0] = parcel_cloud.xx[passed_child_parcel_idx][0];
       parcel_cloud.xx_tm1[passed_child_parcel_idx][1] = parcel_cloud.xx[passed_child_parcel_idx][1];
       parcel_cloud.xx_tm1[passed_child_parcel_idx][2] = parcel_cloud.xx[passed_child_parcel_idx][2];
