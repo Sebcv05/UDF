@@ -245,6 +245,37 @@ void RPE_euler_solver(
     // recovery_time stores the time when last recovery occurred (seconds)
     // recovery_count stores the number of recovery attempts
     
+    // Initialize parameters structure
+    RPE_Params params;
+    
+    // Read liquid properties from parcel
+    params.rho_l = old_parcel_cloud->density[p_idx];
+    params.mu_l = old_parcel_cloud->viscosity[p_idx];
+    params.sigma = old_parcel_cloud->surf_ten[p_idx];
+    params.P_amb = P_amb;
+    params.Ro = old_parcel_cloud->radius[p_idx];
+    
+    // Safety check: If droplet radius is too small, don't run RPE
+    if (params.Ro < 1.0e-9) {
+        if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
+            printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Ro too small (%.3e m), recovery_time=%.3e s, recovery_count=%d\n",
+                   p_idx, params.Ro, old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
+        }
+        printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m\n", params.Ro);
+        old_parcel_cloud->breakup_phase[p_idx] = 12;  // Droplet too small
+        old_parcel_cloud->film_flag[p_idx] = 12;
+        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        return;
+    }
+    
+    // Calculate droplet mass
+    params.m_drop = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro * params.rho_l;
+    
+    // Get temperature-dependent properties from tables
+    CONVERGE_precision_t Td = old_parcel_cloud->temp[p_idx];
+    
     // Special handling for parcels re-entering after recovery period
     // These have been reset to breakup_phase=1 and r_bubble=0 by spray_drop_distort
     if (old_parcel_cloud->recovery_time[p_idx] > 0.0 && 
@@ -305,37 +336,6 @@ void RPE_euler_solver(
             return;
         }
     }
-    
-    // Initialize parameters structure
-    RPE_Params params;
-    
-    // Read liquid properties from parcel
-    params.rho_l = old_parcel_cloud->density[p_idx];
-    params.mu_l = old_parcel_cloud->viscosity[p_idx];
-    params.sigma = old_parcel_cloud->surf_ten[p_idx];
-    params.P_amb = P_amb;
-    params.Ro = old_parcel_cloud->radius[p_idx];
-    
-    // Safety check: If droplet radius is too small, don't run RPE
-    if (params.Ro < 1.0e-9) {
-        if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
-            printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Ro too small (%.3e m), recovery_time=%.3e s, recovery_count=%d\n",
-                   p_idx, params.Ro, old_parcel_cloud->recovery_time[p_idx], old_parcel_cloud->recovery_count[p_idx]);
-        }
-        printf("[RPE_ERROR] Droplet radius too small: Ro=%.3e m\n", params.Ro);
-        old_parcel_cloud->breakup_phase[p_idx] = 12;  // Droplet too small
-        old_parcel_cloud->film_flag[p_idx] = 12;
-        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
-        old_parcel_cloud->r_bubble[p_idx] = 0.0;
-        old_parcel_cloud->v_bubble[p_idx] = 0.0;
-        return;
-    }
-    
-    // Calculate droplet mass
-    params.m_drop = (4.0/3.0) * PI * params.Ro * params.Ro * params.Ro * params.rho_l;
-    
-    // Get temperature-dependent properties from tables
-    CONVERGE_precision_t Td = old_parcel_cloud->temp[p_idx];
     
     // Latent heat and specific heat (weighted by species mass fraction)
     CONVERGE_precision_t L_v_avg = 0.0;
