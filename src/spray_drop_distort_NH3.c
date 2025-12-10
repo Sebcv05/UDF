@@ -448,9 +448,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          {
             // Not superheated - disable thermal breakup for this parcel
             // Calculate velocity magnitude
-            CONVERGE_precision_t vel_x = old_parcel_cloud.uu[p_idx].X;
-            CONVERGE_precision_t vel_y = old_parcel_cloud.uu[p_idx].Y;
-            CONVERGE_precision_t vel_z = old_parcel_cloud.uu[p_idx].Z;
+            CONVERGE_precision_t vel_x = old_parcel_cloud.uu[p_idx][0];
+            CONVERGE_precision_t vel_y = old_parcel_cloud.uu[p_idx][1];
+            CONVERGE_precision_t vel_z = old_parcel_cloud.uu[p_idx][2];
             CONVERGE_precision_t vel_mag = sqrt(vel_x*vel_x + vel_y*vel_y + vel_z*vel_z);
             
             static int not_superheated_count = 0;
