@@ -442,8 +442,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          CONVERGE_precision_t P_sat_new;
          Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
          
+         // Skip children and diagnostic bypass states (5+) from re-evaluation
+         // These parcels are either post-breakup children or have been permanently disabled
+         if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
+            continue;  // Skip to next parcel
+         }
+         
          // Superheat check: Parcel must be superheated to enter thermal breakup
          // Condition: P_sat(T_drop) >= P_ambient
+         // Only evaluates parent parcels in phases 0-4
          if (P_sat_new < P_amb)
          {
             // Not superheated - disable thermal breakup for this parcel
