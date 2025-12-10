@@ -245,6 +245,67 @@ void RPE_euler_solver(
     // recovery_time stores the time when last recovery occurred (seconds)
     // recovery_count stores the number of recovery attempts
     
+    // Special handling for parcels re-entering after recovery period
+    // These have been reset to breakup_phase=1 and r_bubble=0 by spray_drop_distort
+    if (old_parcel_cloud->recovery_time[p_idx] > 0.0 && 
+        old_parcel_cloud->r_bubble[p_idx] < 1e-12) {
+        
+        // Check if conditions are favorable for re-growth
+        CONVERGE_precision_t P_sat_check;
+        Saturation_PressureNH3(Td, &P_sat_check);
+        
+        if (P_sat_check > P_amb) {
+            // Conditions favorable - initialize new bubble from critical radius
+            static int recovery_restart_count = 0;
+            if (recovery_restart_count < 10) {
+                printf("[RECOVERY_RESTART] p_idx=%li, P_sat=%.3e > P_amb=%.3e, initializing new bubble\n",
+                       p_idx, P_sat_check, P_amb);
+                printf("                   T_drop=%.2f K, recovery_count=%d\n",
+                       Td, old_parcel_cloud->recovery_count[p_idx]);
+                recovery_restart_count++;
+            }
+            
+            // Calculate critical radius: Rc = 2*sigma / (P_sat - P_amb)
+            CONVERGE_precision_t sigma = old_parcel_cloud->surf_ten[p_idx];
+            CONVERGE_precision_t delta_P = P_sat_check - P_amb;
+            CONVERGE_precision_t Rc = 2.0 * sigma / delta_P;
+            
+            // Initialize bubble at 1.1 * Rc (10% above critical for stable growth)
+            CONVERGE_precision_t R_init = 1.1 * Rc;
+            old_parcel_cloud->r_bubble[p_idx] = R_init;
+            old_parcel_cloud->r_bubble_0[p_idx] = R_init;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            
+            // Initialize bubble mass from saturation properties
+            CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat_check, Td);
+            CONVERGE_precision_t Vb = (4.0/3.0) * PI * R_init * R_init * R_init;
+            old_parcel_cloud->m_bubble[p_idx] = rho_b * Vb;
+            
+            // Clear recovery time to allow normal operation
+            old_parcel_cloud->recovery_time[p_idx] = 0.0;
+            
+            if (recovery_restart_count < 10) {
+                printf("                   Rc=%.3e m, R_init=%.3e m (1.1*Rc), m_bubble=%.3e kg\n",
+                       Rc, R_init, old_parcel_cloud->m_bubble[p_idx]);
+            }
+            
+        } else {
+            // Conditions not favorable - disable thermal breakup
+            static int recovery_abort_count = 0;
+            if (recovery_abort_count < 10) {
+                printf("[RECOVERY_ABORT] p_idx=%li, P_sat=%.3e < P_amb=%.3e, aborting thermal breakup\n",
+                       p_idx, P_sat_check, P_amb);
+                recovery_abort_count++;
+            }
+            old_parcel_cloud->breakup_phase[p_idx] = 13;  // Subcooled
+            old_parcel_cloud->film_flag[p_idx] = 13;
+            old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+            old_parcel_cloud->r_bubble[p_idx] = 0.0;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            return;
+        }
+    }
+    
     // Initialize parameters structure
     RPE_Params params;
     
@@ -382,22 +443,22 @@ void RPE_euler_solver(
         // Check if this parcel has already been recovered (now a child)
         CONVERGE_precision_t recovery_start_time = old_parcel_cloud->recovery_time[p_idx];
         
-        if (recovery_start_time > 0.0) {
-            // This parcel was already recovered and converted to child (breakup_phase=5)
-            // It shouldn't be in RPE anymore
-            printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
-                   p_idx, recovery_start_time);
-            old_parcel_cloud->breakup_phase[p_idx] = 14;  // Recovered parcel in RPE
-            old_parcel_cloud->film_flag[p_idx] = 14;
-            old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
-            old_parcel_cloud->r_bubble[p_idx] = 0.0;
-            old_parcel_cloud->v_bubble[p_idx] = 0.0;
-            return;
-        }
+        // if (recovery_start_time > 0.0) {
+        //     // This parcel was already recovered and converted to child (breakup_phase=5)
+        //     // It shouldn't be in RPE anymore
+        //     printf("[RPE_ERROR] Recovered parcel (child) re-entered RPE! p_idx=%li, recovery_time=%.3e s\n",
+        //            p_idx, recovery_start_time);
+        //     old_parcel_cloud->breakup_phase[p_idx] = 14;  // Recovered parcel in RPE
+        //     old_parcel_cloud->film_flag[p_idx] = 14;
+        //     old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        //     old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        //     old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        //     return;
+        // }
         
         // First time collapse - attempt recovery by converting to child
         // Always print collapse diagnostics
-        printf("[RPE_COLLAPSE] Negative Rdot=%.3e, converting to child parcel\n", state.Rdot);
+        printf("[RPE_COLLAPSE] Negative Rdot=%.3e, entering recovery...\n", state.Rdot);
         printf("               Time: %.6e s\n", current_time);
         
         printf("               T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
@@ -411,7 +472,11 @@ void RPE_euler_solver(
         // Apply recovery: reset bubble and enter recovery state
         old_parcel_cloud->breakup_phase[p_idx] = 3;  // RECOVERY (bubble collapsed)
         old_parcel_cloud->film_flag[p_idx] = 3;
-        old_parcel_cloud->r_drop_0[p_idx] = old_parcel_cloud->radius[p_idx];
+        //Use volume balance to return to original N0 
+        old_parcel_cloud->num_drop[p_idx] = CONVERGE_cube(old_parcel_cloud->radius[p_idx])* old_parcel_cloud->num_drop[p_idx] / CONVERGE_cube(old_parcel_cloud->r_drop_0[p_idx]);
+        //Reset radius 
+        old_parcel_cloud->radius[p_idx] = old_parcel_cloud->r_drop_0[p_idx];
+        //Reset r_bubble and v_bubble
         old_parcel_cloud->r_bubble[p_idx] = 0.0;
         old_parcel_cloud->v_bubble[p_idx] = 0.0;
         old_parcel_cloud->recovery_time[p_idx] = current_time;
