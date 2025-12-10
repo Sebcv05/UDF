@@ -447,15 +447,25 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          if (P_sat_new < P_amb)
          {
             // Not superheated - disable thermal breakup for this parcel
+            // Calculate velocity magnitude
+            CONVERGE_precision_t vel_x = old_parcel_cloud.uu[p_idx].X;
+            CONVERGE_precision_t vel_y = old_parcel_cloud.uu[p_idx].Y;
+            CONVERGE_precision_t vel_z = old_parcel_cloud.uu[p_idx].Z;
+            CONVERGE_precision_t vel_mag = sqrt(vel_x*vel_x + vel_y*vel_y + vel_z*vel_z);
+            
             static int not_superheated_count = 0;
-            if (not_superheated_count < 10) {
-               printf("[THERMAL_ABORT] p_idx=%li, not superheated: P_sat(T_drop)=%.3e < P_amb=%.3e Pa\n",
-                      p_idx, P_sat_new, P_amb);
-               printf("                T_drop=%.2f K, lifetime=%.3e s, disabling thermal breakup\n",
-                      old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx]);
+            if (not_superheated_count < 20) {
+               printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  Vel=%.3e\n",
+                      8,
+                      old_parcel_cloud.lifetime[p_idx],
+                      old_parcel_cloud.lifetime[p_idx],  // Same as time since injection
+                      old_parcel_cloud.radius[p_idx],
+                      old_parcel_cloud.r_bubble[p_idx],
+                      old_parcel_cloud.temp[p_idx],
+                      vel_mag);
                not_superheated_count++;
             }
-            old_parcel_cloud.breakup_phase[p_idx] = 8;  // Not superheated
+            old_parcel_cloud.breakup_phase[p_idx] = 8;  // Breakup Bypassed - Not superheated
             old_parcel_cloud.film_flag[p_idx] = 8;
             old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
             old_parcel_cloud.r_bubble[p_idx] = 0.0;
