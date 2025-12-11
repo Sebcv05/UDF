@@ -798,6 +798,107 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     CONVERGE_index_t initial_cloud_size = CONVERGE_cloud_size(cloud);
     // printf("\nInitial cloud size = %i",initial_cloud_size);
     // printf("\nParent parcel radius = %e, num_drop = %e", old_parcel_cloud->radius[p_idx], old_parcel_cloud->num_drop[p_idx]);
+    
+    // ============================================================================
+    // SPECIAL CASE: Single child (num_children = 1)
+    // Instead of creating a new parcel via spray_child_parcel, just update
+    // the current parent parcel properties to act as the single child.
+    // This avoids overhead of parcel creation/destruction for the common case
+    // of a single breakup fragment.
+    // ============================================================================
+    
+    if (num_child_parcels == 1) {
+        // --- In-place transformation of parent to child ---
+        
+        // 1. Update radius and num_drop from RR sampling
+        old_parcel_cloud->radius[p_idx] = child_radii[0];
+        old_parcel_cloud->radius_tm1[p_idx] = child_radii[0];
+        old_parcel_cloud->num_drop[p_idx] = child_num_drop[0];
+        old_parcel_cloud->num_drop_tm1[p_idx] = child_num_drop[0];
+        
+        // 2. Update velocity (parent + radial component)
+        CONVERGE_vec3_t new_velocity;
+        CONVERGE_vec3_add(parent_velocity, user_child_velocity[0], &new_velocity);
+        
+        // Safety check on velocity magnitude
+        if (CONVERGE_vec3_length(new_velocity) > 1.0e3) {
+            printf("\nBreakup.c: Single child velocity too large = %e %e %e. Capping to parent velocity.", 
+                   new_velocity[0], new_velocity[1], new_velocity[2]);
+            CONVERGE_vec3_dup(parent_velocity, &new_velocity);
+        }
+        
+        old_parcel_cloud->uu[p_idx][0] = new_velocity[0];
+        old_parcel_cloud->uu[p_idx][1] = new_velocity[1];
+        old_parcel_cloud->uu[p_idx][2] = new_velocity[2];
+        
+        old_parcel_cloud->uu_tm1[p_idx][0] = new_velocity[0];
+        old_parcel_cloud->uu_tm1[p_idx][1] = new_velocity[1];
+        old_parcel_cloud->uu_tm1[p_idx][2] = new_velocity[2];
+        
+        // 3. Reset bubble properties (from parcel_child)
+        old_parcel_cloud->r_bubble[p_idx] = 0.0;
+        old_parcel_cloud->r_bubble_0[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble[p_idx] = 0.0;
+        old_parcel_cloud->v_bubble_tm1[p_idx] = 0.0;
+        
+        // 4. Mark as child (COMPLETE) - will never re-enter thermal breakup
+        old_parcel_cloud->breakup_phase[p_idx] = 5;
+        old_parcel_cloud->film_flag[p_idx] = 5;
+        
+        // 5. Update thermal properties
+        old_parcel_cloud->r_drop_0[p_idx] = child_radii[0];
+        old_parcel_cloud->r_therm[p_idx] = child_radii[0];
+        
+        // 6. Reset breakup variables (from parcel_child)
+        old_parcel_cloud->int_omega[p_idx] = 0.0;
+        old_parcel_cloud->omega[p_idx] = 0.0;
+        old_parcel_cloud->omega_tm1[p_idx] = 0.0;
+        old_parcel_cloud->eta_drop[p_idx] = 0.0;
+        old_parcel_cloud->dgre_cycle_count[p_idx] = 0;
+        
+        // 7. Reset lifetime for new child droplet
+        old_parcel_cloud->lifetime[p_idx] = 0.0;
+        
+        // 8. Reset recovery fields
+        old_parcel_cloud->user_lag_var_i[p_idx] = 0;  // Collapse counter
+        old_parcel_cloud->recovery_time[p_idx] = 0.0;
+        old_parcel_cloud->recovery_count[p_idx] = 0;
+        
+        // 9. Update film_thickness hijack for diagnostics
+        old_parcel_cloud->film_thickness[p_idx] = 0.0;  // No bubble anymore
+        
+        // 10. Update m0 (initial mass reference)
+        old_parcel_cloud->m0[p_idx] = 1.33333 * PI * CONVERGE_cube(child_radii[0]) * child_num_drop[0];
+        
+        // 11. Log single child breakup event
+        static FILE* breakup_events_log_single = NULL;
+        if (!breakup_events_log_single) {
+            breakup_events_log_single = fopen("breakup_events.csv", "a");
+        }
+        if (breakup_events_log_single) {
+            fprintf(breakup_events_log_single, "%.6e,%ld,%ld,%.6e,%.6e,%.6e,%.6e\n",
+                    CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), p_idx,
+                    parent_radius, old_r_bubble, 
+                    old_parcel_cloud->v_bubble[p_idx], child_radii[0]);
+            fflush(breakup_events_log_single);
+        }
+        
+        // DIAGNOSTIC: Log if large single child
+        if (child_radii[0] > 80.0e-6) {
+            printf("BREAKUP_SINGLE_LARGE_CHILD: t=%.6e, p_idx=%ld, child_R=%.2f um, parent_R=%.2f um\n",
+                   CONVERGE_simulation_time_sec(), p_idx, child_radii[0]*1e6, parent_radius*1e6);
+        }
+        
+        // Done - parcel has been transformed in-place, no need to create/destroy parcels
+        prof_loop += CONVERGE_mpi_wtime() - t0;
+        return;
+    }
+    
+    // ============================================================================
+    // NORMAL CASE: Multiple children (num_children > 1)
+    // Use existing spray_child_parcel approach
+    // ============================================================================
+    
     if(initial_cloud_size >0)
     {
         CONVERGE_precision_t nd_before_break = old_parcel_cloud->num_drop[p_idx];
