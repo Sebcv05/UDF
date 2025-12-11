@@ -137,35 +137,16 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
    {
       cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
       const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
-      // printf("\ninitializing tables");
-     
-      // printf("\n spray_distort_cell...");
-    
-   
-      //Timing 
       
       spray_distort_cell_NH3(mesh, cloud, spray_cloud_list, i_pc, node_index, density, gas_mol_viscosity, parcel_counter,sp);
-     
-     // printf("\ndiff = %es",sdc_diff);
-    //  printf("\n destroying tables...");
-      
+
 
    }
    destroy_tables(sp);
   
-   //Get rank 
-   // CONVERGE_int_t rank;
-   //  CONVERGE_mpi_comm_rank(&rank);
-   // if(rank==0)
-   // {
-   // printf("cloud loop time = %f\n",cl_diff);
-   // }
+
    CONVERGE_iterator_destroy(&cl_it);
 
-   CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
-   // CONVERGE_precision_t total_time = end_time - start_time;
-
-     // printf("\nTotal time: %f\n",total_time);
    
      CONVERGE_precision_t distort_end = CONVERGE_mpi_wtime();
      CONVERGE_int_t rank;
