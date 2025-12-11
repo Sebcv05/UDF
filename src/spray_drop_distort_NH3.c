@@ -80,6 +80,7 @@ static void sync_child_velocity(CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t sp
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
 static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx);
+static int check_superheat_eligibility(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb);
 
 // static void init_tables(CONVERGE_species_t species);
 // static void destroy_tables(CONVERGE_species_t species);
@@ -138,6 +139,85 @@ static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_inde
    parcel_cloud->film_flag[p_idx] = 1;
    
    return 0;  // Continue to superheat check
+}
+
+/// @brief Check if parcel is superheated and eligible for thermal breakup
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @param P_sat Saturation pressure at droplet temperature (Pa)
+/// @param P_amb Ambient pressure (Pa)
+/// @return 0 = eligible (superheated), 1 = skip parcel (not superheated or stuck)
+static int check_superheat_eligibility(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, 
+                                       CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb)
+{
+   // Skip children and diagnostic bypass states (5+)
+   if (parcel_cloud->breakup_phase[p_idx] >= 5) {
+      return 1;  // Skip this parcel
+   }
+   
+   // Check if parcel is NOT superheated
+   if (P_sat < P_amb) {
+      // Calculate velocity magnitude for diagnostics
+      CONVERGE_precision_t vel_x = parcel_cloud->uu[p_idx][0];
+      CONVERGE_precision_t vel_y = parcel_cloud->uu[p_idx][1];
+      CONVERGE_precision_t vel_z = parcel_cloud->uu[p_idx][2];
+      CONVERGE_precision_t vel_mag = sqrt(vel_x*vel_x + vel_y*vel_y + vel_z*vel_z);
+      
+      static int not_superheated_count = 0;
+      if (not_superheated_count < 20) {
+         printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  T_tm1 =%0.3f  Vel=%.3e\n",
+               parcel_cloud->breakup_phase[p_idx],
+               parcel_cloud->lifetime[p_idx],
+               parcel_cloud->lifetime[p_idx],
+               parcel_cloud->radius[p_idx],
+               parcel_cloud->r_bubble[p_idx],
+               parcel_cloud->temp[p_idx],
+               parcel_cloud->temp_tm1[p_idx],
+               vel_mag);
+         not_superheated_count++;
+      }
+      
+      // Disable thermal breakup - not superheated
+      parcel_cloud->breakup_phase[p_idx] = 8;
+      parcel_cloud->film_flag[p_idx] = 8;
+      parcel_cloud->r_drop_0[p_idx] = parcel_cloud->radius[p_idx];
+      parcel_cloud->r_bubble[p_idx] = 0.0;
+      parcel_cloud->v_bubble[p_idx] = 0.0;
+      return 1;  // Skip this parcel
+   }
+   
+   // Handle DISABLED (phase 0) parcels - check if they should be re-enabled or permanently disabled
+   if (parcel_cloud->breakup_phase[p_idx] == 0) {
+      if (P_sat >= P_amb) {
+         // Parcel IS superheated but was disabled - re-enable
+         static int reenable_count = 0;
+         if (reenable_count < 10) {
+            printf("[STUCK_REENABLE] p_idx=%li, superheated but disabled - re-enabling\n", p_idx);
+            printf("                 P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+                  P_sat, P_amb, parcel_cloud->temp[p_idx], parcel_cloud->radius[p_idx]);
+            reenable_count++;
+         }
+         parcel_cloud->breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
+         parcel_cloud->film_flag[p_idx] = 1;
+      } else {
+         // Parcel is NOT superheated and disabled - force to bypass state
+         static int forced_child_count = 0;
+         if (forced_child_count < 20) {
+            printf("[STUCK_FORCE_CHILD] p_idx=%li, not superheated and disabled - forcing to child\n", p_idx);
+            printf("                    P_sat=%.3e < P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+                  P_sat, P_amb, parcel_cloud->temp[p_idx], parcel_cloud->radius[p_idx]);
+            forced_child_count++;
+         }
+         parcel_cloud->breakup_phase[p_idx] = 9;  // Stuck: disabled and not superheated
+         parcel_cloud->film_flag[p_idx] = 9;
+         parcel_cloud->r_drop_0[p_idx] = parcel_cloud->radius[p_idx];
+         parcel_cloud->r_bubble[p_idx] = 0.0;
+         parcel_cloud->v_bubble[p_idx] = 0.0;
+         return 1;  // Skip this parcel
+      }
+   }
+   
+   return 0;  // Parcel is eligible for thermal breakup
 }
 
 /**********************************************************************/
@@ -424,78 +504,11 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                if (handle_recovery_state(&old_parcel_cloud, p_idx)) {
                   continue;  // Skip this parcel, still in recovery wait
                }
-                  
-                  // Skip children and diagnostic bypass states (5+) from re-evaluation
-                  // These parcels are either post-breakup children or have been permanently disabled
-                  if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
-                     continue;  // Skip to next parcel
-                  }
-                  
-                  // Superheat check: Parcel must be superheated to enter thermal breakup
-                  // Condition: P_sat(T_drop) >= P_ambient
-                  // Only evaluates parent parcels in phases 0-4
-                  if (P_sat_new < P_amb)
-                  {
-                     // Not superheated - disable thermal breakup for this parcel
-                     // Calculate velocity magnitude
-                     CONVERGE_precision_t vel_x = old_parcel_cloud.uu[p_idx][0];
-                     CONVERGE_precision_t vel_y = old_parcel_cloud.uu[p_idx][1];
-                     CONVERGE_precision_t vel_z = old_parcel_cloud.uu[p_idx][2];
-                     CONVERGE_precision_t vel_mag = sqrt(vel_x*vel_x + vel_y*vel_y + vel_z*vel_z);
-                     
-                     static int not_superheated_count = 0;
-                     if (not_superheated_count < 20) {
-                        printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  T_tm1 =%0.3f  Vel=%.3e\n",
-                              old_parcel_cloud.breakup_phase[p_idx],
-                              old_parcel_cloud.lifetime[p_idx],
-                              old_parcel_cloud.lifetime[p_idx],  // Same as time since injection
-                              old_parcel_cloud.radius[p_idx],
-                              old_parcel_cloud.r_bubble[p_idx],
-                              old_parcel_cloud.temp[p_idx],
-                              old_parcel_cloud.temp_tm1[p_idx],
-                              vel_mag);
-                        not_superheated_count++;
-                     }
-                     old_parcel_cloud.breakup_phase[p_idx] = 8;  // Breakup Bypassed - Not superheated
-                     old_parcel_cloud.film_flag[p_idx] = 8;
-                     old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
-                     old_parcel_cloud.r_bubble[p_idx] = 0.0;
-                     old_parcel_cloud.v_bubble[p_idx] = 0.0;
-                     continue;
-                  }
-
-                  // UNIFIED STUCK PARCEL FIX: Re-enable or disable thermal breakup for phase=0 parcels
-                  // If parcel is DISABLED (phase=0), check if it should be re-enabled or forced to child
-                  if (old_parcel_cloud.breakup_phase[p_idx] == 0) {
-                     // Check if parcel IS actually superheated - if so, re-enable thermal breakup
-                     if (P_sat_new >= P_amb) {
-                        // Parcel IS superheated but was disabled - re-enable
-                        static int reenable_count = 0;
-                        if (reenable_count < 10) {
-                           printf("[STUCK_REENABLE] p_idx=%li, superheated but disabled - re-enabling\n", p_idx);
-                           printf("                 P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
-                                 P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.radius[p_idx]);
-                           reenable_count++;
-                        }
-                        old_parcel_cloud.breakup_phase[p_idx] = 1;  // Set to ELIGIBLE
-                        old_parcel_cloud.film_flag[p_idx] = 1;  // Hijack: mirror breakup_phase
-                     } else {
-                        // Parcel is NOT superheated and disabled - force to child
-                        static int forced_child_count = 0;
-                        if (forced_child_count < 20) {
-                           printf("[STUCK_FORCE_CHILD] p_idx=%li, not superheated and disabled - forcing to child\n", p_idx);
-                           printf("                    P_sat=%.3e < P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
-                                 P_sat_new, P_amb, old_parcel_cloud.temp[p_idx], old_parcel_cloud.radius[p_idx]);
-                           forced_child_count++;
-                        }
-                        old_parcel_cloud.breakup_phase[p_idx] = 9;  // Stuck: disabled and not superheated
-                        old_parcel_cloud.film_flag[p_idx] = 9;
-                        old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
-                        old_parcel_cloud.r_bubble[p_idx] = 0.0;
-                        old_parcel_cloud.v_bubble[p_idx] = 0.0;
-                        continue;  // Skip rest of loop
-                     }
-                  }
+               
+               // Check superheat eligibility and handle stuck parcels
+               if (check_superheat_eligibility(&old_parcel_cloud, p_idx, P_sat_new, P_amb)) {
+                  continue;  // Skip this parcel, not eligible for thermal breakup
+               }
 
 
             
