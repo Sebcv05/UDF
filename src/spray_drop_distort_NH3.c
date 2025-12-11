@@ -153,10 +153,7 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
 
 static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index, const CONVERGE_precision_t *global_density, const CONVERGE_precision_t *global_viscosity, CONVERGE_index_t parcel_counter,CONVERGE_species_t sp)
 {
-   /*  fprintf(stderr,"mesh size = %i\n",sizeof(mesh));
-            fprintf(stderr,"cloud size = %i\n",sizeof(cloud));
-                  fprintf(stderr,"mesh size = %i\n",sizeof(spray_cloud_list));
-*/
+
 
 
 
@@ -174,14 +171,12 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    static int tracked_parcel_id = -1;  // Will be set to first parent parcel we encounter
 
 
-   // printf("\n0");
+
+   // Load the parcel cloud structure 
    CONVERGE_size_t num_parcels_in_cloud = CONVERGE_cloud_size(cloud);
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
-
    load_user_cloud(&old_parcel_cloud, cloud);
 
-   CONVERGE_precision_t pre_pl = CONVERGE_mpi_wtime();
-   CONVERGE_precision_t pre_TAB,post_TAB,pre_DGRE,post_DGRE,pre_Geom,post_Geom,pre_break,post_break,pre_bc,post_bc,pre_pbr,post_pbr,sopl,eopl;
    // printf("\n 0.1");
    // printf("starting loop over parcels in cloud\n");
    mass_before = 0;
