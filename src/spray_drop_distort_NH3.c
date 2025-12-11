@@ -211,37 +211,23 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          {
             return;
          }
-
-         CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);
-
-
-         CONVERGE_index_t new_pc_idx, new_p_idx;
-         // printf("user cloud loaded\n");
          
-         // printf("loaded global variables\n");
-         // printf("rho_v = %e\n",rho_v);
-         // printf("mu_v = %e \n",mu_v);
-         //  Simulation Metadata
-         // printf("mesh variables loaded\n");
-         CONVERGE_precision_t dt = CONVERGE_simulation_dt();
          // Get high-level API containers
+         CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);       
+         CONVERGE_precision_t dt = CONVERGE_simulation_dt();
          num_gas_species = CONVERGE_species_num_gas(sp);
-         num_parcel_species = CONVERGE_species_num_parcel(sp);
-
+         
          // Old table lookup vars
          CONVERGE_precision_t average_hvap = 0.0;
          CONVERGE_precision_t hvap;
 
-         // Initialize variables and tables.
+
          
 
 
       CONVERGE_int_t theskyisblue = 1;          // it is 
       CONVERGE_int_t theskyisgreen = 0;         //it isn't, other than in Skinner's Kitchen
-      /*--------------------------------------------------------------*/
 
-
-      // printf("iterator created\n");
       //  Local variables
       CONVERGE_precision_t mu;       // Liquid Viscosity
       CONVERGE_precision_t sigma;    // Surface Tension
@@ -261,23 +247,17 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       CONVERGE_precision_t NDR;      // Non dimensional Radius
       CONVERGE_precision_t rho_b;    // Bubble density
       CONVERGE_precision_t tab_om;
-      // printf("initiated local variables\n");
-      //  Mesh Vars
 
+      //  Mesh Vars
       CONVERGE_precision_t P_amb = global_pressure[node_index];
       CONVERGE_precision_t T_amb = global_temperature[node_index];
       CONVERGE_precision_t csubp = global_csubp[node_index];
       CONVERGE_precision_t rho_v = global_density[node_index];
       CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
 
-         // old_parcel_cloud.tbreak_rt[p_idx] = old_parcel_cloud.temp[p_idx];
          parcel_counter++;
-         // Store thermal breakup flag in from_nozzle so it can be exported in .h5s
-         //
-         // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
-         // printf("p_idx = %i\n",p_idx);
-         //   Populate local variables
 
+         //   Populate local variables
          sigma = old_parcel_cloud.surf_ten[p_idx];
          Td = old_parcel_cloud.temp[p_idx];
          Rb = old_parcel_cloud.r_bubble[p_idx];
