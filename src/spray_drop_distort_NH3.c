@@ -225,35 +225,35 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          
 
 
-      CONVERGE_int_t theskyisblue = 1;          // it is 
-      CONVERGE_int_t theskyisgreen = 0;         //it isn't, other than in Skinner's Kitchen
+         CONVERGE_int_t theskyisblue = 1;          // it is 
+         CONVERGE_int_t theskyisgreen = 0;         //it isn't, other than in Skinner's Kitchen
 
-      //  Local variables
-      CONVERGE_precision_t mu;       // Liquid Viscosity
-      CONVERGE_precision_t sigma;    // Surface Tension
-      CONVERGE_precision_t Td;       // Droplet Temperature
-      CONVERGE_precision_t Rb;       // Bubble Radius
-      CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
-      CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
-      CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
-      CONVERGE_precision_t rho_l;    // Droplet Density
-      CONVERGE_precision_t k;        // Suface Viscosity
-      CONVERGE_precision_t H;        // Enthalpy of Vaporisation
-      CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
-      CONVERGE_precision_t t_parcel; // Parcel Lifetime
-      CONVERGE_precision_t csubp_l;  // Liquid specific heat
-      CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
-      CONVERGE_precision_t tau;      // Non-dimensional Time
-      CONVERGE_precision_t NDR;      // Non dimensional Radius
-      CONVERGE_precision_t rho_b;    // Bubble density
-      CONVERGE_precision_t tab_om;
+         //  Local variables
+         CONVERGE_precision_t mu;       // Liquid Viscosity
+         CONVERGE_precision_t sigma;    // Surface Tension
+         CONVERGE_precision_t Td;       // Droplet Temperature
+         CONVERGE_precision_t Rb;       // Bubble Radius
+         CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
+         CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
+         CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
+         CONVERGE_precision_t rho_l;    // Droplet Density
+         CONVERGE_precision_t k;        // Suface Viscosity
+         CONVERGE_precision_t H;        // Enthalpy of Vaporisation
+         CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
+         CONVERGE_precision_t t_parcel; // Parcel Lifetime
+         CONVERGE_precision_t csubp_l;  // Liquid specific heat
+         CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
+         CONVERGE_precision_t tau;      // Non-dimensional Time
+         CONVERGE_precision_t NDR;      // Non dimensional Radius
+         CONVERGE_precision_t rho_b;    // Bubble density
+         CONVERGE_precision_t tab_om;
 
-      //  Mesh Vars
-      CONVERGE_precision_t P_amb = global_pressure[node_index];
-      CONVERGE_precision_t T_amb = global_temperature[node_index];
-      CONVERGE_precision_t csubp = global_csubp[node_index];
-      CONVERGE_precision_t rho_v = global_density[node_index];
-      CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
+         //  Mesh Vars
+         CONVERGE_precision_t P_amb = global_pressure[node_index];
+         CONVERGE_precision_t T_amb = global_temperature[node_index];
+         CONVERGE_precision_t csubp = global_csubp[node_index];
+         CONVERGE_precision_t rho_v = global_density[node_index];
+         CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
 
          parcel_counter++;
 
@@ -277,7 +277,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             radius_diag_count++;
          }
          
-         // ROGUE PARCEL LOGGER: Check for parcels > 80 μm and > 10 mm downstream
+         // ROGUE PARCEL LOGGER: Check for parcels > 80 μm and > 10 mm downstream of injector
          CONVERGE_precision_t x = old_parcel_cloud.xx[p_idx][0];
          CONVERGE_precision_t y = old_parcel_cloud.xx[p_idx][1];
          CONVERGE_precision_t z = old_parcel_cloud.xx[p_idx][2];
@@ -341,85 +341,72 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                   old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
                   old_parcel_cloud.r_bubble[p_idx] = 0.0;
                   old_parcel_cloud.v_bubble[p_idx] = 0.0;
-                  // Also zero out the parcel for complete removal
+                  // Also zero out the parcel for complete removal - energy balance has been violated
                   old_parcel_cloud.num_drop[p_idx] = 0.0;
                   old_parcel_cloud.radius[p_idx] = 0.0;
                   continue;
                }
                Saturation_PressureNH3(Td, &P_sat);
                // Unit tests for saturation pressure function
-               CONVERGE_precision_t Psattest1, Psattest2, Psattest3, Ttest1, Ttest2, Ttest3;
+               CONVERGE_precision_t Psattest1, Ttest1;
+               //Unit Test Psat 
                Ttest1 = 300.274;
-
-            Saturation_PressureNH3(Ttest1, &Psattest1);
+               Saturation_PressureNH3(Ttest1, &Psattest1);
                if (round(Psattest1) != 1061549)
                {
                   printf("\nP_sat function failed unit test, aborting...");
                   printf("\n %f != 77188", floor(Psattest1 * 1e5) / 1e5);
                   CONVERGE_mpi_abort();
                }
-               // Unit tests 2 & 3 -- only uncomment to check program aborts when T outside of range
-               //    Ttest2=280;
-               //    Ttest3=400;
-               //   // Saturation_PressureNH3(Ttest2,&Psattest2);
-               //    Saturation_PressureNH3(Ttest3,&Psattest3);
+     
 
+               //Check to prevent negative P_sat
                if (P_sat < 1)
                {
-                  // FIX: Added pbt=0 and thermal_breakup_flag=999 to properly disable thermal breakup
-                  static int psat_low_count = 0;
-                  if (psat_low_count < 10) {
-                     printf("[THERMAL_ABORT] p_idx=%li, P_sat=%.3e Pa < 1 Pa, Td=%.2f K outside Antoine range (lifetime=%.3e s)\n",
-                           p_idx, P_sat, Td, old_parcel_cloud.lifetime[p_idx]);
-                     psat_low_count++;
-                  }
-                  old_parcel_cloud.breakup_phase[p_idx] = 7;  // Pre-check: P_sat < P_amb
-                  old_parcel_cloud.film_flag[p_idx] = 7;
-                  old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
-                  old_parcel_cloud.r_bubble[p_idx] = 0.0;
-                  old_parcel_cloud.v_bubble[p_idx] = 0.0;
-                  continue;
-
+                  printf("\n\n=======================================\nABORTING: P_SAT < 1 CALCULATED\n=======================================\n\n");
+                  CONVERGE_mpi_abort();
                }
-               rho_b = bubble_densityNH3(P_sat, Td); // Not sure about using this to estimate rho_b
+
+
+               rho_b = bubble_densityNH3(P_sat, Td); //Ideal gas estimate of rho_b
             
 
                
-                  CONVERGE_precision_t P_sat_new;
-                  Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
+               CONVERGE_precision_t P_sat_new;
+               Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
+               
+               // Handle RECOVERY state (3) - check if recovery period has elapsed
+               if (old_parcel_cloud.breakup_phase[p_idx] == 3) {
+                  CONVERGE_precision_t recovery_time = old_parcel_cloud.recovery_time[p_idx];
+                  CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+                  CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
                   
-                  // Handle RECOVERY state (3) - check if recovery period has elapsed
-                  if (old_parcel_cloud.breakup_phase[p_idx] == 3) {
-                     CONVERGE_precision_t recovery_time = old_parcel_cloud.recovery_time[p_idx];
-                     CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-                     CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
-                     
-                     const CONVERGE_precision_t RECOVERY_PERIOD = 20.0e-6;  // 20 μs recovery wait
-                     
-                     if (time_since_recovery < RECOVERY_PERIOD) {
-                        // Still in recovery wait period - skip this timestep
-                        static int recovery_wait_count = 0;
-                        if (recovery_wait_count < 10) {
-                           printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
-                                 p_idx, time_since_recovery, RECOVERY_PERIOD, 
-                                 100.0 * time_since_recovery / RECOVERY_PERIOD);
-                           recovery_wait_count++;
-                        }
-                        continue;
-                     } else {
-                        // Recovery period complete - reset to ELIGIBLE for re-evaluation
-                        static int recovery_complete_count = 0;
-                        if (recovery_complete_count < 10) {
-                           printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
-                           printf("                    Time since recovery: %.3e s, will re-check superheat\n",
-                                 time_since_recovery);
-                           recovery_complete_count++;
-                        }
-                        old_parcel_cloud.breakup_phase[p_idx] = 1;  // Back to ELIGIBLE
-                        old_parcel_cloud.film_flag[p_idx] = 1;
-                        // Continue to superheat check below - don't skip this parcel
+                  const CONVERGE_precision_t RECOVERY_PERIOD = 20.0e-6;  // 20 μs recovery wait 
+                  
+                  if (time_since_recovery < RECOVERY_PERIOD) {
+                     // Still in recovery wait period - skip this timestep
+                     static int recovery_wait_count = 0;
+                     if (recovery_wait_count < 10) {
+                        printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
+                              p_idx, time_since_recovery, RECOVERY_PERIOD, 
+                              100.0 * time_since_recovery / RECOVERY_PERIOD);
+                        recovery_wait_count++;
                      }
+                     continue;
+                  } else {
+                     // Recovery period complete - reset to ELIGIBLE for re-evaluation
+                     static int recovery_complete_count = 0;
+                     if (recovery_complete_count < 10) {
+                        printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
+                        printf("                    Time since recovery: %.3e s, will re-check superheat\n",
+                              time_since_recovery);
+                        recovery_complete_count++;
+                     }
+                     old_parcel_cloud.breakup_phase[p_idx] = 1;  // Back to ELIGIBLE
+                     old_parcel_cloud.film_flag[p_idx] = 1;
+                     // Continue to superheat check below - don't skip this parcel
                   }
+               }
                   
                   // Skip children and diagnostic bypass states (5+) from re-evaluation
                   // These parcels are either post-breakup children or have been permanently disabled
