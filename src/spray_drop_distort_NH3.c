@@ -184,6 +184,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
+
          // Skip parcels that are too small (avoid numerical issues in breakup routines)
          if (old_parcel_cloud.radius[p_idx] < 1.0e-6) {
             static int skip_count = 0;
@@ -195,15 +196,15 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             continue;  // Skip this parcel
          }
             
-         // if(CONVERGE_simulation_time_sec() > 1.0e-4)
-         // {
-         //Timing 
+         //initialise profiling vars
          pre_TAB = 0.0; post_TAB = 0.0; pre_DGRE=0.0;post_DGRE=0.0;pre_Geom=0.0;post_Geom=0.0;pre_break=0.0;post_break=0.0;pre_bc=0.0;pre_bc=0.0;pre_pbr=0.0;post_bc=0.0;
          sopl = CONVERGE_mpi_wtime();
 
+
+         // 4/3 Nd pi R^3 is used throughout to track mass (even when there is a bubble)  
          mass_before= mass_before + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
-        // printf("\n before num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
+
 
          CONVERGE_size_t num_parcels_before = CONVERGE_cloud_list_num_parcels(spray_cloud_list);
          if (num_parcels_before <= 0)
