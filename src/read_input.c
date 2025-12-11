@@ -181,9 +181,9 @@ CONVERGE_INPUT(read_user,
       CONVERGE_logger_err("user_inputs.in: kb_threshold missing or invalid");
       error = CONVERGE_TRUE;
    }
-   if(user_inputs->num_children < 2)
+   if(user_inputs->num_children < 1)
    {
-      CONVERGE_logger_err("user_inputs.in: num_children must be >= 2 (got %d)", user_inputs->num_children);
+      CONVERGE_logger_err("user_inputs.in: num_children must be >= 1 (got %d)", user_inputs->num_children);
       error = CONVERGE_TRUE;
    }
    if(user_inputs->num_children > MAX_NUM_CHILDREN)
