@@ -177,6 +177,9 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
    load_user_cloud(&old_parcel_cloud, cloud);
 
+
+   //Profiling Variables
+   CONVERGE_precision_t pre_TAB,post_TAB,pre_DGRE,post_DGRE,pre_Geom,post_Geom,pre_break,post_break,pre_bc,post_bc,pre_pbr,post_pbr,sopl,eopl;
    // printf("\n 0.1");
    // printf("starting loop over parcels in cloud\n");
    mass_before = 0;
