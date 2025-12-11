@@ -79,6 +79,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 static void sync_child_velocity(CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index);
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
+static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx);
 
 // static void init_tables(CONVERGE_species_t species);
 // static void destroy_tables(CONVERGE_species_t species);
@@ -95,6 +96,50 @@ static CONVERGE_table_t *evap_species_sensible_h_table;
 static double prof_geom=0.0, prof_dgre=0.0, prof_bc=0.0, prof_break=0.0, prof_bubble=0.0;
 static int last_cycle = -1;
 static int spray_params_logged = 0;
+
+// Recovery period constant
+#define RECOVERY_PERIOD 20.0e-6  // 20 μs recovery wait
+
+/// @brief Handle recovery state (phase 3) - check if recovery period has elapsed
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @return 0 = continue normal processing, 1 = skip this parcel (still waiting)
+static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx)
+{
+   if (parcel_cloud->breakup_phase[p_idx] != 3) {
+      return 0;  // Not in recovery, continue normal processing
+   }
+   
+   CONVERGE_precision_t recovery_time = parcel_cloud->recovery_time[p_idx];
+   CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+   CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
+   
+   if (time_since_recovery < RECOVERY_PERIOD) {
+      // Still in recovery wait period - skip this timestep
+      static int recovery_wait_count = 0;
+      if (recovery_wait_count < 10) {
+         printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
+               p_idx, time_since_recovery, RECOVERY_PERIOD, 
+               100.0 * time_since_recovery / RECOVERY_PERIOD);
+         recovery_wait_count++;
+      }
+      return 1;  // Skip this parcel
+   }
+   
+   // Recovery period complete - reset to ELIGIBLE for re-evaluation
+   static int recovery_complete_count = 0;
+   if (recovery_complete_count < 10) {
+      printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
+      printf("                    Time since recovery: %.3e s, will re-check superheat\n",
+            time_since_recovery);
+      recovery_complete_count++;
+   }
+   parcel_cloud->breakup_phase[p_idx] = 1;  // Back to ELIGIBLE
+   parcel_cloud->film_flag[p_idx] = 1;
+   
+   return 0;  // Continue to superheat check
+}
+
 /**********************************************************************/
 /*                                                                    */
 /* Name: user_drop_distort, user_drop_distort_cell                    */
@@ -376,36 +421,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
                
                // Handle RECOVERY state (3) - check if recovery period has elapsed
-               if (old_parcel_cloud.breakup_phase[p_idx] == 3) {
-                  CONVERGE_precision_t recovery_time = old_parcel_cloud.recovery_time[p_idx];
-                  CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
-                  CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
-                  
-                  const CONVERGE_precision_t RECOVERY_PERIOD = 20.0e-6;  // 20 μs recovery wait 
-                  
-                  if (time_since_recovery < RECOVERY_PERIOD) {
-                     // Still in recovery wait period - skip this timestep
-                     static int recovery_wait_count = 0;
-                     if (recovery_wait_count < 10) {
-                        printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
-                              p_idx, time_since_recovery, RECOVERY_PERIOD, 
-                              100.0 * time_since_recovery / RECOVERY_PERIOD);
-                        recovery_wait_count++;
-                     }
-                     continue;
-                  } else {
-                     // Recovery period complete - reset to ELIGIBLE for re-evaluation
-                     static int recovery_complete_count = 0;
-                     if (recovery_complete_count < 10) {
-                        printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
-                        printf("                    Time since recovery: %.3e s, will re-check superheat\n",
-                              time_since_recovery);
-                        recovery_complete_count++;
-                     }
-                     old_parcel_cloud.breakup_phase[p_idx] = 1;  // Back to ELIGIBLE
-                     old_parcel_cloud.film_flag[p_idx] = 1;
-                     // Continue to superheat check below - don't skip this parcel
-                  }
+               if (handle_recovery_state(&old_parcel_cloud, p_idx)) {
+                  continue;  // Skip this parcel, still in recovery wait
                }
                   
                   // Skip children and diagnostic bypass states (5+) from re-evaluation
