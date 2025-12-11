@@ -147,12 +147,6 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
 
    CONVERGE_iterator_destroy(&cl_it);
 
-   
-     CONVERGE_precision_t distort_end = CONVERGE_mpi_wtime();
-     CONVERGE_int_t rank;
-     CONVERGE_mpi_comm_rank(&rank);
-     CONVERGE_precision_t distort_diff = distort_end - distort_start;
-   //   printf("\n spray distort rank %d runtime = %.2e (s)\n",rank,distort_diff);
 }
 
 
