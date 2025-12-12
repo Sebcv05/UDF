@@ -191,10 +191,15 @@ void RPE_song_solver(
         return;
     }
     
-    // CRITICAL FIX: Recalculate R_bubble_0 on first call with actual P_amb
+    // CRITICAL FIX: Always recalculate R_bubble_0 on first call with actual P_amb
     // (parcel_prop.c uses default 2 bar since it doesn't have CFD mesh access)
-    if (R0 < 1e-12 || fabs(R - R0) < 1e-15) {
-        // This is the first call - recalculate critical radius with actual P_amb
+    //
+    // Use breakup_phase to detect first call: parcels enter with phase=1 (ELIGIBLE)
+    // Once thermal breakup starts, phase becomes 2 (ACTIVE)
+    // So if phase==1, this is the first RPE call - always recalculate R0
+    
+    if (old_parcel_cloud->breakup_phase[p_idx] == 1) {
+        // First call to Song RPE for this parcel - recalculate with actual P_amb
         CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
         R0 = 1.1 * Rc;
         R = R0;
@@ -205,10 +210,14 @@ void RPE_song_solver(
         old_parcel_cloud->r_bubble[p_idx] = R;
         old_parcel_cloud->v_bubble[p_idx] = Rdot;
         
+        // Set phase to ACTIVE now that we've initialized properly
+        old_parcel_cloud->breakup_phase[p_idx] = 2;
+        old_parcel_cloud->film_flag[p_idx] = 2;  // Mirror for hijack
+        
         // Log correction
         static int correction_logged = 0;
         if (correction_logged < 5) {
-            printf("[SONG_INIT] Corrected R_bubble_0 with actual P_amb:\n");
+            printf("[SONG_INIT] First call - initialized R_bubble_0 with actual P_amb:\n");
             printf("[SONG_INIT]   T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
                    T_drop, P_sat, P_amb, P_sat - P_amb);
             printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
