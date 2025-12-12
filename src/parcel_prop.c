@@ -165,23 +165,14 @@ CONVERGE_UDF(parcel_inject,
    // printf("\n ambient_pres = %f \n",ambient_pres);
    // printf("\n r_bubble old = %f \n", parcel_cloud.r_bubble[passed_parcel_idx]);
 
-   // Calculate critical radius Rc = 2*sigma / DeltaP (approximate, corrected in RPE)
-   CONVERGE_precision_t Rc = 2.0 * parcel_cloud.surf_ten[passed_parcel_idx] / (P_sat - ambient_pres);
-   // Initialize bubble at 1.1 * Rc (10% above critical radius for stable growth)
-   parcel_cloud.r_bubble[passed_parcel_idx] = 1.1 * Rc;
-   
-   if (parcel_cloud.r_bubble[passed_parcel_idx] < 0.0)
-   {
-      parcel_cloud.r_bubble[passed_parcel_idx] = 0.0;
-      parcel_cloud.r_bubble_0[passed_parcel_idx] = 0.0;
-   }
+   // Initialize bubble to 0.0 - RPE solvers will calculate proper R0 with actual P_amb
+   // This avoids using default ambient_pres which may not match local CFD pressure
+   parcel_cloud.r_bubble[passed_parcel_idx] = 0.0;
+   parcel_cloud.r_bubble_0[passed_parcel_idx] = 0.0;
 
-
-   
    parcel_cloud.time_of_injection[passed_parcel_idx] = CONVERGE_simulation_time_sec();
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
-   parcel_cloud.r_bubble_0[passed_parcel_idx] = parcel_cloud.r_bubble[passed_parcel_idx];
 
    // printf("\n\n r_bubble = %e <seg_60> r_bubble_0 = %e", parcel_cloud.r_bubble[passed_parcel_idx], parcel_cloud.r_bubble_0[passed_parcel_idx]);
 

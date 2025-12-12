@@ -191,37 +191,28 @@ void RPE_song_solver(
         return;
     }
     
-    // CRITICAL FIX: Always recalculate R_bubble_0 on first call with actual P_amb
-    // (parcel_prop.c uses default 2 bar since it doesn't have CFD mesh access)
-    //
-    // Use R0 being very small compared to expected Rc to detect first call
-    // Calculate what Rc should be, if R0 is way off, this is first call
-    
-    CONVERGE_precision_t Rc_expected = 2.0 * params.sigma / (P_sat - P_amb);
-    CONVERGE_precision_t R0_expected = 1.1 * Rc_expected;
-    
-    // If R0 differs significantly from expected value (more than 20%), recalculate
-    // This catches both uninitialized (R0 ≈ 0) and wrong P_amb cases
-    if (R0 < 1e-12 || fabs(R0 - R0_expected) / R0_expected > 0.2) {
-        // First call to Song RPE for this parcel - recalculate with actual P_amb
-        R0 = R0_expected;
+    // Initialize bubble on first call (when R0 == 0.0 from parcel_prop.c)
+    // Calculate R0 with actual local P_amb from CFD mesh
+    if (R0 < 1e-12) {
+        // First call to Song RPE for this parcel - initialize with actual P_amb
+        CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
+        R0 = 1.1 * Rc;
         R = R0;
         Rdot = 0.001;  // Small positive initial velocity
         
-        // Store corrected values
+        // Store initial values (will never change after this)
         old_parcel_cloud->r_bubble_0[p_idx] = R0;
         old_parcel_cloud->r_bubble[p_idx] = R;
         old_parcel_cloud->v_bubble[p_idx] = Rdot;
         
-        // Log correction
-        static int correction_logged = 0;
-        if (correction_logged < 5) {
-            printf("[SONG_INIT] R0 recalculated with actual P_amb (was %.3e m, now %.3e m):\n", 
-                   old_parcel_cloud->r_bubble_0[p_idx], R0);
-            printf("[SONG_INIT]   T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
-                   T_drop, P_sat, P_amb, P_sat - P_amb);
-            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc_expected, R0);
-            correction_logged++;
+        // Log initialization
+        static int init_logged = 0;
+        if (init_logged < 10) {
+            printf("[SONG_INIT] First call - initialized bubble with actual P_amb:\n");
+            printf("[SONG_INIT]   p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
+                   p_idx, T_drop, P_sat, P_amb, P_sat - P_amb);
+            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
+            init_logged++;
         }
     }
     

@@ -337,6 +337,49 @@ void RPE_euler_solver(
         }
     }
     
+    // Initialize bubble on first call (when R0 == 0.0 from parcel_prop.c)
+    // This handles normal first nucleation (not recovery)
+    if (old_parcel_cloud->r_bubble_0[p_idx] < 1e-12 && 
+        old_parcel_cloud->recovery_time[p_idx] == 0.0) {
+        
+        // First call to thermal RPE for this parcel - initialize with actual P_amb
+        CONVERGE_precision_t P_sat_init;
+        Saturation_PressureNH3(Td, &P_sat_init);
+        
+        if (P_sat_init > P_amb) {
+            // Calculate critical radius with actual local P_amb
+            CONVERGE_precision_t sigma = old_parcel_cloud->surf_ten[p_idx];
+            CONVERGE_precision_t Rc = 2.0 * sigma / (P_sat_init - P_amb);
+            CONVERGE_precision_t R_init = 1.1 * Rc;
+            
+            // Store initial values (will never change after this)
+            old_parcel_cloud->r_bubble[p_idx] = R_init;
+            old_parcel_cloud->r_bubble_0[p_idx] = R_init;
+            old_parcel_cloud->v_bubble[p_idx] = 0.0;
+            
+            // Initialize bubble mass
+            CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat_init, Td);
+            CONVERGE_precision_t Vb = (4.0/3.0) * PI * R_init * R_init * R_init;
+            old_parcel_cloud->m_bubble[p_idx] = rho_b * Vb;
+            
+            // Log initialization
+            static int thermal_init_logged = 0;
+            if (thermal_init_logged < 10) {
+                printf("[THERMAL_INIT] First call - initialized bubble with actual P_amb:\n");
+                printf("[THERMAL_INIT]   p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
+                       p_idx, Td, P_sat_init, P_amb, P_sat_init - P_amb);
+                printf("[THERMAL_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc), m_b=%.3e kg\n", 
+                       Rc, R_init, old_parcel_cloud->m_bubble[p_idx]);
+                thermal_init_logged++;
+            }
+        } else {
+            // Not superheated - disable thermal breakup
+            old_parcel_cloud->breakup_phase[p_idx] = 13;  // Subcooled
+            old_parcel_cloud->film_flag[p_idx] = 13;
+            return;
+        }
+    }
+    
     // Latent heat and specific heat (weighted by species mass fraction)
     CONVERGE_precision_t L_v_avg = 0.0;
     CONVERGE_precision_t cp_l_avg = 0.0;
