@@ -1047,7 +1047,13 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                         
                         // Use Song breakup model if Song RPE solver is active
                         if (use_song_rpe) {
+                           if(old_parcel_cloud.radius[p_idx]>5.0e-5){
                            Breakup_Song(&old_parcel_cloud, p_idx, P_amb);
+                           }
+                           else{
+                              //Set as child (too small to break up) as per communicaiton with authors
+                              set_breakup_phase(&old_parcel_cloud, p_idx, 5);
+                           }
                         } else {
                            Breakup(&old_parcel_cloud, p_idx, cloud);
                         }
