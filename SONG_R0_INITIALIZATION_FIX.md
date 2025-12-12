@@ -82,10 +82,13 @@ Use `breakup_phase` to detect first call:
 
 ```c
 // NEW (FIXED):
-if (old_parcel_cloud->breakup_phase[p_idx] == 1) {
-    // First call to Song RPE for this parcel
-    CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
-    R0 = 1.1 * Rc;
+// Calculate what R0 should be with actual P_amb
+CONVERGE_precision_t Rc_expected = 2.0 * params.sigma / (P_sat - P_amb);
+CONVERGE_precision_t R0_expected = 1.1 * Rc_expected;
+
+// If R0 differs significantly from expected (>20%), recalculate
+if (R0 < 1e-12 || fabs(R0 - R0_expected) / R0_expected > 0.2) {
+    R0 = R0_expected;
     R = R0;
     Rdot = 0.001;
     
@@ -93,10 +96,6 @@ if (old_parcel_cloud->breakup_phase[p_idx] == 1) {
     old_parcel_cloud->r_bubble_0[p_idx] = R0;
     old_parcel_cloud->r_bubble[p_idx] = R;
     old_parcel_cloud->v_bubble[p_idx] = Rdot;
-    
-    // Mark as initialized
-    old_parcel_cloud->breakup_phase[p_idx] = 2;
-    old_parcel_cloud->film_flag[p_idx] = 2;
 }
 ```
 
@@ -232,10 +231,15 @@ The **Song RPE** is particularly sensitive to R0 because:
 - **Con:** No mesh access during injection
 - **Status:** Not possible
 
-### Option D: Use breakup_phase (CHOSEN)
+### Option D: Use breakup_phase (TRIED, FAILED)
 - **Pro:** Reliable detection, no new variables needed
-- **Con:** Couples to state machine
-- **Status:** ✅ Implemented
+- **Con:** Parcels may already be in phase 2 when Song RPE is first called
+- **Status:** ❌ Didn't work - parcels don't always enter with phase=1
+
+### Option E: Compare R0 to expected value (CHOSEN)
+- **Pro:** Always works regardless of when called, self-correcting
+- **Con:** Slightly more computation (calculate expected Rc every time)
+- **Status:** ✅ Implemented - checks if R0 differs >20% from expected
 
 ---
 
