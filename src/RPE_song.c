@@ -194,14 +194,17 @@ void RPE_song_solver(
     // CRITICAL FIX: Always recalculate R_bubble_0 on first call with actual P_amb
     // (parcel_prop.c uses default 2 bar since it doesn't have CFD mesh access)
     //
-    // Use breakup_phase to detect first call: parcels enter with phase=1 (ELIGIBLE)
-    // Once thermal breakup starts, phase becomes 2 (ACTIVE)
-    // So if phase==1, this is the first RPE call - always recalculate R0
+    // Use R0 being very small compared to expected Rc to detect first call
+    // Calculate what Rc should be, if R0 is way off, this is first call
     
-    if (old_parcel_cloud->breakup_phase[p_idx] == 1) {
+    CONVERGE_precision_t Rc_expected = 2.0 * params.sigma / (P_sat - P_amb);
+    CONVERGE_precision_t R0_expected = 1.1 * Rc_expected;
+    
+    // If R0 differs significantly from expected value (more than 20%), recalculate
+    // This catches both uninitialized (R0 ≈ 0) and wrong P_amb cases
+    if (R0 < 1e-12 || fabs(R0 - R0_expected) / R0_expected > 0.2) {
         // First call to Song RPE for this parcel - recalculate with actual P_amb
-        CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
-        R0 = 1.1 * Rc;
+        R0 = R0_expected;
         R = R0;
         Rdot = 0.001;  // Small positive initial velocity
         
@@ -210,17 +213,14 @@ void RPE_song_solver(
         old_parcel_cloud->r_bubble[p_idx] = R;
         old_parcel_cloud->v_bubble[p_idx] = Rdot;
         
-        // Set phase to ACTIVE now that we've initialized properly
-        old_parcel_cloud->breakup_phase[p_idx] = 2;
-        old_parcel_cloud->film_flag[p_idx] = 2;  // Mirror for hijack
-        
         // Log correction
         static int correction_logged = 0;
         if (correction_logged < 5) {
-            printf("[SONG_INIT] First call - initialized R_bubble_0 with actual P_amb:\n");
+            printf("[SONG_INIT] R0 recalculated with actual P_amb (was %.3e m, now %.3e m):\n", 
+                   old_parcel_cloud->r_bubble_0[p_idx], R0);
             printf("[SONG_INIT]   T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
                    T_drop, P_sat, P_amb, P_sat - P_amb);
-            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
+            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc_expected, R0);
             correction_logged++;
         }
     }
