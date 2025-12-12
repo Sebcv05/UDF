@@ -1052,6 +1052,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            }
                            else{
                               //Set as child (too small to break up) as per communicaiton with authors
+                              printf("\nSONG_AVERT : PREVENTING SMALL PARCEL FROM BREAKING UP");
                               set_breakup_phase(&old_parcel_cloud, p_idx, 5);
                            }
                         } else {

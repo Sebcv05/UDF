@@ -196,9 +196,9 @@ void RPE_song_solver(
     if (R0 < 1e-12) {
         // First call to Song RPE for this parcel - initialize with actual P_amb
         CONVERGE_precision_t Rc = 2.0 * params.sigma / (P_sat - P_amb);
-        R0 = 1.1 * Rc;
+        R0 = 1.01 * Rc;  // 1% above critical (matches standalone test)
         R = R0;
-        Rdot = 0.001;  // Small positive initial velocity
+        Rdot = 0.0;  // Start from rest (matches standalone test)
         
         // Store initial values (will never change after this)
         old_parcel_cloud->r_bubble_0[p_idx] = R0;
@@ -211,7 +211,7 @@ void RPE_song_solver(
             printf("[SONG_INIT] First call - initialized bubble with actual P_amb:\n");
             printf("[SONG_INIT]   p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
                    p_idx, T_drop, P_sat, P_amb, P_sat - P_amb);
-            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc)\n", Rc, R0);
+            printf("[SONG_INIT]   Rc=%.3e m, R0=%.3e m (1.01*Rc)\n", Rc, R0);
             init_logged++;
         }
     }

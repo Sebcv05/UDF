@@ -301,8 +301,8 @@ void RPE_euler_solver(
             CONVERGE_precision_t delta_P = P_sat_check - P_amb;
             CONVERGE_precision_t Rc = 2.0 * sigma / delta_P;
             
-            // Initialize bubble at 1.1 * Rc (10% above critical for stable growth)
-            CONVERGE_precision_t R_init = 1.1 * Rc;
+            // Initialize bubble at 1.01 * Rc (1% above critical, matches standalone test)
+            CONVERGE_precision_t R_init = 1.01 * Rc;
             old_parcel_cloud->r_bubble[p_idx] = R_init;
             old_parcel_cloud->r_bubble_0[p_idx] = R_init;
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
@@ -350,7 +350,7 @@ void RPE_euler_solver(
             // Calculate critical radius with actual local P_amb
             CONVERGE_precision_t sigma = old_parcel_cloud->surf_ten[p_idx];
             CONVERGE_precision_t Rc = 2.0 * sigma / (P_sat_init - P_amb);
-            CONVERGE_precision_t R_init = 1.1 * Rc;
+            CONVERGE_precision_t R_init = 1.01 * Rc;  // 1% above critical (matches standalone test)
             
             // Store initial values (will never change after this)
             old_parcel_cloud->r_bubble[p_idx] = R_init;
@@ -368,7 +368,7 @@ void RPE_euler_solver(
                 printf("[THERMAL_INIT] First call - initialized bubble with actual P_amb:\n");
                 printf("[THERMAL_INIT]   p_idx=%li, T=%.2f K, P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n",
                        p_idx, Td, P_sat_init, P_amb, P_sat_init - P_amb);
-                printf("[THERMAL_INIT]   Rc=%.3e m, R0=%.3e m (1.1*Rc), m_b=%.3e kg\n", 
+                printf("[THERMAL_INIT]   Rc=%.3e m, R0=%.3e m (1.01*Rc), m_b=%.3e kg\n", 
                        Rc, R_init, old_parcel_cloud->m_bubble[p_idx]);
                 thermal_init_logged++;
             }
