@@ -253,7 +253,7 @@ void RPE_song_solver(
         static int collapse_detail_count = 0;
         if (collapse_detail_count < 5) {
             printf("[SONG_COLLAPSE] Bubble collapsing: Rdot=%.3e m/s at p_idx=%li\n", Rdot, p_idx);
-            printf("[SONG_COLLAPSE]   R=%.3e m, R0=%.3e m, Rddot=%.3e m/s², R_drop=%.3e m\n", R, R0, Rddot,R_drop);
+            printf("[SONG_COLLAPSE]   R=%.3e m, R0=%.3e m, Rddot=%.3e m/s², R_drop=%.3e m\n", R, R0, Rddot,R_drop_current);
             printf("[SONG_COLLAPSE]   P_sat=%.2e Pa, P_amb=%.2e Pa, ΔP=%.2e Pa\n", P_sat, P_amb, P_sat - P_amb);
             printf("[SONG_COLLAPSE]   T_drop=%.2f K, rho_m=%.1f kg/m³, ε=%.4f\n", T_drop, rho_m, epsilon);
             
