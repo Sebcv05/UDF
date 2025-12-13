@@ -196,11 +196,11 @@ CONVERGE_UDF(spray_evap,
     */
    dt = CONVERGE_simulation_dt();
 
-   // Check and display LK flags at cycle 10 to confirm they are set correctly
-   if(CONVERGE_ncyc() == 10)
+   // Check and display LK flags at cycle 100 to confirm they are set correctly
+   if(CONVERGE_ncyc() == 100)
    {
       printf("\n\n========================================\n");
-      printf("LK FLAGS CHECK AT CYCLE 10:\n");
+      printf("LK FLAGS CHECK AT CYCLE 100:\n");
       printf("  lk_correction_flag = %d\n", lk_correction_flag);
       printf("  lk_diagnostic_flag = %d\n", lk_diagnostic_flag);
       printf("  lk_chi_neq_min = %.4f\n", lk_chi_neq_min);
