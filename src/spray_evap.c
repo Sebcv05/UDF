@@ -196,6 +196,18 @@ CONVERGE_UDF(spray_evap,
     */
    dt = CONVERGE_simulation_dt();
 
+   // Check and display LK flags at cycle 10 to confirm they are set correctly
+   if(CONVERGE_ncyc() == 10)
+   {
+      CONVERGE_logger_concise("\n\n========================================");
+      CONVERGE_logger_concise("LK FLAGS CHECK AT CYCLE 10:");
+      CONVERGE_logger_concise("  lk_correction_flag = %d", lk_correction_flag);
+      CONVERGE_logger_concise("  lk_diagnostic_flag = %d", lk_diagnostic_flag);
+      CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", lk_chi_neq_min);
+      CONVERGE_logger_concise("  lk_chi_neq_max = %.4f", lk_chi_neq_max);
+      CONVERGE_logger_concise("========================================\n\n");
+   }
+
    init_tables(sp);
 
    // Note: These global variables are global to this file.
@@ -2160,6 +2172,8 @@ CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
    Y_v_s = (Y_v_s > 1.0) ? 1.0 : Y_v_s;
    
    // Diagnostic output to file (only on rank 0 to avoid conflicts)
+   // Control with lk_diagnostic_flag in user_inputs.in (0=off, 1=on)
+   // WARNING: Can create very large files (15+ GB) - use only when needed
    if(lk_diagnostic_flag == 1)
    {
       int rank;

@@ -21,14 +21,11 @@
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
 {
-   // Enable LK model with robust safety checks
-   lk_correction_flag = 1;
-   lk_diagnostic_flag = 1;
-   lk_chi_neq_min = 0.0;
-   lk_chi_neq_max = 0.9999;
+   // LK model parameters now read from user_inputs.in
+   // No hardcoding - all flags controlled by input file
    
-   // Log the values
-   CONVERGE_logger_concise("LK Model Parameters (HARDCODED FOR TESTING):");
+   // Log the values (set by read_input.c)
+   CONVERGE_logger_concise("LK Model Parameters (from user_inputs.in):");
    CONVERGE_logger_concise("  lk_correction_flag = %d", lk_correction_flag);
    CONVERGE_logger_concise("  lk_diagnostic_flag = %d", lk_diagnostic_flag);
    CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", lk_chi_neq_min);
