@@ -199,13 +199,14 @@ CONVERGE_UDF(spray_evap,
    // Check and display LK flags at cycle 10 to confirm they are set correctly
    if(CONVERGE_ncyc() == 10)
    {
-      CONVERGE_logger_concise("\n\n========================================");
-      CONVERGE_logger_concise("LK FLAGS CHECK AT CYCLE 10:");
-      CONVERGE_logger_concise("  lk_correction_flag = %d", lk_correction_flag);
-      CONVERGE_logger_concise("  lk_diagnostic_flag = %d", lk_diagnostic_flag);
-      CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", lk_chi_neq_min);
-      CONVERGE_logger_concise("  lk_chi_neq_max = %.4f", lk_chi_neq_max);
-      CONVERGE_logger_concise("========================================\n\n");
+      printf("\n\n========================================\n");
+      printf("LK FLAGS CHECK AT CYCLE 10:\n");
+      printf("  lk_correction_flag = %d\n", lk_correction_flag);
+      printf("  lk_diagnostic_flag = %d\n", lk_diagnostic_flag);
+      printf("  lk_chi_neq_min = %.4f\n", lk_chi_neq_min);
+      printf("  lk_chi_neq_max = %.4f\n", lk_chi_neq_max);
+      printf("========================================\n\n");
+      fflush(stdout);
    }
 
    init_tables(sp);
