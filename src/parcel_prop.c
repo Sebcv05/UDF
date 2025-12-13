@@ -322,6 +322,28 @@ CONVERGE_UDF(parcel_child,
       parcel_cloud.recovery_time[passed_child_parcel_idx] = 0.0;
       parcel_cloud.recovery_count[passed_child_parcel_idx] = 0;
       
+         //KHRT Parmas 
+
+         //KH
+         parcel_cloud.tbreak_rt[passed_parcel_idx]     = 0.0;
+         parcel_cloud.shed_num_drop[passed_parcel_idx] = 0.0;
+         parcel_cloud.shed_mass[passed_parcel_idx]     = 0.0;
+
+         //RT
+         parcel_cloud.tbreak_rt[passed_parcel_idx]      = 0.0;
+         parcel_cloud.distort[passed_parcel_idx]        = 0.0;
+         parcel_cloud.distort_dot[passed_parcel_idx]    = 0.0;
+         parcel_cloud.shed_num_drop[passed_parcel_idx]  = 0.0;
+         parcel_cloud.shed_mass[passed_parcel_idx]      = 0.0;
+         parcel_cloud.tbreak_kh[passed_parcel_idx]      = 0.0;
+         parcel_cloud.tke0[passed_parcel_idx]           = 0.0;
+         parcel_cloud.eps0[passed_parcel_idx]           = 0.0;
+         parcel_cloud.lifetime[passed_parcel_idx]       = 0.0;
+         parcel_cloud.area_reduction[passed_parcel_idx] = 0.0;
+
+
+
+
       // If parent's thermal_breakup_flag is set, displace the child parcel
       int rank;
       CONVERGE_mpi_comm_rank(&rank);
