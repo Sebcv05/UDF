@@ -385,9 +385,38 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
       CONVERGE_precision_t spray_tab_csubk   = CONVERGE_get_double("lagrangian.tab_csubk");
       CONVERGE_precision_t spray_tab_cfocbck = CONVERGE_get_double("lagrangian.tab_cfocbck");
 
+         // Get high-level API containers
+      CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);       
+      const CONVERGE_precision_t dt = CONVERGE_simulation_dt();
+      num_gas_species = CONVERGE_species_num_gas(sp);
+            //  Local variables
+         CONVERGE_precision_t mu;       // Liquid Viscosity
+         CONVERGE_precision_t sigma;    // Surface Tension
+         CONVERGE_precision_t Td;       // Droplet Temperature
+         CONVERGE_precision_t Rb;       // Bubble Radius
+         CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
+         CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
+         CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
+         CONVERGE_precision_t rho_l;    // Droplet Density
+         CONVERGE_precision_t k;        // Suface Viscosity
+         CONVERGE_precision_t H;        // Enthalpy of Vaporisation
+         CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
+         CONVERGE_precision_t t_parcel; // Parcel Lifetime
+         CONVERGE_precision_t csubp_l;  // Liquid specific heat
+         CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
+         CONVERGE_precision_t tau;      // Non-dimensional Time
+         CONVERGE_precision_t NDR;      // Non dimensional Radius
+         CONVERGE_precision_t rho_b;    // Bubble density
+         CONVERGE_precision_t tab_om;
+
+   
+
 
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
+
+         
+
       //===================================================================== START OF DISTORT ROUTINE =====================================================================//
       //  if(tab_flag || lisa_flag)
       // {
@@ -472,11 +501,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
             return;
          }
          
-         // Get high-level API containers
-         CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);       
-         CONVERGE_precision_t dt = CONVERGE_simulation_dt();
-         num_gas_species = CONVERGE_species_num_gas(sp);
-         
+    
          // Old table lookup vars
          CONVERGE_precision_t average_hvap = 0.0;
          CONVERGE_precision_t hvap;
@@ -488,25 +513,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          CONVERGE_int_t theskyisblue = 1;          // it is 
          CONVERGE_int_t theskyisgreen = 0;         //it isn't, other than in Skinner's Kitchen
 
-         //  Local variables
-         CONVERGE_precision_t mu;       // Liquid Viscosity
-         CONVERGE_precision_t sigma;    // Surface Tension
-         CONVERGE_precision_t Td;       // Droplet Temperature
-         CONVERGE_precision_t Rb;       // Bubble Radius
-         CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
-         CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
-         CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
-         CONVERGE_precision_t rho_l;    // Droplet Density
-         CONVERGE_precision_t k;        // Suface Viscosity
-         CONVERGE_precision_t H;        // Enthalpy of Vaporisation
-         CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
-         CONVERGE_precision_t t_parcel; // Parcel Lifetime
-         CONVERGE_precision_t csubp_l;  // Liquid specific heat
-         CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
-         CONVERGE_precision_t tau;      // Non-dimensional Time
-         CONVERGE_precision_t NDR;      // Non dimensional Radius
-         CONVERGE_precision_t rho_b;    // Bubble density
-         CONVERGE_precision_t tab_om;
 
          // Initialize commonly used variables via struct
          struct ParcelLoopVars vars;
