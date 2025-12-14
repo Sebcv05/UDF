@@ -383,6 +383,62 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
+      //===================================================================== START OF DISTORT ROUTINE =====================================================================//
+       if(tab_flag || lisa_flag)
+      {
+         continue;
+      }
+
+      const CONVERGE_precision_t dt     = CONVERGE_simulation_dt();
+      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+
+      // calculate weber number
+      CONVERGE_precision_t weber = global_density[node_index] * parcel_cloud.rel_vel_mag[p_idx] *
+                                   parcel_cloud.rel_vel_mag[p_idx] * parcel_cloud.radius[p_idx] /
+                                   parcel_cloud.surf_ten[p_idx];
+
+      // tab_rtd is 1/t_d in TAB paper referenced in header
+      CONVERGE_precision_t tab_rtd =
+         0.5 * spray_tab_csubd * parcel_cloud.viscosity[p_idx] /
+         (parcel_cloud.density[p_idx] * parcel_cloud.radius[p_idx] * parcel_cloud.radius[p_idx]);
+
+      // tab_omsq is omega^2 in TAB paper referenced in header
+      CONVERGE_precision_t tab_omsq = spray_tab_csubk * parcel_cloud.surf_ten[p_idx] /
+                                         (parcel_cloud.density[p_idx] * parcel_cloud.radius[p_idx] *
+                                          parcel_cloud.radius[p_idx] * parcel_cloud.radius[p_idx]) -
+                                      tab_rtd * tab_rtd;
+
+      if(tab_omsq <= 0.0)
+      {
+         parcel_cloud.distort[p_idx]     = 0.0;
+         parcel_cloud.distort_dot[p_idx] = 0.0;
+      }
+      else
+      {
+         CONVERGE_precision_t tab_om = sqrt(tab_omsq);
+         CONVERGE_precision_t term1  = parcel_cloud.distort[p_idx] - spray_tab_cfocbck * weber;
+         CONVERGE_precision_t term2  = (1.0 / tab_om) * (parcel_cloud.distort_dot[p_idx] + term1 * tab_rtd);
+
+         // following is Eq. 4 in TAB paper referenced in header
+         parcel_cloud.distort[p_idx] =
+            spray_tab_cfocbck * weber + exp(-dt * tab_rtd) * (term1 * cos(tab_om * dt) + term2 * sin(tab_om * dt));
+
+         parcel_cloud.distort_dot[p_idx] =
+            (spray_tab_cfocbck * weber - parcel_cloud.distort[p_idx]) * tab_rtd +
+            exp(-dt * tab_rtd) * tab_om * (term2 * cos(tab_om * dt) - term1 * sin(tab_om * dt));
+
+         // make sure that distort is between 0 and 1
+         if(parcel_cloud.distort[p_idx] >= 1.0)
+         {
+            parcel_cloud.distort[p_idx] = 1.0;
+         }
+         if(parcel_cloud.distort[p_idx] <= 0.0)
+         {
+            parcel_cloud.distort[p_idx] = 0.0;
+         }
+      }
+      //===================================================================== END OF DISTORT ROUTINE =====================================================================//
+
 
          // Skip parcels that are too small (avoid numerical issues in breakup routines)
          if (old_parcel_cloud.radius[p_idx] < 1.0e-6) {
