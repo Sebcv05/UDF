@@ -1125,6 +1125,19 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            }
                         } else {
                            Breakup(&old_parcel_cloud, p_idx, cloud);
+                           printf("\n[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+                                  p_idx,
+                                  old_parcel_cloud.lifetime[p_idx],
+                                  old_parcel_cloud.v_bubble[p_idx],
+                                  T_final,
+                                  Pb_final,
+                                  Pb_actual,
+                                  R_final,
+                                  R_drop_final,
+                                  kb_final,
+                                  breakup_flag,
+                                  m_b_final,
+                                  rho_v_final);
                         }
                         
                         prof_break += CONVERGE_mpi_wtime() - t0;
@@ -1200,14 +1213,6 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
     int rank;
     CONVERGE_mpi_comm_rank(&rank);
   
-   //     // Print every rank’s data
-   //  printf("Rank %d, Cycle %d profiling (s): Bubble=%f, Geometry=%f, DGRE=%f, BreakupCriterion=%f, Breakup=%f\n",
-   //    rank, ncyc, prof_bubble, prof_geom, prof_dgre, prof_bc, prof_break);
-   //    CONVERGE_precision_t prof_total = prof_bubble+prof_geom+prof_dgre+prof_bc+prof_break;
-   //  // Print percentages
-   //  printf("Rank %d, Cycle %d profiling (%%): Bubble=%f, Geometry=%f, DGRE=%f, BreakupCriterion=%f, Breakup=%f\n",
-   //    rank, ncyc, 100.0f * prof_bubble / prof_total, 100.0f * prof_geom / prof_total, 100.0f * prof_dgre / prof_total, 100.0f * prof_bc / prof_total, 100.0f * prof_break / prof_total);
-
 
 
     // reset accumulators
