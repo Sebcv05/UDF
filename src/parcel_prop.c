@@ -348,13 +348,13 @@ CONVERGE_UDF(parcel_child,
       int rank;
       CONVERGE_mpi_comm_rank(&rank);
 
-      parcel_cloud.uu[passed_child_parcel_idx][0] = user_child_velocity_x;
-      parcel_cloud.uu[passed_child_parcel_idx][1] = user_child_velocity_y;
-      parcel_cloud.uu[passed_child_parcel_idx][2] = user_child_velocity_z;
+      parcel_cloud.uu[passed_child_parcel_idx][0] = user_child_velocity_x*2.0;
+      parcel_cloud.uu[passed_child_parcel_idx][1] = user_child_velocity_y*2.0;
+      parcel_cloud.uu[passed_child_parcel_idx][2] = user_child_velocity_z*2.0;
       
-      parcel_cloud.uu_tm1[passed_child_parcel_idx][0] = user_child_velocity_x;
-      parcel_cloud.uu_tm1[passed_child_parcel_idx][1] = user_child_velocity_y;
-      parcel_cloud.uu_tm1[passed_child_parcel_idx][2] = user_child_velocity_z;
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][0] = user_child_velocity_x*2.0;
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][1] = user_child_velocity_y*2.0;
+      parcel_cloud.uu_tm1[passed_child_parcel_idx][2] = user_child_velocity_z*2.0;
 
     
       // Update positions based on normalized velocity direction
