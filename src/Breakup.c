@@ -588,7 +588,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     if(rad_vel * breakup_velocity_scale > 100.0){
     //  printf("|Vc| = %f",rad_vel * breakup_velocity_scale);   
     }
-    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * breakup_velocity_scale);
+    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * breakup_velocity_scale * 5.0);
     
     for (int k = 0; k < 3; k++)
     user_child_velocity[jj][k] *= (1.0 + 0.1 * (CONVERGE_random_precision() - 0.5));
@@ -916,6 +916,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
                 new_radius = child_radii[nnn];
                 new_parcel_num_drop = child_num_drop[nnn];
               
+
                 CONVERGE_vec3_add(parent_velocity, user_child_velocity[nnn], &new_parcel_uu);
 
                 if (CONVERGE_vec3_length(new_parcel_uu) > 1.0e3) {
