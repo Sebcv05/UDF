@@ -588,7 +588,7 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
     if(rad_vel * breakup_velocity_scale > 100.0){
     //  printf("|Vc| = %f",rad_vel * breakup_velocity_scale);   
     }
-    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * breakup_velocity_scale * 2.0);
+    CONVERGE_vec3_scale(user_child_velocity[jj],rad_vel * breakup_velocity_scale * 4.0);
     
     for (int k = 0; k < 3; k++)
     user_child_velocity[jj][k] *= (1.0 + 0.1 * (CONVERGE_random_precision() - 0.5));
