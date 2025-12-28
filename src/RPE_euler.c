@@ -118,8 +118,7 @@ void compute_thermal_mass_transfer(
     mdot_senda = mdot_senda * Nu; 
     mdot_senda = fmax(mdot_senda,0.0);
     // Debug output
-    printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, h_conv_si=%.2e, h_conv_film=%.2e, mdot_senda=%.2e\n", 
-           R, params->Ro, film_thickness, h_conv_si, h_conv_film, mdot_senda);
+
     
     // Use maximum (least restrictive) for heat transfer
     CONVERGE_precision_t Q_conv = (Q_film > Q_si) ? Q_film : Q_si;
@@ -133,7 +132,11 @@ void compute_thermal_mass_transfer(
     mdot = mdot+ mdot_senda;
 
     if (mdot < 0.0) mdot = 0.0;  // Evaporation only
-    
+
+    mdot_film = Q_film / params->L_v;
+    mdot_si = Q_si / params->L_v;
+        printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, mdot_si=%.2e, mdot_film=%.2e, mdot_senda=%.2e, mdot=%.2e\n", 
+           R, params->Ro, film_thickness, mdot_si, mdot_film, mdot_senda, mdot);
     // Output
     *Nu_out = Nu;
     *Q_out = Q_conv;
