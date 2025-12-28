@@ -104,7 +104,7 @@ void compute_thermal_mass_transfer(
     }
 
     // Senda contribution 
-    mdot_senda = 0.0;   //reset in case dT < 0 or otherwise
+    CONVERGE_precision_t mdot_senda = 0.0;   //reset in case dT < 0 or otherwise
     CONVERGE_precision_t pi = 3.14159265358979323846;
     if(dT >= 0.0 && dT<5.0){
         alpha_senda = 760.0 * pow(dT,0.26);
