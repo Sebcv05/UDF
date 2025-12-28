@@ -115,7 +115,7 @@ void compute_thermal_mass_transfer(
         mdot_senda = alpha_senda * dT * A_bubble / params->L_v;
     }    
     mdot_senda = mdot_senda * Nu; 
-    mdot_senda = max(mdot_senda,0.0);
+    mdot_senda = fmax(mdot_senda,0.0);
     // Debug output
     printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, h_conv_si=%.2e, h_conv_film=%.2e, mdot_senda=%.2e, mdot_price=%.2e\n", 
            R, params->Ro, film_thickness, h_conv_si, h_conv_film, mdot_senda, mdot_price);
