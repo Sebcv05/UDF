@@ -102,12 +102,35 @@ void compute_thermal_mass_transfer(
         h_conv_film = 1e20;
         Q_film = 0.0;
     }
+
+    // Senda contribution 
+    mdot_senda = 0.0;   //reset in case dT < 0 or otherwise
+    CONVERGE_precision_t pi = 3.14159265358979323846;
+    if(dT >= 0.0 && dT<5.0){
+        alpha_senda = 760.0 * pow(dT,0.26);
+        mdot_senda = alpha_senda * dT  * A_bubble / params->L_v;
+    }
+    else if(dT >= 5.0){
+        alpha_senda = 27 * pow(dT,2.33);
+        mdot_senda = alpha_senda * dT * A_bubble / params->L_v;
+    }    
+    mdot_senda = mdot_senda * Nu; 
+    mdot_senda = max(mdot_senda,0.0);
+    // Debug output
+    printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, h_conv_si=%.2e, h_conv_film=%.2e, mdot_senda=%.2e, mdot_price=%.2e\n", 
+           R, params->Ro, film_thickness, h_conv_si, h_conv_film, mdot_senda, mdot_price);
     
     // Use maximum (least restrictive) for heat transfer
     CONVERGE_precision_t Q_conv = (Q_film > Q_si) ? Q_film : Q_si;
     
+
+
+
+
     // Mass transfer rate (thermal limiting)
     CONVERGE_precision_t mdot = safe_divide(Q_conv, params->L_v, 0.0);
+    mdot = mdot+ mdot_senda;
+
     if (mdot < 0.0) mdot = 0.0;  // Evaporation only
     
     // Output
