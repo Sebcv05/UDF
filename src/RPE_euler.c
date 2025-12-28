@@ -135,8 +135,8 @@ void compute_thermal_mass_transfer(
     CONVERGE_precision_t mdot_film, mdot_si;
     mdot_film = Q_film / params->L_v;
     mdot_si = Q_si / params->L_v;
-        printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, mdot_si=%.2e, mdot_film=%.2e, mdot_senda=%.2e, mdot=%.2e\n", 
-           R, params->Ro, film_thickness, mdot_si, mdot_film, mdot_senda, mdot);
+        // printf("DEBUG: R=%.2e, Ro=%.2e, film_thickness=%.2e, mdot_si=%.2e, mdot_film=%.2e, mdot_senda=%.2e, mdot=%.2e\n", 
+        //    R, params->Ro, film_thickness, mdot_si, mdot_film, mdot_senda, mdot);
     // Output
     *Nu_out = Nu;
     *Q_out = Q_conv;
