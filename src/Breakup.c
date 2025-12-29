@@ -686,7 +686,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         // printf("\nsurf ten = %e, density = %e rt3 = %e",old_parcel_cloud->surf_ten[p_idx],old_parcel_cloud->density[p_idx],rad_term3);
     }
 
-    printf("\n parent radius = %e, v_bubble = %e, r_bubble = %e, r_child = %e, v_child = %e",parent_radius,old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],calculated_radius,rad_vel);
+    // printf("\n parent radius = %e, v_bubble = %e, r_bubble = %e, r_child = %e, v_child = %e",parent_radius,old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],calculated_radius,rad_vel);
 
     prof_calcs += CONVERGE_mpi_wtime() - t0;
     
