@@ -618,7 +618,6 @@ if (fabs(normal_length - 1.0) > 1.0e-1) {
         CONVERGE_mpi_abort();
     }
 
-    //this is a comment 
 
     rad_denom = 0.5 * (1.0 / denom);
     rad_term1 = (CONVERGE_square(old_parcel_cloud->radius[p_idx]) + CONVERGE_square(old_parcel_cloud->r_bubble[p_idx]));
@@ -687,7 +686,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         // printf("\nsurf ten = %e, density = %e rt3 = %e",old_parcel_cloud->surf_ten[p_idx],old_parcel_cloud->density[p_idx],rad_term3);
     }
 
-
+    printf("\n parent radius = %e, v_bubble = %e, r_bubble = %e, r_child = %e, v_child = %e",parent_radius,old_parcel_cloud->v_bubble[p_idx],old_parcel_cloud->r_bubble[p_idx],calculated_radius,rad_vel);
 
     prof_calcs += CONVERGE_mpi_wtime() - t0;
     
@@ -787,9 +786,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
     // new_parcel_num_drop = new_mass / (1.3333 * PI * CONVERGE_cube(new_radius));
     // new_parcel_num_drop = old_parcel_cloud->num_drop[p_idx];
 
-    //Try cooling the parcel to saturation temp -2 to prevent excessive evap 
-    // Just doing this manually for 2 bar for now T -> 252 K 
-    // old_parcel_cloud->temp[p_idx] = 252.0;
+ 
 
 
     t0 = CONVERGE_mpi_wtime();
