@@ -129,7 +129,7 @@ void compute_thermal_mass_transfer(
 
     // Mass transfer rate (thermal limiting)
     CONVERGE_precision_t mdot = safe_divide(Q_conv, params->L_v, 0.0);
-    mdot = mdot+ mdot_senda;
+    // mdot = mdot+ mdot_senda;
 
     if (mdot < 0.0) mdot = 0.0;  // Evaporation only
     CONVERGE_precision_t mdot_film, mdot_si;
