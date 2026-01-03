@@ -149,7 +149,7 @@ void Breakup_Song(
     
     // Calculate pressure energy release
     // ΔE_p = (P_bubble - P_ambient) * V_bubble
-    CONVERGE_precision_t DeltaE_p = (P_sat - P_amb) * don;
+    CONVERGE_precision_t DeltaE_p = (P_sat - P_amb) * Vb;
     
     // Calculate mixture density factor (from Song paper: 0.45*(ε*ρ_g + (1-ε)*ρ_l))
     CONVERGE_precision_t rho_m = 0.45 * (epsilon * rho_g + (1.0 - epsilon) * rho_l);
