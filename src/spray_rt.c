@@ -90,7 +90,7 @@ CONVERGE_UDF(spray_rt,
    // Check for cooldown period after thermal breakup
    // If parcel underwent thermal breakup recently (lifetime < 10 microseconds), skip RT breakup
    CONVERGE_precision_t cooldown_time = 10.0e-6;  // 10 microseconds
-   if(parcel_cloud.lifetime[passed_parcel_idx] < cooldown_time || parcel_cloud.breakup[passed_parcel_idx] == 5)  ////No RT breakup if parcel underwent thermal breakup 
+   if(parcel_cloud.lifetime[passed_parcel_idx] < cooldown_time || parcel_cloud.breakup_phase[passed_parcel_idx] == 5)  ////No RT breakup if parcel underwent thermal breakup 
    {
       destroy_tables(passed_species);
       return;
