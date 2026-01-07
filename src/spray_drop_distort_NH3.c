@@ -1125,7 +1125,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            }
                         } else {
                            Breakup(&old_parcel_cloud, p_idx, cloud);
-                           printf("\n[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+                           printf("\n[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3, breakup_phase=%d\n",
                                   p_idx,
                                   old_parcel_cloud.lifetime[p_idx],
                                   old_parcel_cloud.v_bubble[p_idx],
@@ -1137,7 +1137,8 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                                   kb_final,
                                   breakup_flag,
                                   m_b_final,
-                                  rho_v_final);
+                                  rho_v_final,
+                                 old_parcel_cloud.breakup_phase[p_idx]);
                         }
                         
                         prof_break += CONVERGE_mpi_wtime() - t0;
