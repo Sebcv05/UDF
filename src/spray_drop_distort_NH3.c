@@ -417,61 +417,61 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
          
 
-      //===================================================================== START OF DISTORT ROUTINE =====================================================================//
-      //  if(tab_flag || lisa_flag)
+      // //===================================================================== START OF DISTORT ROUTINE =====================================================================//
+      // //  if(tab_flag || lisa_flag)
+      // // {
+      // //    continue;
+      // // }
+
+      // const CONVERGE_precision_t dt     = CONVERGE_simulation_dt();
+      // const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+
+      // // calculate weber number
+      // CONVERGE_precision_t weber = global_density[node_index] * old_parcel_cloud.rel_vel_mag[p_idx] *
+      //                              old_parcel_cloud.rel_vel_mag[p_idx] * old_parcel_cloud.radius[p_idx] /
+      //                              old_parcel_cloud.surf_ten[p_idx];
+
+      // // tab_rtd is 1/t_d in TAB paper referenced in header
+      // CONVERGE_precision_t tab_rtd =
+      //    0.5 * spray_tab_csubd * global_viscosity[node_index] /
+      //    (global_density[node_index] * old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]);
+
+      // // tab_omsq is omega^2 in TAB paper referenced in header
+      // CONVERGE_precision_t tab_omsq = spray_tab_csubk * old_parcel_cloud.surf_ten[p_idx] /
+      //                                    (global_density[node_index] * old_parcel_cloud.radius[p_idx] *
+      //                                     old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]) -
+      //                                 tab_rtd * tab_rtd;
+
+      // if(tab_omsq <= 0.0)
       // {
-      //    continue;
+      //    old_parcel_cloud.distort[p_idx]     = 0.0;
+      //    old_parcel_cloud.distort_dot[p_idx] = 0.0;
       // }
+      // else
+      // {
+      //    CONVERGE_precision_t tab_om = sqrt(tab_omsq);
+      //    CONVERGE_precision_t term1  = old_parcel_cloud.distort[p_idx] - spray_tab_cfocbck * weber;
+      //    CONVERGE_precision_t term2  = (1.0 / tab_om) * (old_parcel_cloud.distort_dot[p_idx] + term1 * tab_rtd);
 
-      const CONVERGE_precision_t dt     = CONVERGE_simulation_dt();
-      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+      //    // following is Eq. 4 in TAB paper referenced in header
+      //    old_parcel_cloud.distort[p_idx] =
+      //       spray_tab_cfocbck * weber + exp(-dt * tab_rtd) * (term1 * cos(tab_om * dt) + term2 * sin(tab_om * dt));
 
-      // calculate weber number
-      CONVERGE_precision_t weber = global_density[node_index] * old_parcel_cloud.rel_vel_mag[p_idx] *
-                                   old_parcel_cloud.rel_vel_mag[p_idx] * old_parcel_cloud.radius[p_idx] /
-                                   old_parcel_cloud.surf_ten[p_idx];
+      //    old_parcel_cloud.distort_dot[p_idx] =
+      //       (spray_tab_cfocbck * weber - old_parcel_cloud.distort[p_idx]) * tab_rtd +
+      //       exp(-dt * tab_rtd) * tab_om * (term2 * cos(tab_om * dt) - term1 * sin(tab_om * dt));
 
-      // tab_rtd is 1/t_d in TAB paper referenced in header
-      CONVERGE_precision_t tab_rtd =
-         0.5 * spray_tab_csubd * global_viscosity[node_index] /
-         (global_density[node_index] * old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]);
-
-      // tab_omsq is omega^2 in TAB paper referenced in header
-      CONVERGE_precision_t tab_omsq = spray_tab_csubk * old_parcel_cloud.surf_ten[p_idx] /
-                                         (global_density[node_index] * old_parcel_cloud.radius[p_idx] *
-                                          old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]) -
-                                      tab_rtd * tab_rtd;
-
-      if(tab_omsq <= 0.0)
-      {
-         old_parcel_cloud.distort[p_idx]     = 0.0;
-         old_parcel_cloud.distort_dot[p_idx] = 0.0;
-      }
-      else
-      {
-         CONVERGE_precision_t tab_om = sqrt(tab_omsq);
-         CONVERGE_precision_t term1  = old_parcel_cloud.distort[p_idx] - spray_tab_cfocbck * weber;
-         CONVERGE_precision_t term2  = (1.0 / tab_om) * (old_parcel_cloud.distort_dot[p_idx] + term1 * tab_rtd);
-
-         // following is Eq. 4 in TAB paper referenced in header
-         old_parcel_cloud.distort[p_idx] =
-            spray_tab_cfocbck * weber + exp(-dt * tab_rtd) * (term1 * cos(tab_om * dt) + term2 * sin(tab_om * dt));
-
-         old_parcel_cloud.distort_dot[p_idx] =
-            (spray_tab_cfocbck * weber - old_parcel_cloud.distort[p_idx]) * tab_rtd +
-            exp(-dt * tab_rtd) * tab_om * (term2 * cos(tab_om * dt) - term1 * sin(tab_om * dt));
-
-         // make sure that distort is between 0 and 1
-         if(old_parcel_cloud.distort[p_idx] >= 1.0)
-         {
-            old_parcel_cloud.distort[p_idx] = 1.0;
-         }
-         if(old_parcel_cloud.distort[p_idx] <= 0.0)
-         {
-            old_parcel_cloud.distort[p_idx] = 0.0;
-         }
-      }
-      //===================================================================== END OF DISTORT ROUTINE =====================================================================//
+      //    // make sure that distort is between 0 and 1
+      //    if(old_parcel_cloud.distort[p_idx] >= 1.0)
+      //    {
+      //       old_parcel_cloud.distort[p_idx] = 1.0;
+      //    }
+      //    if(old_parcel_cloud.distort[p_idx] <= 0.0)
+      //    {
+      //       old_parcel_cloud.distort[p_idx] = 0.0;
+      //    }
+      // }
+      // //===================================================================== END OF DISTORT ROUTINE =====================================================================//
 
 
          // Skip parcels that are too small (avoid numerical issues in breakup routines)

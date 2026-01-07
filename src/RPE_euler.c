@@ -103,20 +103,20 @@ void compute_thermal_mass_transfer(
         Q_film = 0.0;
     }
 
-    // Senda contribution 
-    CONVERGE_precision_t mdot_senda = 0.0;   //reset in case dT < 0 or otherwise
-    CONVERGE_precision_t alpha_senda = 0.0;
-    CONVERGE_precision_t pi = 3.14159265358979323846;
-    if(dT >= 0.0 && dT<5.0){
-        alpha_senda = 760.0 * pow(dT,0.26);
-        mdot_senda = alpha_senda * dT  * A_bubble / params->L_v;
-    }
-    else if(dT >= 5.0){
-        alpha_senda = 27 * pow(dT,2.33);
-        mdot_senda = alpha_senda * dT * A_bubble / params->L_v;
-    }    
-    mdot_senda = mdot_senda * Nu; 
-    mdot_senda = fmax(mdot_senda,0.0);
+    // // Senda contribution 
+    // CONVERGE_precision_t mdot_senda = 0.0;   //reset in case dT < 0 or otherwise
+    // CONVERGE_precision_t alpha_senda = 0.0;
+    // CONVERGE_precision_t pi = 3.14159265358979323846;
+    // if(dT >= 0.0 && dT<5.0){
+    //     alpha_senda = 760.0 * pow(dT,0.26);
+    //     mdot_senda = alpha_senda * dT  * A_bubble / params->L_v;
+    // }
+    // else if(dT >= 5.0){
+    //     alpha_senda = 27 * pow(dT,2.33);
+    //     mdot_senda = alpha_senda * dT * A_bubble / params->L_v;
+    // }    
+    // mdot_senda = mdot_senda * Nu; 
+    // mdot_senda = fmax(mdot_senda,0.0);
     // Debug output
 
     
