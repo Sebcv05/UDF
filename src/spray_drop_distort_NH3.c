@@ -565,16 +565,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
          }
          
          // Initialize single parcel tracking
-         if (!tracking_initialized && 
-            old_parcel_cloud.breakup_phase[p_idx] >= 1 && 
-            old_parcel_cloud.breakup_phase[p_idx] < 5) {
-            tracked_parcel_id = p_idx;
-            tracking_initialized = 1;
-            parcel_track_file = fopen("tracked_parcel.csv", "w");
-            if (parcel_track_file) {
-               fprintf(parcel_track_file, "time,lifetime,p_idx,R_drop,R_bubble,Rdot,T_drop,Pb,P_amb,thermal_breakup_flag,kb\n");
-            }
-         }
+         // if (!tracking_initialized && 
+         //    old_parcel_cloud.breakup_phase[p_idx] >= 1 && 
+         //    old_parcel_cloud.breakup_phase[p_idx] < 5) {
+         //    tracked_parcel_id = p_idx;
+         //    tracking_initialized = 1;
+         //    parcel_track_file = fopen("tracked_parcel.csv", "w");
+         //    if (parcel_track_file) {
+         //       fprintf(parcel_track_file, "time,lifetime,p_idx,R_drop,R_bubble,Rdot,T_drop,Pb,P_amb,thermal_breakup_flag,kb\n");
+         //    }
+         // }
          
          // Log tracked parcel data at every CFD timestep (before thermal breakup loop)
          if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
@@ -913,16 +913,16 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                            old_parcel_cloud.r_bubble[p_idx] = Rb;
                            
                            // DIAGNOSTIC: Log bubble changes with FULL details
-                           if (fabs(Rb - Rb_old_save) > 1e-9) {
-                              static FILE* bubble_log = NULL;
-                              if (!bubble_log) {
-                                 bubble_log = fopen("bubble_changes.csv", "w");
-                                 if (bubble_log) {
-                                       fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,");
-                                       fprintf(bubble_log, "T_drop,P_amb,P_bubble,superheat,v_bubble,");
-                                       fprintf(bubble_log, "rho_liquid,sigma,film_flag,pbt,thermal_flag\n");
-                                 }
-                              }
+                           // if (fabs(Rb - Rb_old_save) > 1e-9) {
+                           //    static FILE* bubble_log = NULL;
+                           //    if (!bubble_log) {
+                           //       bubble_log = fopen("bubble_changes.csv", "w");
+                           //       if (bubble_log) {
+                           //             fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,");
+                           //             fprintf(bubble_log, "T_drop,P_amb,P_bubble,superheat,v_bubble,");
+                           //             fprintf(bubble_log, "rho_liquid,sigma,film_flag,pbt,thermal_flag\n");
+                           //       }
+                           //    }
                               
                               if (bubble_log && Rb < Rb_old_save) {  // SHRINK event
                                  // Calculate bubble pressure
@@ -965,14 +965,14 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
                      CONVERGE_precision_t rdrop_after_geometry = old_parcel_cloud.radius[p_idx];
                      
                            // DIAGNOSTIC: Log radius increase for large parcels
-                           if (rdrop_after_geometry > 80.0e-6 && fabs(rdrop_after_geometry - rdrop_before_geometry) > 1e-9) {
-                              static FILE* radius_log = NULL;
-                              if (!radius_log) {
-                                 radius_log = fopen("radius_changes.csv", "w");
-                                 if (radius_log) {
-                                       fprintf(radius_log, "time,ncyc,p_idx,R_drop_before,R_drop_after,delta_R,R_bubble,R_drop_0,expansion_ratio,film_flag\n");
-                                 }
-                              }
+                           // if (rdrop_after_geometry > 80.0e-6 && fabs(rdrop_after_geometry - rdrop_before_geometry) > 1e-9) {
+                           //    static FILE* radius_log = NULL;
+                           //    if (!radius_log) {
+                           //       radius_log = fopen("radius_changes.csv", "w");
+                           //       if (radius_log) {
+                           //             fprintf(radius_log, "time,ncyc,p_idx,R_drop_before,R_drop_after,delta_R,R_bubble,R_drop_0,expansion_ratio,film_flag\n");
+                           //       }
+                           //    }
                               
                               if (radius_log) {
                                  CONVERGE_precision_t expansion = rdrop_after_geometry / old_parcel_cloud.r_drop_0[p_idx];
