@@ -675,19 +675,19 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          // // ******************************************************************************************************//
 
                // ******************************************************************************************************//
-         // Print  Droplet Data to File 5% sample rate
-         CONVERGE_precision_t user_rand = CONVERGE_random_precision();
-         if(user_rand<0.05){
-         CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
-         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
-         char *filename1 = "Temp_Tracker.txt";
-         FILE *fp1 = fopen("Temp_Tracker.txt", "a");
-         if (fp1 == NULL)
-         {
-            printf("Error opening the file %s", filename1);
-         }
-         fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
-         fclose(fp1);
+         // // Print  Droplet Data to File 5% sample rate
+         // CONVERGE_precision_t user_rand = CONVERGE_random_precision();
+         // if(user_rand<0.05){
+         // CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
+         // CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+         // char *filename1 = "Temp_Tracker.txt";
+         // FILE *fp1 = fopen("Temp_Tracker.txt", "a");
+         // if (fp1 == NULL)
+         // {
+         //    printf("Error opening the file %s", filename1);
+         // }
+         // fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
+         // fclose(fp1);
          // ******************************************************************************************************//
       }
 
