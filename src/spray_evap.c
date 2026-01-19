@@ -675,11 +675,11 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          // // ******************************************************************************************************//
 
                // ******************************************************************************************************//
-         // // Print  Droplet Data to File 5% sample rate
-         // CONVERGE_precision_t user_rand = CONVERGE_random_precision();
-         // if(user_rand<0.05){
-         // CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
-         // CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+         // Print  Droplet Data to File 5% sample rate
+         CONVERGE_precision_t user_rand = CONVERGE_random_precision();
+         if(user_rand<0.05){
+         CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
+         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
          // char *filename1 = "Temp_Tracker.txt";
          // FILE *fp1 = fopen("Temp_Tracker.txt", "a");
          // if (fp1 == NULL)
