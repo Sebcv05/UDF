@@ -528,13 +528,13 @@ void RPE_euler_solver(
         
         // First time collapse - attempt recovery by converting to child
         // Always print collapse diagnostics
-        printf("[RPE_COLLAPSE] Negative Rdot=%.3e, entering recovery...\n", state.Rdot);
-        printf("               Time: %.6e s\n", current_time);
+        // printf("[RPE_COLLAPSE] Negative Rdot=%.3e, entering recovery...\n", state.Rdot);
+        // printf("               Time: %.6e s\n", current_time);
         
-        printf("               T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
-               state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
-        printf("               R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
-               state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
+        // printf("               T_drop=%.2f K, T_sat(P_amb)=%.2f K, P_sat(T_drop)=%.3e Pa, P_amb=%.3e Pa\n",
+        //        state.T_drop, T_sat_calc, P_sat_calc, params.P_amb);
+        // printf("               R=%.3e m, Ro=%.3e m, dRdt=%.3e m/s, dRdotdt=%.3e m/s²\n",
+        //        state.R, params.Ro, derivs.dRdt, derivs.dRdotdt);
         
         // NEW RECOVERY STRATEGY: Set to RECOVERY state (3) with timed recovery period
         // After recovery period, parcel will be re-evaluated for thermal breakup eligibility
