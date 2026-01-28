@@ -281,7 +281,7 @@ CONVERGE_UDF(spray_kh,
 
 
             //USER ADDITION START - Reset phase to 5 and reset radius to rdrop_0 to abort thermal breakup routine and apply KH breakup
-            if(parcel_cloud.phase[passed_parcel_idx] < 5)
+            if(parcel_cloud.breakup_phase[passed_parcel_idx] < 5)
             {
                set_breakup_phase(&parcel_cloud, passed_parcel_idx, 5);  //KH breakup happened faster than thermal breakup for this parcel, thermal breakup will not happen 
                parcel_cloud.num_drop[passed_parcel_idx] = CONVERGE_cube(parcel_cloud.radius[passed_parcel_idx])* parcel_cloud.num_drop[passed_parcel_idx] / CONVERGE_cube(parcel_cloud.r_drop_0[passed_parcel_idx]);
