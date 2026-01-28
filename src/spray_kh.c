@@ -25,6 +25,13 @@
 /* Called when: user_kh_flag=1 in udf.in                              */
 /*                                                                    */
 /**********************************************************************/
+//USER ADDITION START - sets the breakup phase (part of the thermal breakup routine) 
+static void set_breakup_phase(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, int phase)
+{
+   parcel_cloud->breakup_phase[p_idx] = phase;
+   parcel_cloud->film_flag[p_idx] = phase;
+}
+//USER ADDITION END
 
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
