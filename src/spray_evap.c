@@ -641,36 +641,46 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       }
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
-
-   // if(CONVERGE_ncyc()%5== 0)
-   // {
-         //    // ******************************************************************************************************//
-         // // Print  Droplet Data to File
-         // CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
-         // char *filename1 = "Temp_Tracker.txt";
-  
-
-         // FILE *fp1 = fopen("Temp_Tracker.bin", "wb");  // Use "wb" to create new file each time
-         // if (fp1 == NULL) {
-         //    printf("Error opening the file Temp_Tracker.bin\n");
-         //    return;
-         // }
-         
-         // // Write the data in binary format
-         // int write_count = 0;
-         // write_count += fwrite(&parcel_cloud.cloud_index[0], sizeof(CONVERGE_int_t), 1, fp1);
-         // write_count += fwrite(&parcel_cloud.parcel_index[0], sizeof(CONVERGE_int_t), 1, fp1);
-         // write_count += fwrite(&parcel_cloud.temp[0], sizeof(CONVERGE_precision_t), 1, fp1);
-         // write_count += fwrite(&parcel_cloud.radius[0], sizeof(CONVERGE_precision_t), 1, fp1);
-         // write_count += fwrite(&parcel_cloud.lifetime[0], sizeof(CONVERGE_precision_t), 1, fp1);
-         // write_count += fwrite(&vmag, sizeof(CONVERGE_precision_t), 1, fp1);
-         
-         // if (write_count != 6) {
-         //    printf("Error writing to file. Only wrote %d/6 items\n", write_count);
-         // }
-         
-         // fclose(fp1);
-
+   CONVERGE_precision_t user_rand = CONVERGE_random_precision();
+         // ******************************************************************************************************//
+         // Print Droplet Data to File (Text Mode with Sampling)
+         // Sampling: 5% of parcels, every 50 cycles to keep file size manageable
+         if(CONVERGE_ncyc() % 50 == 0)
+         {
+             CONVERGE_precision_t user_rand = CONVERGE_random_precision();
+             if(user_rand < 0.05)
+             {
+                 CONVERGE_precision_t vmag = CONVERGE_sqrt(CONVERGE_square(parcel_cloud.uu[i_pc][0]) + 
+                                                           CONVERGE_square(parcel_cloud.uu[i_pc][1]) + 
+                                                           CONVERGE_square(parcel_cloud.uu[i_pc][2]));
+                 
+                 CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+                 
+                 // Use append mode "a" to add to the file without overwriting
+                 FILE *fp1 = fopen("Temp_Tracker.txt", "a");
+                 if (fp1 != NULL)
+                 {
+                     // Format: cloud_idx parcel_idx temp radius lifetime vmag is_child sim_time inj_time
+                     fprintf(fp1, "%ld %ld %.6e %.6e %.6e %.6e %d %.6e %.6e\n", 
+                             parcel_cloud.cloud_index[i_pc], 
+                             parcel_cloud.parcel_index[i_pc], 
+                             parcel_cloud.temp[i_pc], 
+                             parcel_cloud.radius[i_pc], 
+                             parcel_cloud.lifetime[i_pc], 
+                             vmag, 
+                             (parcel_cloud.breakup_phase[i_pc] >= 5) ? 1 : 0, 
+                             sim_time, 
+                             parcel_cloud.time_of_injection[i_pc]);
+                     fclose(fp1);
+                 }
+                 else
+                 {
+                     // Optional: Log error if file can't be opened, but avoid spamming
+                     // printf("Error opening Temp_Tracker.txt\n");
+                 }
+             }
+         }
+         // ******************************************************************************************************//
                
          // // ******************************************************************************************************//
 
