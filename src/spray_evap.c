@@ -660,12 +660,13 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                  FILE *fp1 = fopen("Temp_Tracker.txt", "a");
                  if (fp1 != NULL)
                  {
-                     // Format: cloud_idx parcel_idx temp radius lifetime vmag is_child sim_time inj_time
-                     fprintf(fp1, "%ld %ld %.6e %.6e %.6e %.6e %d %.6e %.6e\n", 
+                     // Format: cloud_idx parcel_idx temp radius num_drop lifetime vmag is_child sim_time inj_time
+                     fprintf(fp1, "%ld %ld %.6e %.6e %.6e %.6e %.6e %d %.6e %.6e\n", 
                              parcel_cloud.cloud_index[0], 
                              parcel_cloud.parcel_index[0], 
                              parcel_cloud.temp[0], 
                              parcel_cloud.radius[0], 
+                             parcel_cloud.num_drop[0],
                              parcel_cloud.lifetime[0], 
                              vmag, 
                              (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, 
