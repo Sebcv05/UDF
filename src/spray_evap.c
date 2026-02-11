@@ -101,7 +101,7 @@ static CONVERGE_precision_t dt;
 
 static struct ParcelCloud parcel_cloud;
 
-static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 10.0;
+static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 100.0;
 static long last_temp_clamp_warn_cycle = -1;
 static int lk_diagnostic_header_written = 0;
 
