@@ -645,7 +645,7 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
          // ******************************************************************************************************//
          // Print Droplet Data to File (Text Mode with Sampling)
          // Sampling: 5% of parcels, every 50 cycles to keep file size manageable
-         if(CONVERGE_ncyc() % 50 == 0)
+         if(CONVERGE_ncyc() % 5 == 0)
          {
              CONVERGE_precision_t user_rand = CONVERGE_random_precision();
              if(user_rand < 0.05)
