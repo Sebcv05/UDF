@@ -101,7 +101,7 @@ static CONVERGE_precision_t dt;
 
 static struct ParcelCloud parcel_cloud;
 
-static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 100.0;
+static const CONVERGE_precision_t MAX_PARCEL_TEMP_DELTA = 123.0;  // 323K - 123K = 200K = min_spray_temp (thermo.dat only goes down to 200K)
 static long last_temp_clamp_warn_cycle = -1;
 static int lk_diagnostic_header_written = 0;
 
