@@ -1125,6 +1125,14 @@ CONVERGE_precision_t user_radius = 0.0;
                                   (2.0 * parcel_cloud.radius[i_pc] * parcel_cloud.density[i_pc]);
                }
 
+
+               //USER MAXWELL MODEL IMPLEMENTATION
+               //Sherwood number (modidfied)
+               //   CONVERGE_precision_t user_sh = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
+
+               // mass_trans_coeff = spray_scale_mass_trans_coeff_spray * user_sh * (mol_visc / sc_num) /
+                                
+
                if(parcel_boil_flag == 1 && parcel_species_boil_flag[isp] == 1)   // boiling correlation
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
@@ -1191,6 +1199,29 @@ CONVERGE_precision_t user_radius = 0.0;
                      }
                   }
                }
+
+               //USER MAXWELL MODEL IMPLEMENTATION
+               if( evap_flag_flash_boiling==1 )
+               {
+                  double super_heat_degree = tdrop - temp_boil[isp];
+                  // if( super_heat_degree > 0.2 )
+                  // {
+                        //Diffusion Coefficient]
+                        // CONVERGE_precision_t user_Tg = global_temperature[node_index];
+                        // printf("\n temp_gas = %f",global_temperature[node_index]);
+                        // CONVERGE_precision_t user_D =  1e-5 * (pow(global_temperature[node_index],1.75) * CONVERGE_sqrt(1/17 + 1/28) )/((global_pressure[node_index]/1e5) * CONVERGE_square(pow(17.9,0.33) + pow(14.9,0.33)));
+                        CONVERGE_precision_t user_D = mol_visc / sc_n
+                        //Pva
+                        CONVERGE_precision_t user_Pv = y1 * global_pressure[node_index];
+                        //Psat
+                        CONVERGE_precision_t user_Ps =  CONVERGE_table_lookup(pvap_table[isp], temp1);
+                        CONVERGE_precision_t user_denom = 2 * parcel_cloud.radius[i_pc] * gas_constant;
+                        parcel_cloud.drdt[i_pc * num_parcel_species + isp] =-  parcel_cloud.v_sh[i_pc] * user_D * 17 * ((user_Ps/temp1)-(user_Pv/temp_gas)) /user_denom;
+                  // }
+                        // printf("\n user_D = %e,gpressure = %f",user_D,global_pressure[node_index]/1e5);
+
+               }
+
                //printf("\n spray_evap_cell L815 ");
                //Zero for first 1e-6 s of child's lifetime to improve stability 
                if(parcel_cloud.breakup_phase[i_pc] >= 5 && parcel_cloud.lifetime[i_pc] < 1.0e-6)
@@ -1395,6 +1426,14 @@ CONVERGE_precision_t user_radius = 0.0;
                {
                   cond_term1 =
                      (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
+                     if(evap_flag_flash_boiling==1)
+                     {
+                        double superheatdegreee = tdrop - temp_gas;
+                        if(superheatdegreee>0)
+                        {
+                                             (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff ;
+                        }
+                     }
                }
                else if(spray_evap_flag == 2)
                {
