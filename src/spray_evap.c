@@ -1210,7 +1210,7 @@ CONVERGE_precision_t user_radius = 0.0;
                         // CONVERGE_precision_t user_Tg = global_temperature[node_index];
                         // printf("\n temp_gas = %f",global_temperature[node_index]);
                         // CONVERGE_precision_t user_D =  1e-5 * (pow(global_temperature[node_index],1.75) * CONVERGE_sqrt(1/17 + 1/28) )/((global_pressure[node_index]/1e5) * CONVERGE_square(pow(17.9,0.33) + pow(14.9,0.33)));
-                        CONVERGE_precision_t user_D = mol_visc / sc_n;
+                        CONVERGE_precision_t user_D = mol_visc / sc_num;
                         //Pva
                         CONVERGE_precision_t user_Pv = y1 * global_pressure[node_index];
                         //Psat
