@@ -1212,7 +1212,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
         // --- diffusivity (verify mol_visc is kinematic viscosity [m^2/s]) ---
         CONVERGE_precision_t user_D = mol_visc / sc_num;
-
+         printf("\n D = %e , T= %f K\n", user_D, temp1);
         // --- universal gas constant (J/mol/K) ---
         const CONVERGE_precision_t R_univ = 8.314462618;
 
