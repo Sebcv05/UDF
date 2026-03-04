@@ -146,7 +146,6 @@ CONVERGE_INPUT(read_user,
       else if(strstr(ktoken, "lk_correction_flag"))
       {
          user_inputs->lk_correction_flag = atoi(vtoken);
-         CONVERGE_logger_concise("[UDF_PARSER] SUCCESSFULLY READ: lk_correction_flag = %d", user_inputs->lk_correction_flag);
       }
       else if(strstr(ktoken, "lk_diagnostic_flag"))
       {
@@ -210,6 +209,14 @@ CONVERGE_INPUT(read_user,
    lk_diagnostic_flag = (CONVERGE_index_t)user_inputs->lk_diagnostic_flag;
    lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
    lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
+
+   CONVERGE_logger_concise("========================================");
+   CONVERGE_logger_concise("LK Model Parameters (Parsed from user_inputs.in):");
+   CONVERGE_logger_concise("  lk_correction_flag = %d", user_inputs->lk_correction_flag);
+   CONVERGE_logger_concise("  lk_diagnostic_flag = %d", user_inputs->lk_diagnostic_flag);
+   CONVERGE_logger_concise("  lk_chi_neq_min = %.4f", user_inputs->lk_chi_neq_min);
+   CONVERGE_logger_concise("  lk_chi_neq_max = %.4f", user_inputs->lk_chi_neq_max);
+   CONVERGE_logger_concise("========================================");
    
    // VALIDATE: use_song_rpe MUST be read from file
    if(user_inputs->use_song_rpe == 999)
