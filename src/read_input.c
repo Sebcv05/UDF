@@ -109,7 +109,7 @@ CONVERGE_INPUT(read_user,
       }
    }
 
-   char buffer[100];
+   char buffer[1024];
    CONVERGE_file_register_comment_delimiters(file, "#%");
    while(CONVERGE_file_read_line(file, buffer))
    {
@@ -122,45 +122,46 @@ CONVERGE_INPUT(read_user,
          continue;
       }
       // Allow reread/override of breakup velocity scale
-      if(strcmp(ktoken, "breakup_velocity_scale") == 0 || strcmp(ktoken, "aa") == 0)
+      if(strstr(ktoken, "breakup_velocity_scale") || strstr(ktoken, "aa"))
       {
          user_inputs->breakup_velocity_scale = atof(vtoken);
       }
-      else if(strcmp(ktoken, "breakup_radius_scale") == 0 || strcmp(ktoken, "B") == 0)
+      else if(strstr(ktoken, "breakup_radius_scale") || strstr(ktoken, "B"))
       {
          user_inputs->breakup_radius_scale = atof(vtoken);
       }
-      else if(strcmp(ktoken, "kb_threshold") == 0 || strcmp(ktoken, "kb") == 0)
+      else if(strstr(ktoken, "kb_threshold") || strstr(ktoken, "kb"))
       {
          user_inputs->kb_threshold = atof(vtoken);
       }
-      else if(strcmp(ktoken, "n_RR") == 0 || strcmp(ktoken, "n_rosin_rammler") == 0)
+      else if(strstr(ktoken, "n_RR") || strstr(ktoken, "n_rosin_rammler"))
       {
          user_inputs->n_RR = atof(vtoken);
       }
-      else if(strcmp(ktoken, "num_children") == 0 || strcmp(ktoken, "n_children") == 0)
+      else if(strstr(ktoken, "num_children") || strstr(ktoken, "n_children"))
       {
          user_inputs->num_children = atoi(vtoken);
       }
       // Langmuir-Knudsen parameters
-      else if(strcmp(ktoken, "lk_correction_flag") == 0)
+      else if(strstr(ktoken, "lk_correction_flag"))
       {
          user_inputs->lk_correction_flag = atoi(vtoken);
+         CONVERGE_logger_concise("[UDF_PARSER] SUCCESSFULLY READ: lk_correction_flag = %d", user_inputs->lk_correction_flag);
       }
-      else if(strcmp(ktoken, "lk_diagnostic_flag") == 0)
+      else if(strstr(ktoken, "lk_diagnostic_flag"))
       {
          user_inputs->lk_diagnostic_flag = atoi(vtoken);
       }
-      else if(strcmp(ktoken, "lk_chi_neq_min") == 0)
+      else if(strstr(ktoken, "lk_chi_neq_min"))
       {
          user_inputs->lk_chi_neq_min = atof(vtoken);
       }
-      else if(strcmp(ktoken, "lk_chi_neq_max") == 0)
+      else if(strstr(ktoken, "lk_chi_neq_max"))
       {
          user_inputs->lk_chi_neq_max = atof(vtoken);
       }
       // Song RPE model selection
-      else if(strcmp(ktoken, "use_song_rpe") == 0)
+      else if(strstr(ktoken, "use_song_rpe"))
       {
          user_inputs->use_song_rpe = atoi(vtoken);
       }
