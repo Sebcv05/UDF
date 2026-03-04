@@ -114,8 +114,9 @@ CONVERGE_INPUT(read_user,
    while(CONVERGE_file_read_line(file, buffer))
    {
       char* bookmark;
-      char* vtoken = strtok_r(buffer, " ", &bookmark);
-      char* ktoken = strtok_r(bookmark, " ", &bookmark);
+      // Use space, tab, carriage return, and newline as valid delimiters
+      char* vtoken = strtok_r(buffer, " \t\r\n", &bookmark);
+      char* ktoken = strtok_r(NULL, " \t\r\n", &bookmark);
       if(!vtoken || !ktoken)
       {
          continue;
