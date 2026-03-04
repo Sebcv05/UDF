@@ -1240,8 +1240,8 @@ CONVERGE_precision_t user_radius = 0.0;
         else if (user_xstar > 1.0) user_xstar = 1.0;
 
          //Psat (LK Correction with user_xstar)
-         CONVERGE_precision_t user_Ps = user_xstar * P_sat;
-
+         // CONVERGE_precision_t user_Ps = user_xstar * P_sat;
+         CONVERGE_precision_t user_Ps = P_sat;
         // --- denominator for dr/dt: r * R * rho_liquid  (rho must be liquid density [kg/m^3]) ---
         CONVERGE_precision_t r = parcel_cloud.radius[i_pc];
         if (r < 1e-12) r = 1e-12;
