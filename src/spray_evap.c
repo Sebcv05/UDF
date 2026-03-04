@@ -682,14 +682,20 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
              CONVERGE_precision_t user_rand = CONVERGE_random_precision();
              if(user_rand < 0.05)
              {
+                 int rank;
+                 CONVERGE_mpi_comm_rank(&rank);
+                 
                  CONVERGE_precision_t vmag = CONVERGE_sqrt(CONVERGE_square(parcel_cloud.uu[0][0]) + 
                                                            CONVERGE_square(parcel_cloud.uu[0][1]) + 
                                                            CONVERGE_square(parcel_cloud.uu[0][2]));
                  
                  CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
                  
-                 // Use append mode "a" to add to the file without overwriting
-                 FILE *fp1 = fopen("Temp_Tracker.txt", "a");
+                 char filename[64];
+                 sprintf(filename, "Temp_Tracker_rank_%d.txt", rank);
+
+                 // Use append mode "a" to add to the rank-specific file without overwriting
+                 FILE *fp1 = fopen(filename, "a");
                  if (fp1 != NULL)
                  {
                      // Format: cloud_idx parcel_idx temp radius num_drop lifetime vmag is_child sim_time inj_time
@@ -705,11 +711,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                              sim_time, 
                              parcel_cloud.time_of_injection[0]);
                      fclose(fp1);
-                 }
-                 else
-                 {
-                     // Optional: Log error if file can't be opened, but avoid spamming
-                     // printf("Error opening Temp_Tracker.txt\n");
                  }
              }
          }
