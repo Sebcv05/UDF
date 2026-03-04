@@ -44,6 +44,38 @@ static CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
                                                   CONVERGE_precision_t M_gas_avg,
                                                   CONVERGE_index_t lk_diagnostic_flag);
 
+// Context for implicit LK bisection solver
+typedef struct {
+   CONVERGE_precision_t temp1;
+   CONVERGE_precision_t global_pressure;
+   CONVERGE_precision_t vapor_pres;
+   CONVERGE_precision_t radius;
+   CONVERGE_precision_t mol_visc;
+   CONVERGE_precision_t rho_liquid;
+   CONVERGE_precision_t pr_num;
+   CONVERGE_precision_t sc_num;
+   CONVERGE_precision_t y1_inf;
+   CONVERGE_precision_t m_species;
+   CONVERGE_precision_t w_0;
+   CONVERGE_precision_t mass_trans_coeff_geom; // mass_trans_coeff * (2*r*rho) -> independent of bsub_d
+   CONVERGE_precision_t latent_heat;
+   CONVERGE_precision_t evap_mass_drop_0;
+   CONVERGE_precision_t dt;
+   CONVERGE_precision_t mass_drop_tm1;
+   CONVERGE_index_t lk_diagnostic_flag;
+} LKCtx;
+
+// Residual function for implicit solve
+static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, void* ctx_ptr);
+
+// Bisection root finder
+static CONVERGE_index_t solve_lk_bisection(CONVERGE_precision_t* beta_out,
+                                           CONVERGE_precision_t beta_lo,
+                                           CONVERGE_precision_t beta_hi,
+                                           CONVERGE_precision_t tol_x,
+                                           CONVERGE_precision_t tol_f,
+                                           int max_iter,
+                                           void* ctx);
 
 /********************************************************************************************/
 /*                                                                                          */
@@ -1064,23 +1096,105 @@ CONVERGE_precision_t user_radius = 0.0;
                         }
                         
                         CONVERGE_precision_t rho_liquid = CONVERGE_table_lookup(rho_table[isp], temp1);
+
+                        // NEW: Implicit LK solution for small droplets (D < 50 um)
+                        const CONVERGE_precision_t D_threshold = 50.0e-6; // 50 microns
+                        CONVERGE_precision_t D_drop = parcel_cloud.radius[i_pc] * 2.0;
+
+                        // Pre-calculate Sherwood / mass trans coeff terms for both approaches
+                        CONVERGE_precision_t mass_trans_coeff_geom = 0.0;
+                        if(hidden_multi_component_diffusion_flag == 1)
+                        {
+                            mass_trans_coeff_geom = spray_scale_mass_trans_coeff_spray * mult_sh_num[i_pc * num_parcel_species + isp] * (mol_visc / mult_sc_num[isp]);
+                        }
+                        else
+                        {
+                           mass_trans_coeff_geom = spray_scale_mass_trans_coeff_spray * parcel_cloud.v_sh[i_pc] * (mol_visc / sc_num);
+                        }
                         
-                        // Use LK model to calculate y1_star
-                        y1_star = calculate_lk_y1_star(
-                           temp1,                                           // T_drop
-                           global_pressure[node_index],                     // P_gas
-                           vapor_pres,                                      // P_sat
-                           parcel_cloud.radius[i_pc],                       // radius
-                           drdt_prev,                                       // drdt_prev
-                           mol_visc,                                        // mu_gas
-                           rho_liquid,                                      // rho_liquid
-                           pr_num,                                          // Pr_gas
-                           sc_num,                                          // Sc_gas
-                           vapor_mass[isp] / mass,                          // Y_inf
-                           CONVERGE_get_parcel_species_mw(isp),            // M_species
-                           w_0,                                             // M_gas_avg
-                           lk_diagnostic_flag                               // diagnostic flag
-                        );
+                        // Decide between implicit and explicit LK
+                        int implicit_success = 0;
+                        if (D_drop < D_threshold) 
+                        {
+                           // Setup context for the Residual Evaluator
+                           LKCtx lk_ctx;
+                           lk_ctx.temp1 = temp1;
+                           lk_ctx.global_pressure = global_pressure[node_index];
+                           lk_ctx.vapor_pres = vapor_pres;
+                           lk_ctx.radius = parcel_cloud.radius[i_pc];
+                           lk_ctx.mol_visc = mol_visc;
+                           lk_ctx.rho_liquid = rho_liquid;
+                           lk_ctx.pr_num = pr_num;
+                           lk_ctx.sc_num = sc_num;
+                           lk_ctx.y1_inf = vapor_mass[isp] / mass;
+                           lk_ctx.m_species = CONVERGE_get_parcel_species_mw(isp);
+                           lk_ctx.w_0 = w_0;
+                           lk_ctx.mass_trans_coeff_geom = mass_trans_coeff_geom;
+                           lk_ctx.latent_heat = hvap;
+                           lk_ctx.evap_mass_drop_0 = evap_mass_drop_0[isp];
+                           lk_ctx.dt = dt;
+                           lk_ctx.mass_drop_tm1 = mass_drop_tm1;
+                           lk_ctx.lk_diagnostic_flag = 0; // Turn off inner loop diagnostics
+                           
+                           // Guess Beta from explicit evaluation as the upper bound
+                           CONVERGE_precision_t C_beta_guess = (rho_liquid * pr_num * parcel_cloud.radius[i_pc]) / (mol_visc + 1.0e-30);
+                           CONVERGE_precision_t beta_guess_hi = -C_beta_guess * drdt_prev;
+                           if (beta_guess_hi < 1.0e-6) { beta_guess_hi = 1.0e-6; }
+                           
+                           CONVERGE_precision_t beta_lo = 0.0;
+                           CONVERGE_precision_t beta_root = 0.0;
+                           
+                           CONVERGE_index_t slv_status = solve_lk_bisection(&beta_root, beta_lo, beta_guess_hi, 1e-8, 1e-10, 40, &lk_ctx);
+                           
+                           if (slv_status == 0) // successfully converged
+                           {
+                              // Transform back to drdt to lock final y1_star
+                              CONVERGE_precision_t drdt_root = -beta_root / (C_beta_guess + 1.0e-30);
+                              
+                              y1_star = calculate_lk_y1_star(
+                                 temp1, global_pressure[node_index], vapor_pres, parcel_cloud.radius[i_pc],
+                                 drdt_root, mol_visc, rho_liquid, pr_num, sc_num, vapor_mass[isp] / mass,
+                                 CONVERGE_get_parcel_species_mw(isp), w_0, lk_diagnostic_flag
+                              );
+
+                              implicit_success = 1;
+                              
+                              static int implicit_dbg_count = 0;
+                              if (implicit_dbg_count < 10 && print_this) {
+                                  printf("[LK_IMPLICIT] Success. i_pc=%d isp=%d. beta_guess=%.3e beta_root=%.3e drdt_prev=%.3e drdt_root=%.3e Ys=%.6f\n",
+                                         (int)i_pc, (int)isp, beta_guess_hi, beta_root, drdt_prev, drdt_root, y1_star);
+                                  implicit_dbg_count++;
+                              }
+                           }
+                           else 
+                           {
+                              static int fail_dbg_count = 0;
+                              if (fail_dbg_count < 20) {
+                                  printf("[LK_IMPLICIT_FAIL] Code %d. i_pc=%d isp=%d. Falling back to explicit LK.\n", (int)slv_status, (int)i_pc, (int)isp);
+                                  fail_dbg_count++;
+                              }
+                           }
+                        }
+
+                        if (!implicit_success)
+                        {
+                           // Use classical explicit LK model if we failed, or if diameter >= 50 microns
+                           y1_star = calculate_lk_y1_star(
+                              temp1,                                           // T_drop
+                              global_pressure[node_index],                     // P_gas
+                              vapor_pres,                                      // P_sat
+                              parcel_cloud.radius[i_pc],                       // radius
+                              drdt_prev,                                       // drdt_prev
+                              mol_visc,                                        // mu_gas
+                              rho_liquid,                                      // rho_liquid
+                              pr_num,                                          // Pr_gas
+                              sc_num,                                          // Sc_gas
+                              vapor_mass[isp] / mass,                          // Y_inf
+                              CONVERGE_get_parcel_species_mw(isp),            // M_species
+                              w_0,                                             // M_gas_avg
+                              lk_diagnostic_flag                               // diagnostic flag
+                           );
+                        }
                      }
                   }
                   else
@@ -1153,13 +1267,6 @@ CONVERGE_precision_t user_radius = 0.0;
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
                         -mass_trans_coeff * (y1_star - y1) * (bsub_d / (pow((1.0 + bsub_d), 0.568)));
                   }
-                  
-
-
-
-
-
-
                }
                //printf("\n spray_evap_cell: L785, parcel_cloud.drdt[i_pc * num_parcel_species + isp] = %e\n  ", parcel_cloud.drdt[i_pc * num_parcel_species + isp]);
                if( evap_flag_flash_boiling==1 )
@@ -1200,7 +1307,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   }
                }
 
-               //USER MAXWELL MODEL IMPLEMENTATION
+              //USER MAXWELL MODEL IMPLEMENTATION
 //        if (evap_flag_flash_boiling == 1)
 // {
 //     double super_heat_degree = tdrop - temp_boil[isp];
@@ -2311,6 +2418,126 @@ CONVERGE_precision_t calculate_lk_y1_star(CONVERGE_precision_t T_drop,
 }
 
 /**
+ * @brief lk_residual_beta: computes the residual F(beta) = beta - (-drdt(beta) * rho_l * Pr_g * r / mu_g)
+ */
+static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, void* ctx_ptr)
+{
+   LKCtx* ctx = (LKCtx*)ctx_ptr;
+   
+   // Deducible drdt from the trial beta
+   // beta_guess = -(rho_l * Pr_g * R / mu_g) * drdt_guess
+   CONVERGE_precision_t C_beta = (ctx->rho_liquid * ctx->pr_num * ctx->radius) / (ctx->mol_visc + 1.0e-30);
+   CONVERGE_precision_t drdt_guess = -beta_guess / (C_beta + 1.0e-30);
+   
+   // 1. Calculate Y_1_star resulting from this trial drdt_guess
+   CONVERGE_precision_t y1_star_trial = calculate_lk_y1_star(
+      ctx->temp1,
+      ctx->global_pressure,
+      ctx->vapor_pres,
+      ctx->radius,
+      drdt_guess,
+      ctx->mol_visc,
+      ctx->rho_liquid,
+      ctx->pr_num,
+      ctx->sc_num,
+      ctx->y1_inf,
+      ctx->m_species,
+      ctx->w_0,
+      0 // No diagnostics inside residual
+   );
+   
+   // 2. Re-evaluate Spalding mass transfer
+   CONVERGE_precision_t bsub_d_trial = (y1_star_trial - ctx->y1_inf) / (1.0 - y1_star_trial + 1.0e-10);
+   bsub_d_trial = (bsub_d_trial < 1.0e-15) ? 1.0e-15 : bsub_d_trial;
+   
+   // Evaluate drdt_eval
+   // Based on standard formulation: drdt = -mass_trans_coeff * log(1 + B_M)
+   // However mass_trans_coeff geometrically contains 1/(2 * r * rho), which cancels elegantly.
+   // Utilizing mass_trans_coeff_geom = mass_trans_coeff * (2 * r * rho)
+   CONVERGE_precision_t mass_trans_coeff = ctx->mass_trans_coeff_geom / (2.0 * ctx->radius * ctx->rho_liquid + 1.0e-30);
+   CONVERGE_precision_t drdt_eval = -mass_trans_coeff * log(bsub_d_trial + 1.0);
+   
+   // Condensation safety
+   if (drdt_eval >= 0.0) {
+       drdt_eval = 0.0;
+   }
+   
+   // Mass clipping considerations
+   CONVERGE_precision_t evap_radius = ctx->radius + (drdt_eval * ctx->dt);
+   if (evap_radius < 0.0) { evap_radius = 0.0; }
+   
+   CONVERGE_precision_t evap_mass_drop_1 = (4.0 / 3.0) * 3.14159265358979323846 * ctx->rho_liquid * (evap_radius*evap_radius*evap_radius);
+   CONVERGE_precision_t dm_dt_eval = (evap_mass_drop_1 - ctx->mass_drop_tm1) / (ctx->dt + 1.0e-30);
+   
+   if ((-dm_dt_eval * ctx->dt) > ctx->evap_mass_drop_0) {
+      dm_dt_eval = -ctx->evap_mass_drop_0 / (ctx->dt + 1.0e-30);
+      // Back calculate drdt from dm_dt constraint
+      CONVERGE_precision_t mass_new = ctx->mass_drop_tm1 + dm_dt_eval * ctx->dt;
+      if (mass_new < 0.0) { mass_new = 0.0; }
+      CONVERGE_precision_t r_new = pow((3.0 / 4.0) * mass_new / (3.14159265358979323846 * ctx->rho_liquid + 1.0e-30), 1.0/3.0);
+      drdt_eval = (r_new - ctx->radius) / (ctx->dt + 1.0e-30);
+   }
+   
+   // 3. Compare evaluated drdt against the one implicit to beta
+   // F(beta) = beta - beta(drdt_eval)
+   CONVERGE_precision_t beta_eval = -C_beta * drdt_eval;
+   
+   return beta_guess - beta_eval;
+}
+
+/**
+ * @brief solve_lk_bisection: Solves F(beta) = 0 via Bisection Method
+ */
+static CONVERGE_index_t solve_lk_bisection(CONVERGE_precision_t* beta_out,
+                                           CONVERGE_precision_t beta_lo,
+                                           CONVERGE_precision_t beta_hi,
+                                           CONVERGE_precision_t tol_x,
+                                           CONVERGE_precision_t tol_f,
+                                           int max_iter,
+                                           void* ctx)
+{
+   CONVERGE_precision_t f_lo = lk_residual_beta(beta_lo, ctx);
+   CONVERGE_precision_t f_hi = lk_residual_beta(beta_hi, ctx);
+   
+   // Verify bracket
+   int expansions = 0;
+   while (f_lo * f_hi > 0.0 && expansions < 12) {
+      beta_hi *= 10.0; // expand right
+      f_hi = lk_residual_beta(beta_hi, ctx);
+      expansions++;
+   }
+   
+   if (f_lo * f_hi > 0.0) {
+      // Bracket failed.
+      return 1; 
+   }
+   
+   CONVERGE_precision_t beta_mid, f_mid;
+   for (int iter = 0; iter < max_iter; ++iter) {
+      beta_mid = 0.5 * (beta_lo + beta_hi);
+      f_mid = lk_residual_beta(beta_mid, ctx);
+      
+      if (fabs(beta_hi - beta_lo) < tol_x || fabs(f_mid) < tol_f) {
+         *beta_out = beta_mid;
+         return 0; // Success
+      }
+      
+      if (f_lo * f_mid < 0.0) {
+         beta_hi = beta_mid;
+         f_hi = f_mid;
+      } else {
+         beta_lo = beta_mid;
+         f_lo = f_mid;
+      }
+   }
+   
+   // Failed to converge within max_iter
+   *beta_out = beta_mid;
+   return 2; 
+}
+
+/**
+
  * @brief reset_parcel_temp_mfrac: Reset the parcel temperature and mass fractions to tm1 values
  *
  * @param parcel: parcel of interest.
