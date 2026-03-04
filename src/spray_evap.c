@@ -1161,9 +1161,11 @@ CONVERGE_precision_t user_radius = 0.0;
                               implicit_success = 1;
                               
                               static int implicit_dbg_count = 0;
-                              if (implicit_dbg_count < 10 && print_this) {
-                                  printf("[LK_IMPLICIT] Success. i_pc=%d isp=%d. beta_guess=%.3e beta_root=%.3e drdt_prev=%.3e drdt_root=%.3e Ys=%.6f\n",
-                                         (int)i_pc, (int)isp, beta_guess_hi, beta_root, drdt_prev, drdt_root, y1_star);
+                              if (implicit_dbg_count < 10) {
+                                  int rank;
+                                  CONVERGE_mpi_comm_rank(&rank);
+                                  printf("[Rank %d LK_IMPLICIT] Success. i_pc=%d isp=%d. beta_guess=%.3e beta_root=%.3e drdt_prev=%.3e drdt_root=%.3e Ys=%.6f\n",
+                                         rank, (int)i_pc, (int)isp, beta_guess_hi, beta_root, drdt_prev, drdt_root, y1_star);
                                   implicit_dbg_count++;
                               }
                            }
@@ -1171,7 +1173,10 @@ CONVERGE_precision_t user_radius = 0.0;
                            {
                               static int fail_dbg_count = 0;
                               if (fail_dbg_count < 20) {
-                                  printf("[LK_IMPLICIT_FAIL] Code %d. i_pc=%d isp=%d. Falling back to explicit LK.\n", (int)slv_status, (int)i_pc, (int)isp);
+                                  int rank;
+                                  CONVERGE_mpi_comm_rank(&rank);
+                                  printf("[Rank %d LK_IMPLICIT_FAIL] Code %d. i_pc=%d isp=%d. Falling back to explicit LK.\n", 
+                                         rank, (int)slv_status, (int)i_pc, (int)isp);
                                   fail_dbg_count++;
                               }
                            }
