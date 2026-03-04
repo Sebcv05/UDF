@@ -1201,70 +1201,70 @@ CONVERGE_precision_t user_radius = 0.0;
                }
 
                //USER MAXWELL MODEL IMPLEMENTATION
-       if (evap_flag_flash_boiling == 1)
-{
-    double super_heat_degree = tdrop - temp_boil[isp];
-    if (super_heat_degree > 0.2)
-    {
-        // --- molar masses (kg/mol) ---
-        const CONVERGE_precision_t M_NH3 = 17.031e-3;
-        const CONVERGE_precision_t M_N2  = 28.014e-3;
+//        if (evap_flag_flash_boiling == 1)
+// {
+//     double super_heat_degree = tdrop - temp_boil[isp];
+//     if (super_heat_degree > 0.2)
+//     {
+//         // --- molar masses (kg/mol) ---
+//         const CONVERGE_precision_t M_NH3 = 17.031e-3;
+//         const CONVERGE_precision_t M_N2  = 28.014e-3;
 
-        // --- diffusivity (verify mol_visc is kinematic viscosity [m^2/s]) ---
-        CONVERGE_precision_t user_D = mol_visc / sc_num;
-         // printf("\n D = %e , T= %f K, Sh = %e\n", user_D, temp1, parcel_cloud.v_sh[i_pc]);
-        // --- universal gas constant (J/mol/K) ---
-        const CONVERGE_precision_t R_univ = 8.314462618;
+//         // --- diffusivity (verify mol_visc is kinematic viscosity [m^2/s]) ---
+//         CONVERGE_precision_t user_D = mol_visc / sc_num;
+//          // printf("\n D = %e , T= %f K, Sh = %e\n", user_D, temp1, parcel_cloud.v_sh[i_pc]);
+//         // --- universal gas constant (J/mol/K) ---
+//         const CONVERGE_precision_t R_univ = 8.314462618;
 
-        // --- convert mass fraction y1 (NH3 mass fraction) -> mole fraction x_NH3 ---
-        CONVERGE_precision_t denom_x1 = (M_N2 * y1) + (M_NH3 * (1.0 - y1));
-        if (denom_x1 <= 0.0) denom_x1 = 1e-30;
-        CONVERGE_precision_t user_x1 = (M_N2 * y1) / denom_x1;
-        if (user_x1 < 0.0) user_x1 = 0.0;
-        else if (user_x1 > 1.0) user_x1 = 1.0;
+//         // --- convert mass fraction y1 (NH3 mass fraction) -> mole fraction x_NH3 ---
+//         CONVERGE_precision_t denom_x1 = (M_N2 * y1) + (M_NH3 * (1.0 - y1));
+//         if (denom_x1 <= 0.0) denom_x1 = 1e-30;
+//         CONVERGE_precision_t user_x1 = (M_N2 * y1) / denom_x1;
+//         if (user_x1 < 0.0) user_x1 = 0.0;
+//         else if (user_x1 > 1.0) user_x1 = 1.0;
 
-        // --- partial pressure of NH3 in the cell [Pa] ---
-        CONVERGE_precision_t P_tot = global_pressure[node_index]; // MUST be Pa
-        CONVERGE_precision_t user_Pv = user_x1 * P_tot;
+//         // --- partial pressure of NH3 in the cell [Pa] ---
+//         CONVERGE_precision_t P_tot = global_pressure[node_index]; // MUST be Pa
+//         CONVERGE_precision_t user_Pv = user_x1 * P_tot;
 
-        // --- saturation vapor pressure of ammonia at droplet surface temperature [Pa] ---
-        CONVERGE_precision_t P_sat = CONVERGE_table_lookup(pvap_table[isp], temp1); // Pa
+//         // --- saturation vapor pressure of ammonia at droplet surface temperature [Pa] ---
+//         CONVERGE_precision_t P_sat = CONVERGE_table_lookup(pvap_table[isp], temp1); // Pa
 
     
 
-        // --- compute x_star if you still need it (kept for reference) ---
-        CONVERGE_precision_t denom_xstar = (M_N2 * y1_star) + (M_NH3 * (1.0 - y1_star));
-        if (denom_xstar <= 0.0) denom_xstar = 1e-30;
-        CONVERGE_precision_t user_xstar = (M_N2 * y1_star) / denom_xstar;
-        if (user_xstar < 0.0) user_xstar = 0.0;
-        else if (user_xstar > 1.0) user_xstar = 1.0;
+//         // --- compute x_star if you still need it (kept for reference) ---
+//         CONVERGE_precision_t denom_xstar = (M_N2 * y1_star) + (M_NH3 * (1.0 - y1_star));
+//         if (denom_xstar <= 0.0) denom_xstar = 1e-30;
+//         CONVERGE_precision_t user_xstar = (M_N2 * y1_star) / denom_xstar;
+//         if (user_xstar < 0.0) user_xstar = 0.0;
+//         else if (user_xstar > 1.0) user_xstar = 1.0;
 
-         //Psat (LK Correction with user_xstar)
-         // CONVERGE_precision_t user_Ps = user_xstar * P_sat;
-         CONVERGE_precision_t user_Ps = P_sat;
-        // --- denominator for dr/dt: r * R * rho_liquid  (rho must be liquid density [kg/m^3]) ---
-        CONVERGE_precision_t r = parcel_cloud.radius[i_pc];
-        if (r < 1e-12) r = 1e-12;
-        CONVERGE_precision_t rho_l = parcel_cloud.density[i_pc];
-        if (rho_l <= 0.0) rho_l = 1.0; // better to assert/throw in real code
+//          //Psat (LK Correction with user_xstar)
+//          // CONVERGE_precision_t user_Ps = user_xstar * P_sat;
+//          CONVERGE_precision_t user_Ps = P_sat;
+//         // --- denominator for dr/dt: r * R * rho_liquid  (rho must be liquid density [kg/m^3]) ---
+//         CONVERGE_precision_t r = parcel_cloud.radius[i_pc];
+//         if (r < 1e-12) r = 1e-12;
+//         CONVERGE_precision_t rho_l = parcel_cloud.density[i_pc];
+//         if (rho_l <= 0.0) rho_l = 1.0; // better to assert/throw in real code
 
-        CONVERGE_precision_t user_denom = r * R_univ * rho_l;
+//         CONVERGE_precision_t user_denom = r * R_univ * rho_l;
 
-        // --- concentration difference term (mol/m^3) ---
-        CONVERGE_precision_t Td = temp1;      // droplet surface temp [K]
-        CONVERGE_precision_t Ta = temp_gas;   // gas temp [K]
-        if (Td <= 0.0) Td = 1e-6;
-        if (Ta <= 0.0) Ta = 1e-6;
+//         // --- concentration difference term (mol/m^3) ---
+//         CONVERGE_precision_t Td = temp1;      // droplet surface temp [K]
+//         CONVERGE_precision_t Ta = temp_gas;   // gas temp [K]
+//         if (Td <= 0.0) Td = 1e-6;
+//         if (Ta <= 0.0) Ta = 1e-6;
 
-        CONVERGE_precision_t conc_term = (user_Ps / (R_univ * Td)) - (user_Pv / (R_univ * Ta));
+//         CONVERGE_precision_t conc_term = (user_Ps / (R_univ * Td)) - (user_Pv / (R_univ * Ta));
 
-        // --- final dr/dt (m/s) ---
-        CONVERGE_precision_t Sh = parcel_cloud.v_sh[i_pc]; // must be dimensionless
-        CONVERGE_precision_t drdt = - Sh * user_D * M_NH3 * conc_term / user_denom;
+//         // --- final dr/dt (m/s) ---
+//         CONVERGE_precision_t Sh = parcel_cloud.v_sh[i_pc]; // must be dimensionless
+//         CONVERGE_precision_t drdt = - Sh * user_D * M_NH3 * conc_term / user_denom;
 
-        parcel_cloud.drdt[i_pc * num_parcel_species + isp] = drdt;
-    }
-}
+//         parcel_cloud.drdt[i_pc * num_parcel_species + isp] = drdt;
+//     }
+// }
 
                //printf("\n spray_evap_cell L815 ");
                //Zero for first 1e-6 s of child's lifetime to improve stability 
