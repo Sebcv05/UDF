@@ -805,8 +805,14 @@ CONVERGE_precision_t user_radius = 0.0;
          for(int isp=0; isp<num_parcel_species; ++isp) acc_dm_dt[isp] = 0.0;
 
          // Start sub-loop
+         CONVERGE_precision_t orig_radius_macro = parcel_cloud.radius[i_pc];
+         CONVERGE_precision_t orig_density_macro = parcel_cloud.density[i_pc];
          for (int sub_iter = 0; sub_iter < n_sub; ++sub_iter)
          {
+         // Proxy the global array element to safely isolate sub-step shrinkage physics
+         parcel_cloud.radius[i_pc]  = sub_radius_tm1;
+         parcel_cloud.density[i_pc] = sub_density_tm1;
+         
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
          CONVERGE_precision_t inner_iter_tol = 1.0;
@@ -1008,7 +1014,7 @@ CONVERGE_precision_t user_radius = 0.0;
                 isp++, isp1                    = CONVERGE_iterator_next(psp_it))
             {
                evap_all_flag[isp] = 0;
-               if(parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp] <= 0.0)
+               if(sub_mfrac_tm1[isp] <= 0.0)
             {
                parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = 0.0;
                evap_mass_drop_0[isp]                               = 0.0;
@@ -1017,7 +1023,7 @@ CONVERGE_precision_t user_radius = 0.0;
                continue;
             }
 
-            evap_mass_drop_0[isp] = mass_drop_tm1 * parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp];
+            evap_mass_drop_0[isp] = mass_drop_tm1 * sub_mfrac_tm1[isp];
 
                evap_min_radius[isp] =
                   (3.0 / 4.0) * (mass_drop_tm1 - evap_mass_drop_0[isp]) / (PI * parcel_cloud.density[i_pc]);
@@ -1174,7 +1180,7 @@ CONVERGE_precision_t user_radius = 0.0;
                            lk_ctx.mass_trans_coeff_geom = mass_trans_coeff_geom;
                            lk_ctx.latent_heat = hvap;
                            lk_ctx.evap_mass_drop_0 = evap_mass_drop_0[isp];
-                           lk_ctx.dt = dt;
+                           lk_ctx.dt = dt_sub;
                            lk_ctx.mass_drop_tm1 = mass_drop_tm1;
                            lk_ctx.lk_diagnostic_flag = 0; // Turn off inner loop diagnostics
                            
@@ -1480,7 +1486,7 @@ CONVERGE_precision_t user_radius = 0.0;
             if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
             {
                parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
-                  -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
+                  -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt_sub);
                   evap_all_flag[isp] = 1;
                }
 
@@ -1570,7 +1576,7 @@ CONVERGE_precision_t user_radius = 0.0;
                for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                {
                   parcel_cloud.mfrac[i_pc * num_parcel_species + isp] =
-                     parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp];
+                     sub_mfrac_tm1[isp];
                }
             }
 
@@ -1592,7 +1598,7 @@ CONVERGE_precision_t user_radius = 0.0;
                for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                {
                   parcel_cloud.mfrac[i_pc * num_parcel_species + isp] =
-                     parcel_cloud.mfrac_tm1[i_pc * num_parcel_species + isp];
+                     sub_mfrac_tm1[isp];
                }
             }
 
@@ -1623,23 +1629,23 @@ CONVERGE_precision_t user_radius = 0.0;
                if(spray_evap_flag == 1)
                {
                   cond_term1 =
-                     (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
+                     (bsub_d_avg == 0.0) ? 0.0 : dt_sub * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
                      if(evap_flag_flash_boiling==1)
                      {
                         double superheatdegreee = tdrop - temp_gas;
                         if(superheatdegreee>0)
                         {
-                                             (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff ;
+                                             (bsub_d_avg == 0.0) ? 0.0 : dt_sub * drop_area * heat_trans_coeff ;
                         }
                      }
                }
                else if(spray_evap_flag == 2)
                {
-                  cond_term1 = dt * drop_area_1 * heat_trans_coeff * (1.0 / (pow((1.0 + bsub_d_avg), 0.678)));
+                  cond_term1 = dt_sub * drop_area_1 * heat_trans_coeff * (1.0 / (pow((1.0 + bsub_d_avg), 0.678)));
                }
                else if(spray_evap_flag == 0)
                {
-                  cond_term1 = dt * drop_area * heat_trans_coeff;
+                  cond_term1 = dt_sub * drop_area * heat_trans_coeff;
                }
             }
             //Turn of spalding number correlation for children after breakup 
@@ -1737,7 +1743,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
-                        -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
+                        -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt_sub);
                      evap_all_flag[isp] = 1;
                   }
 
@@ -1941,7 +1947,8 @@ CONVERGE_precision_t user_radius = 0.0;
             inner_iter_flag = (inner_iter < min_inner_iter) ? (1) : (inner_iter_flag);
             if(fabs(tdrop - sub_temp_tm1) > 10)
             {
-              printf("\nDELTA TEMP > 10 K, cyc=%ld pc=%ld,  tdrop = %e, temp_tm1 = %e\n", (long)CONVERGE_ncyc(), (long)i_pc, tdrop, sub_temp_tm1);
+              printf("\nDELTA TEMP > 10 K (sub_iter=%d), cyc=%ld pc=%ld n_sub=%d, radius=%.3e, rey_num=%.3e, tdrop = %e, sub_temp_tm1 = %e\n", 
+                     sub_iter, (long)CONVERGE_ncyc(), (long)i_pc, n_sub, parcel_cloud.radius[i_pc], parcel_cloud.rey_num[i_pc], tdrop, sub_temp_tm1);
             }
             tdrop_starm1 = tdrop;
          }
@@ -1966,6 +1973,11 @@ CONVERGE_precision_t user_radius = 0.0;
                 sub_mfrac_tm1[isp] = parcel_cloud.mfrac[i_pc * num_parcel_species + isp];
             }
          } // end of sub_iter loop
+         
+         // Restore macro properties to maintain global gas CFD iteration safety
+         parcel_cloud.radius[i_pc]  = orig_radius_macro;
+         parcel_cloud.density[i_pc] = orig_density_macro;
+         
          CONVERGE_precision_t delta_T_check = diag_final_temp - diag_init_temp;
          if (n_sub > 1 && fabs(delta_T_check) > 10.0){
              printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f DELTA = %.2f init_drdt=%.3e final_drdt=%.3e\n",
