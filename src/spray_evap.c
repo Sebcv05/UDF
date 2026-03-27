@@ -814,7 +814,39 @@ CONVERGE_precision_t user_radius = 0.0;
 
             temp_prev_timestep            = fmin(fmax(temp_prev_timestep, min_spray_temp), max_critical_temperature);
             sub_temp_tm1 = temp_prev_timestep;
-            parcel_cloud.temp_starm1[i_pc] = temp_prev_timestep;
+            
+            // Accumulate dm_dt
+            for(int isp=0; isp<num_parcel_species; isp++) {
+                acc_dm_dt[isp] += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub;
+            }
+            
+            diag_final_drdt = 0.0;
+            for(int isp=0; isp<num_parcel_species; isp++) {
+                diag_final_drdt += parcel_cloud.drdt[i_pc * num_parcel_species + isp];
+            }
+            diag_final_temp = tdrop;
+
+            // Update sub_tm1 variables for next sub-step
+            sub_temp_tm1 = tdrop;
+            sub_radius_tm1 = radius_new[i_pc];
+            sub_density_tm1 = parcel_cloud.density[i_pc];
+            sub_mass_tm1 = sub_density_tm1 * (4.0 / 3.0) * 3.14159265358979323846 * (sub_radius_tm1 * sub_radius_tm1 * sub_radius_tm1);
+            for(int isp=0; isp<num_parcel_species; ++isp) {
+                sub_mfrac_tm1[isp] = parcel_cloud.mfrac[i_pc * num_parcel_species + isp];
+            }
+         } // end of sub_iter loop
+
+         if (n_sub > 1) {
+             printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f init_drdt=%.3e final_drdt=%.3e\n",
+                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, diag_init_drdt, diag_final_drdt);
+         }
+
+         for(int isp=0; isp<num_parcel_species; isp++) {
+             parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = acc_dm_dt[isp] / dt;
+         }
+
+         parcel_cloud.temp_starm1[i_pc] = sub_temp_tm1;
+
             tdrop                        = temp_prev_timestep;
             tdrop_starm1                 = temp_prev_timestep;
          }
@@ -1466,7 +1498,7 @@ CONVERGE_precision_t user_radius = 0.0;
             if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
             {
                parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
-                  -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt_sub);
+                  -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
                   evap_all_flag[isp] = 1;
                }
 
@@ -1511,30 +1543,30 @@ CONVERGE_precision_t user_radius = 0.0;
                if(tdrop >= (isp_tcrit - 1.0e-6))   // make the species disappear
                {
                   parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
-                     -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt_sub);
+                     -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
                   evap_all_flag[isp] = 1;
                }
 
-               evap_radius[isp] = parcel_cloud.radius[i_pc] + (parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt_sub);
+               evap_radius[isp] = parcel_cloud.radius[i_pc] + (parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt);
                evap_mass_drop_1[isp] =
                   (4.0 / 3.0) * PI * parcel_cloud.density[i_pc] * (CONVERGE_cube(evap_radius[isp]));
-               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = (evap_mass_drop_1[isp] - mass_drop_tm1) / dt_sub;
+               parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = (evap_mass_drop_1[isp] - mass_drop_tm1) / dt;
 
                // Do not evaporate more mass than available
-               if((-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) > evap_mass_drop_0[isp])
+               if((-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) > evap_mass_drop_0[isp])
                {
-                  parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt_sub;
+                  parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt;
                }
             drdt_base[isp] = parcel_cloud.drdt[i_pc * num_parcel_species + isp];
             latent_heat[isp] = hvap;
             vaporization_term =
-               vaporization_term + (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) * hvap;
+               vaporization_term + (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) * hvap;
             }
 
             mass_drop_new = mass_drop_tm1;
             for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
             {
-               mass_drop_new += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub;
+               mass_drop_new += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt;
             }
 
             if(mass_drop_new > 1.0e-36) /* normal update */
@@ -1542,7 +1574,7 @@ CONVERGE_precision_t user_radius = 0.0;
                for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                {
                   parcel_cloud.mfrac[i_pc * num_parcel_species + isp] =
-                     (evap_mass_drop_0[isp] + parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) /
+                     (evap_mass_drop_0[isp] + parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) /
                      (mass_drop_new);
                   if(parcel_cloud.mfrac[i_pc * num_parcel_species + isp] < 0.0 || evap_all_flag[isp] == 1)
                   {
@@ -1609,23 +1641,23 @@ CONVERGE_precision_t user_radius = 0.0;
                if(spray_evap_flag == 1)
                {
                   cond_term1 =
-                     (bsub_d_avg == 0.0) ? 0.0 : dt_sub * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
+                     (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff * log(1.0 + bsub_d_avg) / bsub_d_avg;
                      if(evap_flag_flash_boiling==1)
                      {
                         double superheatdegreee = tdrop - temp_gas;
                         if(superheatdegreee>0)
                         {
-                                             (bsub_d_avg == 0.0) ? 0.0 : dt_sub * drop_area * heat_trans_coeff ;
+                                             (bsub_d_avg == 0.0) ? 0.0 : dt * drop_area * heat_trans_coeff ;
                         }
                      }
                }
                else if(spray_evap_flag == 2)
                {
-                  cond_term1 = dt_sub * drop_area_1 * heat_trans_coeff * (1.0 / (pow((1.0 + bsub_d_avg), 0.678)));
+                  cond_term1 = dt * drop_area_1 * heat_trans_coeff * (1.0 / (pow((1.0 + bsub_d_avg), 0.678)));
                }
                else if(spray_evap_flag == 0)
                {
-                  cond_term1 = dt_sub * drop_area * heat_trans_coeff;
+                  cond_term1 = dt * drop_area * heat_trans_coeff;
                }
             }
             //Turn of spalding number correlation for children after breakup 
@@ -1723,12 +1755,12 @@ CONVERGE_precision_t user_radius = 0.0;
                   if(parcel_cloud.radius[i_pc] < evap_min_radius[isp])
                   {
                      parcel_cloud.drdt[i_pc * num_parcel_species + isp] =
-                        -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt_sub);
+                        -((parcel_cloud.radius[i_pc] - evap_min_radius[isp]) / dt);
                      evap_all_flag[isp] = 1;
                   }
 
                   evap_radius[isp] = parcel_cloud.radius[i_pc] +
-                                     (parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt_sub);
+                                     (parcel_cloud.drdt[i_pc * num_parcel_species + isp] * dt);
                   if(evap_radius[isp] < 0.0)
                   {
                      evap_radius[isp] = 0.0;
@@ -1737,21 +1769,21 @@ CONVERGE_precision_t user_radius = 0.0;
                   evap_mass_drop_1[isp] =
                      (4.0 / 3.0) * PI * parcel_cloud.density[i_pc] * (CONVERGE_cube(evap_radius[isp]));
                   parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] =
-                     (evap_mass_drop_1[isp] - mass_drop_tm1) / dt_sub;
+                     (evap_mass_drop_1[isp] - mass_drop_tm1) / dt;
 
-                  if((-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) > evap_mass_drop_0[isp])
+                  if((-parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) > evap_mass_drop_0[isp])
                   {
-                     parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt_sub;
+                     parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = -evap_mass_drop_0[isp] / dt;
                   }
 
                   vaporization_term +=
-                     (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) * latent_heat[isp];
+                     (parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) * latent_heat[isp];
                }
 
                mass_drop_new = mass_drop_tm1;
                for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                {
-                  mass_drop_new += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub;
+                  mass_drop_new += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt;
                }
 
                if(mass_drop_new > 1.0e-36) /* normal update */
@@ -1759,7 +1791,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                   {
                      local_mfrac[isp] =
-                        (evap_mass_drop_0[isp] + parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub) /
+                        (evap_mass_drop_0[isp] + parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt) /
                         (mass_drop_new);
                      if(local_mfrac[isp] < 0.0 || evap_all_flag[isp] == 1)
                      {
@@ -1935,7 +1967,7 @@ CONVERGE_precision_t user_radius = 0.0;
          
             // Accumulate dm_dt
             for(int isp=0; isp<num_parcel_species; isp++) {
-                acc_dm_dt[isp] += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub;
+                acc_dm_dt[isp] += parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt;
             }
 
             // Update sub_tm1 variables for next sub-step
