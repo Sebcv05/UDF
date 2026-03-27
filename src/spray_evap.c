@@ -761,9 +761,6 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
-         // Note: For parent parcels (is_child==0), we let the routine run but set drdt=0 in the loop
-         // This prevents excessive cooling while allowing normal evaporation logic for child parcels
-     
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
          CONVERGE_precision_t inner_iter_tol = 1.0;
@@ -1819,7 +1816,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   do_recovery = 1;
                }
             }
-
+            
             if((parcel_boil_correlation_flag && spray_evap_flag != 0) && evap_flag_flash_boiling==0)
             {
                parcel_boil_flag = 0;
@@ -1898,10 +1895,13 @@ CONVERGE_precision_t user_radius = 0.0;
             }
 
             inner_iter_flag = (inner_iter < min_inner_iter) ? (1) : (inner_iter_flag);
-
+            if(fabs(tdrop - tdrop_starm1) > 10)
+            {
+              printf("\nDELTA TEMP > 10 K,  tdrop = %e, tdrop_starm1 = %e\n", tdrop, tdrop_starm1);
+            }
             tdrop_starm1 = tdrop;
          }
-
+         
          parcel_cloud.temp_starm1[i_pc] = tdrop;
       }
 
