@@ -775,7 +775,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
          if (fabs(drdt_guess) > 1.0e-12) {
              CONVERGE_precision_t tau_R = parcel_cloud.radius_tm1[i_pc] / fabs(drdt_guess);
-             n_sub = (int)ceil(dt / (0.5 * tau_R));
+             n_sub = (int)ceil(dt / (0.005 * tau_R));
          }
          if (n_sub < 1) n_sub = 1;
          if (n_sub > 10) n_sub = 10;
