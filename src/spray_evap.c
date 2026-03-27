@@ -1952,7 +1952,7 @@ CONVERGE_precision_t user_radius = 0.0;
              parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] = acc_dm_dt[isp] / dt;
          }
 
-         parcel_cloud.temp_starm1[i_pc] = tdrop;
+         parcel_cloud.temp_starm1[i_pc] = sub_temp_tm1;
 
       }
 
