@@ -1830,7 +1830,7 @@ CONVERGE_precision_t user_radius = 0.0;
                CONVERGE_precision_t tdrop_local = tdrop_starm1;
                if(denom != 0.0)
                {
-                  tdrop_local = ((csubp_liquid * mass_drop_new * parcel_cloud.temp[i_pc]) + vaporization_term +
+                  tdrop_local = ((csubp_liquid * mass_drop_new * sub_temp_tm1) + vaporization_term +
                                  (cond_term1 * temp_gas) + spray_wall_heat_source) /
                                 denom;
                }
