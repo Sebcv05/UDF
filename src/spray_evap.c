@@ -1933,7 +1933,7 @@ CONVERGE_precision_t user_radius = 0.0;
             inner_iter_flag = (inner_iter < min_inner_iter) ? (1) : (inner_iter_flag);
             if(fabs(tdrop - sub_temp_tm1) > 10)
             {
-              printf("\nDELTA TEMP > 10 K,  tdrop = %e, temp_tm1 = %e\n", tdrop, sub_temp_tm1);
+              printf("\nDELTA TEMP > 10 K, cyc=%ld pc=%ld,  tdrop = %e, temp_tm1 = %e\n", (long)CONVERGE_ncyc(), (long)i_pc, tdrop, sub_temp_tm1);
             }
             tdrop_starm1 = tdrop;
          }
@@ -1960,8 +1960,8 @@ CONVERGE_precision_t user_radius = 0.0;
          } // end of sub_iter loop
 
          if (n_sub > 1) {
-             printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f init_drdt=%.3e final_drdt=%.3e\n",
-                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, diag_init_drdt, diag_final_drdt);
+             printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f DELTA = %.2f init_drdt=%.3e final_drdt=%.3e\n",
+                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, diag_final_temp - diag_init_temp, diag_init_drdt, diag_final_drdt);
          }
 
          for(int isp=0; isp<num_parcel_species; isp++) {
