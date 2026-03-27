@@ -1967,8 +1967,8 @@ CONVERGE_precision_t user_radius = 0.0;
          dmass = 0.0;
          for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
          {
-            dmass -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
-            vapor_mass[isp] -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+            dmass -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
+            vapor_mass[isp] -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
          }
 
          mass = mass + dmass;
@@ -1983,7 +1983,7 @@ CONVERGE_precision_t user_radius = 0.0;
          for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
          {
             tot_evap_mass =
-               tot_evap_mass - parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+               tot_evap_mass - parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
          }
          cell_tot_evap = cell_tot_evap + tot_evap_mass;
 
@@ -2011,7 +2011,7 @@ CONVERGE_precision_t user_radius = 0.0;
                enthalpy_liquid1 +=
                   CONVERGE_table_lookup(h_table[isp], temp2) * parcel_cloud.mfrac[i_pc * num_parcel_species + isp];
                hvap -= CONVERGE_table_lookup(hvap_table[isp], temp2) *
-                       parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+                       parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
             }
 
             enth = 0.0;
@@ -2115,7 +2115,7 @@ CONVERGE_precision_t user_radius = 0.0;
       tot_evap_mass = 0.0;
       for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
       {
-         tot_evap_mass -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+         tot_evap_mass -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
       }
 
       mass_star = (4.0 / 3.0) * PI * parcel_cloud.density[i_pc] * parcel_cloud.num_drop[i_pc] * radius_new[i_pc] *
@@ -2126,7 +2126,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
       {
-         cell_tot_evap -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+         cell_tot_evap -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
       }
 
       parcel_cloud.temp[i_pc] = fmin(parcel_cloud.temp_starm1[i_pc], max_critical_temperature);
@@ -2142,7 +2142,7 @@ CONVERGE_precision_t user_radius = 0.0;
                              CONVERGE_table_lookup(h_table[isp], parcel_cloud.temp[i_pc]);
          // Urea model to be implemented
          hvap -= CONVERGE_table_lookup(hvap_table[isp], parcel_cloud.temp[i_pc]) *
-                 parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
+                 parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
       }
 
       enth = 0.0;
@@ -2166,7 +2166,7 @@ CONVERGE_precision_t user_radius = 0.0;
                        (-parcel_cloud.dm_dt[i_pc*num_parcel_species+isp]) * dt * parcel_cloud.num_drop[i_pc];
                local_sie += CONVERGE_table_lookup(evap_species_h_table[isp1], parcel_cloud.temp_tm1[i_pc]) -
                        gas_constant / CONVERGE_species_mw(sp, isp1) * parcel_cloud.temp_tm1[i_pc] *
-                       (-parcel_cloud.dm_dt[i_pc*num_parcel_species+isp] * dt_sub * parcel_cloud.num_drop[i_pc]);
+                       (-parcel_cloud.dm_dt[i_pc*num_parcel_species+isp] * dt * parcel_cloud.num_drop[i_pc]);
             }
          }
       }
@@ -2187,8 +2187,8 @@ CONVERGE_precision_t user_radius = 0.0;
       for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
       {
          evap_cell_tot_evap_species[isp] -=
-            parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub * parcel_cloud.num_drop[i_pc];
-         cell_tot_temp_species[isp] -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt_sub *
+            parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt * parcel_cloud.num_drop[i_pc];
+         cell_tot_temp_species[isp] -= parcel_cloud.dm_dt[i_pc * num_parcel_species + isp] * dt *
                  parcel_cloud.num_drop[i_pc] * parcel_cloud.temp[i_pc];
       }
 
