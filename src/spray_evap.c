@@ -1895,9 +1895,9 @@ CONVERGE_precision_t user_radius = 0.0;
             }
 
             inner_iter_flag = (inner_iter < min_inner_iter) ? (1) : (inner_iter_flag);
-            if(fabs(tdrop - tdrop_starm1) > 10)
+            if(fabs(tdrop - parcel_cloud.temp_tm1[i_pc]) > 10)
             {
-              printf("\nDELTA TEMP > 10 K,  tdrop = %e, tdrop_starm1 = %e\n", tdrop, tdrop_starm1);
+              printf("\nDELTA TEMP > 10 K,  tdrop = %e, temp_tm1 = %e\n", tdrop, parcel_cloud.temp_tm1[i_pc]);
             }
             tdrop_starm1 = tdrop;
          }
