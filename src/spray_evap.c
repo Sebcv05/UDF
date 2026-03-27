@@ -1958,10 +1958,10 @@ CONVERGE_precision_t user_radius = 0.0;
                 sub_mfrac_tm1[isp] = parcel_cloud.mfrac[i_pc * num_parcel_species + isp];
             }
          } // end of sub_iter loop
-
-         if (n_sub > 1) {
+         CONVERGE_precision_t delta_T_check = diag_final_temp - diag_init_temp;
+         if (n_sub > 1) && (delta_T_check > 10) {
              printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f DELTA = %.2f init_drdt=%.3e final_drdt=%.3e\n",
-                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, diag_final_temp - diag_init_temp, diag_init_drdt, diag_final_drdt);
+                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, delta_T_check, diag_init_drdt, diag_final_drdt);
          }
 
          for(int isp=0; isp<num_parcel_species; isp++) {
