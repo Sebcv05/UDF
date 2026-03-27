@@ -778,7 +778,7 @@ CONVERGE_precision_t user_radius = 0.0;
              n_sub = (int)ceil(dt / (0.005 * tau_R));
          }
          if (n_sub < 1) n_sub = 1;
-         if (n_sub > 10) n_sub = 10;
+         if (n_sub > 10) n_sub = 100;
          
          CONVERGE_precision_t dt_sub = dt / n_sub;
 
