@@ -777,8 +777,16 @@ CONVERGE_precision_t user_radius = 0.0;
              CONVERGE_precision_t tau_R = parcel_cloud.radius_tm1[i_pc] / fabs(drdt_guess);
              n_sub = (int)ceil(dt / (0.005 * tau_R));
          }
+         
+         // Add a thermal check: if the explicit predictor already expects a massive Delta T over this timestep, sub-step it too!
+         CONVERGE_precision_t delta_T_guess = fabs(parcel_cloud.temp[i_pc] - parcel_cloud.temp_tm1[i_pc]);
+         if (delta_T_guess > 2.0) {
+             int n_sub_th = (int)ceil(delta_T_guess / 2.0);
+             if (n_sub_th > n_sub) n_sub = n_sub_th;
+         }
+
          if (n_sub < 1) n_sub = 1;
-         if (n_sub > 10) n_sub = 100;
+         if (n_sub > 100) n_sub = 100;
          
          CONVERGE_precision_t dt_sub = dt / n_sub;
 
@@ -1959,7 +1967,7 @@ CONVERGE_precision_t user_radius = 0.0;
             }
          } // end of sub_iter loop
          CONVERGE_precision_t delta_T_check = diag_final_temp - diag_init_temp;
-         if (n_sub > 1 && delta_T_check > 10){
+         if (n_sub > 1 && fabs(delta_T_check) > 10.0){
              printf("SUBSTEP_ACTIVATED: cyc=%ld pc=%ld n_sub=%d init_T=%.2f final_T=%.2f DELTA = %.2f init_drdt=%.3e final_drdt=%.3e\n",
                     (long)CONVERGE_ncyc(), (long)i_pc, n_sub, diag_init_temp, diag_final_temp, delta_T_check, diag_init_drdt, diag_final_drdt);
          }
