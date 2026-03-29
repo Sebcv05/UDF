@@ -22,6 +22,10 @@ struct UserInputs
    double lk_chi_neq_min;
    double lk_chi_neq_max;
    
+   // Spray substepping parameters
+   double substep_tau_coeff;
+   int substep_max_n;
+   
    // Song RPE model selection
    int use_song_rpe;
 };
@@ -75,6 +79,10 @@ CONVERGE_INPUT(read_user,
       user_inputs->lk_diagnostic_flag = 0;     // Off by default
       user_inputs->lk_chi_neq_min = 0.0;
       user_inputs->lk_chi_neq_max = 0.9999;
+      
+      // Default substepping parameters
+      user_inputs->substep_tau_coeff = 0.005;
+      user_inputs->substep_max_n = 100;
       
       // Default RPE model selection (set to sentinel value)
       user_inputs->use_song_rpe = 999;         // Sentinel: MUST be read from file
@@ -159,6 +167,15 @@ CONVERGE_INPUT(read_user,
       {
          user_inputs->lk_chi_neq_max = atof(vtoken);
       }
+      // Spray substepping parameters
+      else if(strstr(ktoken, "substep_tau_coeff"))
+      {
+         user_inputs->substep_tau_coeff = atof(vtoken);
+      }
+      else if(strstr(ktoken, "substep_max_n"))
+      {
+         user_inputs->substep_max_n = atoi(vtoken);
+      }
       // Song RPE model selection
       else if(strstr(ktoken, "use_song_rpe"))
       {
@@ -209,6 +226,8 @@ CONVERGE_INPUT(read_user,
    lk_diagnostic_flag = (CONVERGE_index_t)user_inputs->lk_diagnostic_flag;
    lk_chi_neq_min = (CONVERGE_precision_t)user_inputs->lk_chi_neq_min;
    lk_chi_neq_max = (CONVERGE_precision_t)user_inputs->lk_chi_neq_max;
+   substep_tau_coeff = (CONVERGE_precision_t)user_inputs->substep_tau_coeff;
+   substep_max_n = (int)user_inputs->substep_max_n;
 
    CONVERGE_logger_concise("========================================");
    CONVERGE_logger_concise("LK Model Parameters (Parsed from user_inputs.in):");
@@ -261,6 +280,8 @@ CONVERGE_INPUT(read_user,
    CONVERGE_logger_verbose("user_inputs->lk_diagnostic_flag: %d", user_inputs->lk_diagnostic_flag);
    CONVERGE_logger_verbose("user_inputs->lk_chi_neq_min: %f", user_inputs->lk_chi_neq_min);
    CONVERGE_logger_verbose("user_inputs->lk_chi_neq_max: %f", user_inputs->lk_chi_neq_max);
+   CONVERGE_logger_verbose("user_inputs->substep_tau_coeff: %f", user_inputs->substep_tau_coeff);
+   CONVERGE_logger_verbose("user_inputs->substep_max_n: %d", user_inputs->substep_max_n);
    CONVERGE_logger_verbose("user_inputs->use_song_rpe: %d", user_inputs->use_song_rpe);
 
    // Write the echo file
@@ -275,6 +296,8 @@ CONVERGE_INPUT(read_user,
       CONVERGE_file_write(echo, "%-10d lk_diagnostic_flag\n", user_inputs->lk_diagnostic_flag);
       CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_min\n", user_inputs->lk_chi_neq_min);
       CONVERGE_file_write(echo, "%-10.4f lk_chi_neq_max\n", user_inputs->lk_chi_neq_max);
+      CONVERGE_file_write(echo, "%-10.4f substep_tau_coeff\n", user_inputs->substep_tau_coeff);
+      CONVERGE_file_write(echo, "%-10d substep_max_n\n", user_inputs->substep_max_n);
       CONVERGE_file_write(echo, "%-10d use_song_rpe\n", user_inputs->use_song_rpe);
       CONVERGE_file_close(echo);
       CONVERGE_file_destroy(&echo);

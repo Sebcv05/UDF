@@ -18,6 +18,9 @@
 #include <string.h>
 #include <globals.h>
 
+CONVERGE_precision_t substep_tau_coeff = 0.005;
+int substep_max_n = 100;
+
 
 
 
@@ -775,7 +778,7 @@ CONVERGE_precision_t user_radius = 0.0;
 
          if (fabs(drdt_guess) > 1.0e-12) {
              CONVERGE_precision_t tau_R = parcel_cloud.radius_tm1[i_pc] / fabs(drdt_guess);
-             n_sub = (int)ceil(dt / (0.005 * tau_R));
+             n_sub = (int)ceil(dt / (substep_tau_coeff * tau_R));
          }
          
          // Add a thermal check: if the explicit predictor already expects a massive Delta T over this timestep, sub-step it too!
@@ -786,7 +789,7 @@ CONVERGE_precision_t user_radius = 0.0;
          }
 
          if (n_sub < 1) n_sub = 1;
-         if (n_sub > 100) n_sub = 100;
+         if (n_sub > substep_max_n) n_sub = substep_max_n;
          
          CONVERGE_precision_t dt_sub = dt / n_sub;
 
