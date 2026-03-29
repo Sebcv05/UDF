@@ -814,11 +814,13 @@ CONVERGE_precision_t user_radius = 0.0;
          // Start sub-loop
          CONVERGE_precision_t orig_radius_macro = parcel_cloud.radius[i_pc];
          CONVERGE_precision_t orig_density_macro = parcel_cloud.density[i_pc];
+         CONVERGE_precision_t orig_temp_macro = parcel_cloud.temp[i_pc];
          for (int sub_iter = 0; sub_iter < n_sub; ++sub_iter)
          {
          // Proxy the global array element to safely isolate sub-step shrinkage physics
          parcel_cloud.radius[i_pc]  = sub_radius_tm1;
          parcel_cloud.density[i_pc] = sub_density_tm1;
+         parcel_cloud.temp[i_pc]    = sub_temp_tm1;
          
          int inner_iter_flag                 = 1;
          int inner_iter                      = 0;
@@ -1724,12 +1726,10 @@ CONVERGE_precision_t user_radius = 0.0;
 
                CONVERGE_precision_t *local_mfrac =
                   parcel_cloud.mfrac + i_pc * num_parcel_species;
-               const CONVERGE_precision_t *prev_mfrac =
-                  parcel_cloud.mfrac_tm1 + i_pc * num_parcel_species;
 
                for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                {
-                  local_mfrac[isp] = prev_mfrac[isp];
+                  local_mfrac[isp] = sub_mfrac_tm1[isp];
                }
 
                vaporization_term = 0.0;
@@ -1799,7 +1799,7 @@ CONVERGE_precision_t user_radius = 0.0;
                   mass_drop_new = 1.0e-36;
                   for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                   {
-                     local_mfrac[isp] = prev_mfrac[isp];
+                     local_mfrac[isp] = sub_mfrac_tm1[isp];
                   }
                }
 
@@ -1819,7 +1819,7 @@ CONVERGE_precision_t user_radius = 0.0;
                {
                   for(CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
                   {
-                     local_mfrac[isp] = prev_mfrac[isp];
+                     local_mfrac[isp] = sub_mfrac_tm1[isp];
                   }
                }
 
@@ -1984,6 +1984,7 @@ CONVERGE_precision_t user_radius = 0.0;
          // Restore macro properties to maintain global gas CFD iteration safety
          parcel_cloud.radius[i_pc]  = orig_radius_macro;
          parcel_cloud.density[i_pc] = orig_density_macro;
+         parcel_cloud.temp[i_pc]    = orig_temp_macro;
          
          CONVERGE_precision_t delta_T_check = diag_final_temp - diag_init_temp;
          if (n_sub > 1 && fabs(delta_T_check) > 10.0){
