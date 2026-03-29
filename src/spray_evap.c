@@ -789,7 +789,11 @@ CONVERGE_precision_t user_radius = 0.0;
          }
 
          if (n_sub < 1) n_sub = 1;
-         if (n_sub > substep_max_n) n_sub = substep_max_n;
+         if (n_sub > substep_max_n) {
+             printf("\nWARNING: Max substeps reached or exceeded! cyc=%ld pc=%ld req_n_sub=%d (capped at %d)\n", 
+                    (long)CONVERGE_ncyc(), (long)i_pc, n_sub, substep_max_n);
+             n_sub = substep_max_n;
+         }
          
          CONVERGE_precision_t dt_sub = dt / n_sub;
 
