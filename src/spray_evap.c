@@ -719,29 +719,6 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
              }
          }
          // ******************************************************************************************************//
-               
-         // // ******************************************************************************************************//
-
-               // ******************************************************************************************************//
-         // Print  Droplet Data to File 5% sample rate
-         // CONVERGE_precision_t user_rand = CONVERGE_random_precision();,
-         if(user_rand<0.05){
-         CONVERGE_precision_t vmag =  CONVERGE_sqrt( CONVERGE_square( parcel_cloud.uu[0][0]) + CONVERGE_square( parcel_cloud.uu[0][1]) + CONVERGE_square( parcel_cloud.uu[0][2]));
-         CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
-         // char *filename1 = "Temp_Tracker.txt";
-         // FILE *fp1 = fopen("Temp_Tracker.txt", "a");
-         // if (fp1 == NULL)
-         // {
-         //    printf("Error opening the file %s", filename1);
-         // }
-         // fprintf(fp1, "%i    %i    %f    %e    %e    %e    %i    %e    %e\n", parcel_cloud.cloud_index[0], parcel_cloud.parcel_index[0], parcel_cloud.temp[0], parcel_cloud.radius[0], parcel_cloud.lifetime[0],vmag, (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, sim_time, parcel_cloud.time_of_injection[0]);
-         // fclose(fp1);
-         // ******************************************************************************************************//
-      }
-
-      // }
-
-
 
    //******************************************************************************************************//
    //
@@ -765,6 +742,17 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
+            //Print global pressure and temp then calculate diffusivity and print that to check units
+            printf("\n\n\nGlobal Pressure = %e",global_pressure[node_index]);
+            printf("\nTemp = %e",temp2);
+            printf("\nD0 CONVERGE = %e",spray_evap_d0_diffuse);
+            CONVERGE_precision_t user_D0 = fuller_diffusion_coef_nh3n2(temp2,global_pressure[node_index]);
+            pintf("\nD0 calc = %e\n\n\n",user_D0);
+
+
+
+
+         
          int n_sub = 1;
          CONVERGE_precision_t drdt_guess = 0.0;
          for (int isp = 0; isp < num_parcel_species; isp++) {
