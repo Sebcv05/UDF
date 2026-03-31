@@ -70,7 +70,8 @@ typedef struct {
 
 // Residual function for implicit solve
 static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, void* ctx_ptr);
-
+// Fuller diffusion coefficient for NH3/N2
+static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P);
 // Bisection root finder
 static CONVERGE_index_t solve_lk_bisection(CONVERGE_precision_t* beta_out,
                                            CONVERGE_precision_t beta_lo,
@@ -2595,8 +2596,10 @@ static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, vo
 static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P)
 {
    CONVERGE_precision_t fuller_coef = 0.00143;
-   CONVERGE_precision_t Vol_nh3 = 20.7;
-   CONVERGE_precision_t Vol_n2 = 18.5;
+   CONVERGE_precision_t Vol_nh3 = 20.7;   //Properties of Gases and Liquids 5th ed. Table 11-1
+   CONVERGE_precision_t Vol_n2 = 18.5;   //Properties of Gases and Liquids 5th ed. Table 11-1
+   CONVERGE_precision_t M_NH3 = 17.031; //g/mol
+   CONVERGE_precision_t M_N2  = 28.014; //g/mol
    CONVERGE_precision_t Vol_sum = CONVERGE_square(CONVERGE_cbrt(Vol_nh3) + CONVERGE_cbrt(Vol_n2));
    CONVERGE_precision_t T_term = CONVERGE_pow(T, 1.75);
    CONVERGE_precision_t P_term = P/1.0e5;
