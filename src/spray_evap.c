@@ -2584,6 +2584,29 @@ static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, vo
    
    return beta_guess - beta_eval;
 }
+/**
+* @brief fuller_diffusion_coef_nh3n2: Calculates the Fuller diffusion coefficient for NH3/N2
+* 
+* @param T: Gas Temperature in Kelvin 
+* @param P: Gas Pressure in Pa
+* 
+* @return Fuller diffusion coefficient in cm^2/s
+*/
+static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P)
+{
+   CONVERGE_precision_t fuller_coef = 0.00143;
+   CONVERGE_precision_t Vol_nh3 = 20.7;
+   CONVERGE_precision_t Vol_n2 = 18.5;
+   CONVERGE_precision_t Vol_sum = CONVERGE_square(CONVERGE_cbrt(Vol_nh3) + CONVERGE_cbrt(Vol_n2));
+   CONVERGE_precision_t T_term = CONVERGE_pow(T, 1.75);
+   CONVERGE_precision_t P_term = P/1.0e5;
+   CONVERGE_precision_t M_ab = 1.0/(2 * ((1.0/M_NH3) + (1.0/M_N2)));
+   CONVERGE_precision_t M_ab_term = CONVERGE_sqrt(M_ab);
+
+
+   CONVERGE_precision_t D_fuller = fuller_coef * T_term / (P_term * Vol_sum * M_ab_term);
+   return D_fuller;
+}
 
 /**
  * @brief solve_lk_bisection: Solves F(beta) = 0 via Bisection Method
