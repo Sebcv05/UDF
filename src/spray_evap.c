@@ -747,7 +747,7 @@ CONVERGE_precision_t user_radius = 0.0;
             printf("\nTemp = %e",temp2);
             printf("\nD0 CONVERGE = %e",spray_evap_d0_diffuse);
             CONVERGE_precision_t user_D0 = fuller_diffusion_coef_nh3n2(temp2,global_pressure[node_index]);
-            pintf("\nD0 calc = %e\n\n\n",user_D0);
+            printf("\nD0 calc = %e\n\n\n",user_D0);
 
 
 
