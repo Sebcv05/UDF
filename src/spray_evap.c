@@ -70,8 +70,8 @@ typedef struct {
 
 // Residual function for implicit solve
 static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, void* ctx_ptr);
-// Fuller diffusion coefficient for NH3/N2
-static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P);
+// // Fuller diffusion coefficient for NH3/N2
+// static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P);
 // Bisection root finder
 static CONVERGE_index_t solve_lk_bisection(CONVERGE_precision_t* beta_out,
                                            CONVERGE_precision_t beta_lo,
@@ -742,14 +742,14 @@ CONVERGE_precision_t user_radius = 0.0;
 
       for(CONVERGE_index_t i_pc = CONVERGE_iterator_first(pc_it); i_pc != -1; i_pc = CONVERGE_iterator_next(pc_it))
       {
-            //Print global pressure and temp then calculate diffusivity and print that to check units
-            printf("\n\n\nGlobal Pressure = %e",global_pressure[node_index]);
-            printf("\nTemp = %e",temp2);
-            printf("\nD0 CONVERGE = %e",spray_evap_d0_diffuse);
-            CONVERGE_precision_t converge_D =  density1 * spray_evap_d0_diffuse * pow((temp2 / 273.0), (n_diffuse_m1))/global_density[node_index];
-            printf("\nD CONVERGE = %e",converge_D);
-            CONVERGE_precision_t user_D0 = fuller_diffusion_coef_nh3n2(temp2,global_pressure[node_index]);
-            printf("\nD calc = %e\n\n\n",user_D0);
+            // //Print global pressure and temp then calculate diffusivity and print that to check units
+            // printf("\n\n\nGlobal Pressure = %e",global_pressure[node_index]);
+            // printf("\nTemp = %e",temp2);
+            // printf("\nD0 CONVERGE = %e",spray_evap_d0_diffuse);
+            // CONVERGE_precision_t converge_D =  density1 * spray_evap_d0_diffuse * pow((temp2 / 273.0), (n_diffuse_m1))/global_density[node_index];
+            // printf("\nD CONVERGE = %e",converge_D);
+            // CONVERGE_precision_t user_D0 = fuller_diffusion_coef_nh3n2(temp2,global_pressure[node_index]);
+            // printf("\nD calc = %e\n\n\n",user_D0);
 
 
 
@@ -2575,34 +2575,34 @@ static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, vo
    
    return beta_guess - beta_eval;
 }
-/**
-* @brief fuller_diffusion_coef_nh3n2: Calculates the Fuller diffusion coefficient for NH3/N2
-* 
-* @param T: Gas Temperature in Kelvin 
-* @param P: Gas Pressure in Pa
-* 
-* @return Fuller diffusion coefficient in m^2/s
-*/
-static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P)
-{
-   CONVERGE_precision_t fuller_coef = 0.00143;
-   CONVERGE_precision_t Vol_nh3 = 20.7;   //Properties of Gases and Liquids 5th ed. Table 11-1
-   CONVERGE_precision_t Vol_n2 = 18.5;   //Properties of Gases and Liquids 5th ed. Table 11-1
-   CONVERGE_precision_t M_NH3 = 17.031; //g/mol
-   CONVERGE_precision_t M_N2  = 28.014; //g/mol
-   CONVERGE_precision_t Vol_sum = CONVERGE_square(CONVERGE_cbrt(Vol_nh3) + CONVERGE_cbrt(Vol_n2));
-   CONVERGE_precision_t T_term = CONVERGE_pow(T, 1.75);
-   CONVERGE_precision_t P_term = P/1.0e5;
-   CONVERGE_precision_t M_ab = 1.0/(2 * ((1.0/M_NH3) + (1.0/M_N2)));
-   CONVERGE_precision_t M_ab_term = CONVERGE_sqrt(M_ab);
+// /**
+// * @brief fuller_diffusion_coef_nh3n2: Calculates the Fuller diffusion coefficient for NH3/N2
+// * 
+// * @param T: Gas Temperature in Kelvin 
+// * @param P: Gas Pressure in Pa
+// * 
+// * @return Fuller diffusion coefficient in m^2/s
+// */
+// static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P)
+// {
+//    CONVERGE_precision_t fuller_coef = 0.00143;
+//    CONVERGE_precision_t Vol_nh3 = 20.7;   //Properties of Gases and Liquids 5th ed. Table 11-1
+//    CONVERGE_precision_t Vol_n2 = 18.5;   //Properties of Gases and Liquids 5th ed. Table 11-1
+//    CONVERGE_precision_t M_NH3 = 17.031; //g/mol
+//    CONVERGE_precision_t M_N2  = 28.014; //g/mol
+//    CONVERGE_precision_t Vol_sum = CONVERGE_square(CONVERGE_cbrt(Vol_nh3) + CONVERGE_cbrt(Vol_n2));
+//    CONVERGE_precision_t T_term = CONVERGE_pow(T, 1.75);
+//    CONVERGE_precision_t P_term = P/1.0e5;
+//    CONVERGE_precision_t M_ab = 1.0/(2 * ((1.0/M_NH3) + (1.0/M_N2)));
+//    CONVERGE_precision_t M_ab_term = CONVERGE_sqrt(M_ab);
 
 
-   CONVERGE_precision_t D_fuller = fuller_coef * T_term / (P_term * Vol_sum * M_ab_term);
+//    CONVERGE_precision_t D_fuller = fuller_coef * T_term / (P_term * Vol_sum * M_ab_term);
 
-   //Convert to m^2/s
-   D_fuller = D_fuller * 1.0e-4;
-   return D_fuller;
-}
+//    //Convert to m^2/s
+//    D_fuller = D_fuller * 1.0e-4;
+//    return D_fuller;
+// }
 
 /**
  * @brief solve_lk_bisection: Solves F(beta) = 0 via Bisection Method
