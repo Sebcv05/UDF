@@ -2579,7 +2579,7 @@ static CONVERGE_precision_t lk_residual_beta(CONVERGE_precision_t beta_guess, vo
 * @param T: Gas Temperature in Kelvin 
 * @param P: Gas Pressure in Pa
 * 
-* @return Fuller diffusion coefficient in cm^2/s
+* @return Fuller diffusion coefficient in m^2/s
 */
 static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, CONVERGE_precision_t P)
 {
@@ -2596,6 +2596,9 @@ static CONVERGE_precision_t fuller_diffusion_coef_nh3n2(CONVERGE_precision_t T, 
 
 
    CONVERGE_precision_t D_fuller = fuller_coef * T_term / (P_term * Vol_sum * M_ab_term);
+
+   //Convert to m^2/s
+   D_fuller = D_fuller * 1.0e-4;
    return D_fuller;
 }
 
