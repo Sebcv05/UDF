@@ -1,0 +1,105 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+turbulence_model:         RANS_K_EPS_STD                              # Turbulence modeling flag.
+rans_models:
+   k_eps_models:
+      keps_cmu:           0.09                                        # Turbulent viscosity coefficient. Typically 0.09 for k-eps and 0.0845 for RNG k-eps.
+      keps_rpr_tke:       1                                           # Reciprocal tke Prandtl number. Typically 1.0 for k-eps, v2-f and zeta-f, 1.39 for RNG k-eps.
+      keps_ceps1:         1.55                                        # Turbulent dissipation (eps) constant. Typically 1.44 for k-eps, 1.42 for RNG k-eps, 1.4 for v2-f/zeta-f.
+      keps_ceps2:         1.96                                        # Turbulent dissipation (eps) constant. Typically 1.92 for k-eps, 1.68 for RNG k-eps, 1.9 for v2-f/zeta-f.
+      keps_ceps3:         -1                                          # Turbulent dissipation (eps) constant. Disabled for Rapid Distortion RNG k-eps because CONVERGE calculates it. Typically -1.0 to 0.5.
+      keps_rpr_eps:       0.7692                                      # Reciprocal turbulent dissipation (eps) Prandtl number. Typically 0.7692 for k-eps, v2-f and zeta-f, 1.39 RNG k-eps.
+      keps_rng_beta:      0.012                                       # RNG k-epsilon constant. Typically 0.012.
+      keps_rng_eta0:      4.38                                        # RNG k-epsilon constant. Typically 4.38.
+      keps_rng_gen_b0:    2.0725
+      keps_rng_gen_b1:    -0.3865
+      keps_rng_gen_b2:    0.083
+      v2f_zetaf_models:
+         keps_v2f_cmu:    0.22                                        # Typically 0.22.
+         keps_v2f_c1:     0.4                                         # Typically 1.4 for v2-f, 0.4 for zeta-f.
+         keps_v2f_c2:     0.3                                         # Typically 0.3. Used for v2-f model only.
+         keps_v2f_cl:     0.36                                        # Typically 0.23 for v2-f, 0.36 for zeta-f.
+         keps_v2f_ceta:   85                                          # Typically 70 for v2-f, 85 for zeta-f.
+         keps_zetaf_rpr_zeta: 0.8333                                  # Typically 1.0/1.2. Used for zeta-f model only.
+         keps_zetaf_c2prime: 0.65                                     # Typically 0.65. Used for zeta-f model only.
+   k_omega_models:
+      komega_cmu:         0.09                                        # 0.09 for all models.
+      komega_rpr_tke:     0.85                                        # 0.6  for k-omega 2006, 0.5 for k-omega 1998, 0.85 for k-omega SST.
+      komega_rpr_omega:   0.5                                         # 0.5 for all models.
+      komega_alpha:       0.556                                       # 13/25 for k-omega 1998 and 2006,  5/9 for k-omega SST.
+      komega_beta:        0.075                                       # 0.0708 for k-omega 2006, 0.072 for k-omega 1998, 0.075 for k-omega SST.
+      komega_clim:        0.875                                       # for k-omega 2006 only.
+      komega_sst_a1:      0.31                                        # for k-omega SST only.
+      komega_rpr_tke_outer: 1                                         # for k-omega SST only.
+      komega_rpr_omega_outer: 0.856                                   # for k-omega SST only.
+      komega_alpha_outer: 0.44                                        # for k-omega SST only.
+      komega_beta_outer:  0.0828                                      # for k-omega SST only.
+      komega_transition_model: 0
+   reynolds_stress_models:
+      rsm_cmu:            0.0986                                      # 0.1156 for LRR model without wall reflection, 0.0655 for LRR model with wall reflection, 0.0986 for SSG model.
+      rsm_diffusion_model: iso                                        # iso/aniso_rs/aniso_all # 0=isotropic diffusion model, 1=anisotropic diffusion model for Reynolds stress only, 2=anisotropic diffusion model for both Reynolds stress and eps.
+      rsm_sigma_k:        1
+      rsm_sigma_eps:      1.3
+      rsm_cs:             0.22
+      rsm_cs_eps:         0.18
+      rsm_ceps1:          1.44
+      rsm_ceps2:          1.83                                        # 1.92 for LRR model; 1.83 for SSG model.
+      rsm_ceps3:          -1
+      lrr_model:
+         lrr_c1:          1.8
+         lrr_c2:          0.6
+         lrr_wall_reflection: 1                                       # 0=without wall reflection term, 1=with Gibson and Launder wall reflection model, 2=with Craft wall reflection model.
+         lrr_cw1:         0.5
+         lrr_cw2:         0.3
+         lrr_cw2_c1:      -0.044
+         lrr_cw2_c2:      -0.08
+         lrr_cw2_c3:      0.6
+      ssg_model:
+         ssg_c1:          3.4
+         ssg_c1s:         1.8
+         ssg_c2:          4.2
+         ssg_c3:          0.8
+         ssg_c3s:         1.3
+         ssg_c4:          1.25
+         ssg_c5:          0.4
+   spalart_allmaras_model:
+      sa_cb1:             0.1355
+      sa_cb2:             0.622
+      sa_cw2:             0.3
+      sa_cw3:             2
+      sa_cv1:             7.1
+      sa_cs:              0.3
+      sa_rpr_sigma:       1.5
+des_models:
+   ddes_komegasst_cdes:   0.78                                        # Model constant for both DDES and IDDES models. Typically 0.78.
+   ddes_komegasst_cdes_outer: 0.61                                    # Model constant for both DDES and IDDES models. Typically 0.61.
+   ddes_komegasst_cd1:    20                                          # Model constant for both DDES and IDDES models. Typically 20.0.
+   ddes_komegasst_cd2:    3                                           # Model constant for both DDES and IDDES models. Typically 3.0.
+   iddes_komegasst_cw:    0.15                                        # Model constant for IDDES model. Not used for DDES. Typically 0.15.
+   iddes_komegasst_cl:    5                                           # Model constant for IDDES model. Not used for DDES. Typically 5.0.
+   iddes_komegasst_ct:    1.87                                        # Model constant for IDDES model. Not used for DDES. Typically 1.87.
+les_models:
+   les_rpr_sgs_ke:        1
+   les_c_sgs_ke:          2                                           # LES sub-grid estimate constant. Typically 2.0.
+   les_c_sgs_ke_visc:     0.5                                         # LES Viscosity coefficient.
+   les_c_sgs_eps:         1                                           # LES dissipation constant. Typically 1.0.
+   les_c_wale:            0.325
+   les_wall_model:        1                                           # LES wall model: 0=standard law of the wall, 1=Werner and Wengle (recommended).
+wall_modeling:
+   wall_dist_flag:        1                                           # Enable constant cell distance to wall calculation.
+   near_wall_treatment:   STANDARD
+   heat_model:            0                                           # Wall heat transfer model: 0=O'Rourke , 1=Han and Reitz, 2=Angelberger, 3=GruMo-UniMORE, 4=Jayatilleke.
+   law_kappa:             0.42                                        # Von Karman's constant.
+   law_c:                 5.5                                         # Law of wall parameter for the log-law layer branch of TKE.
+physics_effects:
+   discrete_c_s:          0                                           # Turbulent spray source constant. Typically 0 to 1.5.
+   discrete_c_ps:         0.03                                        # Drop turbulent dispersion constant. Typically 0 to 0.16.
+   buoyancy_flag:         0                                           # Buoyancy effects. It requires gravity values set up in inputs.in.
+turbulence_statistics:
+   turb_stat_flag:        0                                           # Select turbulent statistics model: 0=disabled, 1=temporal average, 2=ensemble average.
+   turb_stat_start_time:  -999999                                     # Statistics start time, in sec, crank angle degrees or cycles. AUTO can be used to automatically calculate start time.
+   turb_stat_end_time:    0                                           # Statistics end time, in sec, crank angle degrees or cycles. AUTO can be used to automatically calculate end time.
+   turb_stat_tol:         0.0001                                      # Relative tolerance to check for statistical convergence.
+

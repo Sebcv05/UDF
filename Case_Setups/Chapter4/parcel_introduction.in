@@ -1,0 +1,99 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+injections:
+   -  injection:
+         injection_name:  Injector_0
+         stream_id:       0                                           # Stream index where the injector is located.
+         injected_parcel:
+            parcel_type:  liquid_parcel
+            parcel_name:  LiqParcel_0
+         penet_control:
+            liquid_frac:  0.75                                        # Liquid fuel mass fraction for calculating liquid spray penetration.
+            vapor_frac:   0.001                                       # Fuel vapor mass fraction for calculating vapor penetration.
+            vapor_bin_size: 0.0002                                    # Bin size (m) for calculating vapor penetration.
+         injection_control:
+            cone_distribution: UNIFORM                                # CLUSTER or UNIFORM: 0=cluster injected parcels (liquid mass) near the center of the cone, 1=distribute injected parcels evenly throughout the cone.
+            dynamic_spray_cone_angle_flag: 0                          # Dynamic cone angle modeling: 0=Off, 1=On.
+            azimuth_angle_start: 0                                    # Azimuth start angle for wedge injection (deg).
+            azimuth_angle_end: 360                                    # Azimuth end angle for wedge injection (deg).
+            spray_bc_model: CONVENTIONAL                              # CONVENTIONAL, ONEWAY or ELSA: 0=regular spray injection, 2=ELSA model, 1=the spray injection using VOF spray file.
+            injection_velocity_control:
+               injection_velocity_mode: RATE_SHAPE                    # Injection velocity mode: RATE_SHAPE, PROFILE, or CONSTANT.
+               injection_velocity: [0, 0, -1]                         # Injection velocity. Can be a vector or a file name for PROFILE option. Not used for RATE_SHAPE option.
+               velocity_randomness_fraction: 0.01                     # The level of randomness to be added to the parcel injection velocity.
+               mass_per_parcel: 1e-12                                 # Mass per parcel in kg. Not used for RATE_SHAPE option.
+               injection_ratio:
+                  type:   MASS                                        # Injection ratio type: MASS or VOLUME for LOCAL_VELOCITY, not used otherwise.
+                  value:  0.1                                         # Injection ratio. Not used for RATE_SHAPE option.
+            position:     [0, 0, 0]                                   # Injector location (m).
+            angle_xy_inj: 0                                           # Injector rotation angle in the XY plane (deg.).
+            angle_xz_inj: 0                                           # Injector rotation angle in the XZ plane (deg.).
+            cone_flag:    1                                           # Spray cone flag: 0=hollow cone spray, 1=solid cone spray.
+            temporal_type: SEQUENTIAL
+            period:       0                                           # Cycle period of injection.
+            start_time:   0                                           # Start of injection in seconds or crank angles.
+            duration:     0.007                                       # Duration of injection in seconds or crank angles.
+            tot_mass:     1.295e-05                                   # Spray mass (kg) injected in the computational domain for this injector.
+            temp:         323.15                                      # Liquid spray temperature (K) at time of injection.
+            tke:          3000                                        # Constant tke.
+            eps:          300                                         # Constant turbulent dissipation.
+            inject_distribution: BLOB                                 # Blob (specified nozzle diameter), CHI-SQUARED, ROSIN-RAMMLER or UNIFORM. Injection drop size distribution flag: 0=no distribution, 1=chi-squared distribution, 2=Rosin-Rammler distribution, 3=injected parcel radius is set to 0.5*smd.
+            q_rr:         3.5                                         # Rosin-Rammler distribution parameter.
+            swirl_fraction: 0                                         # The fraction of total velocity that is tangential to the spray: [-1,1]; 0 for non-swirling spray. Only works for hollow cone.
+            discharge_coeff_flag: 0                                   # 0=no discharge coefficient (Cd) model, 1=Cd model with varying nozzle velocity coefficient (Cv), 2=the user specified Cv is used.
+            discharge_coeff_model:
+               cd:        0.5                                         # Nozzle discharge coefficient (Cd) value.
+               cv:        1                                           # Nozzle velocity coefficient (Cv) value.
+            rate_shape:   rateshape_inj700.in                         # Profile of rate-shape; either CONSTANT or file name (CONSTANT if not provided).
+            khact_model:
+               active:    0                                           # Use KH-ACT Model.
+               nozzle_flow_data: CONVERGE                             # A file name for nozzle flow simulation data if noz_flow_flag=1 (TKE, eps, Ca).
+            lisa_model:
+               active:    0                                           # LISA breakup flag: 0=no LISA breakup, 1=activate LISA breakup.
+               injection_pres: 15000000                               # LISA model injection pressure (Pa) used in parcel velocity initialization.
+            vof_oneway_mapping:
+               filename:  vof_spray.dat                               # VOF spray file name.
+               transformation: NONE                                   # NONE, NOZZLE-DIAMETER, TRANSLATION, ROTATION, TRANSLATION-ROTATION or NOZZLE-COPY.
+               temp_map:
+                  active: 0                                           # 1=from the file with scale and offset, 0=constant value.
+                  scale:  1                                           # Temperature scaling.
+                  offset: 0                                           # Temperature offset.
+               tke_map:
+                  active: 1                                           # 1=from the file with scale and offset, 0=constant value.
+                  scale:  1                                           # Turbulent kinetic energy scaling.
+                  offset: 0                                           # Turbulent kinetic energy offset.
+               eps_map:
+                  active: 1                                           # 1=from the file with scale and offset, 0=constant value.
+                  scale:  1                                           # Turbulent dissipation scaling.
+                  offset: 0                                           # Turbulent dissipation offset.
+               mass_per_parcel: 4.5e-12                               # Mass per parcel when injecting parcels using VOF spray file.
+               liq_frac_threshold: 0.4                                # The threshold of liquid VOF for injecting a parcel at a certain position.
+               init_cell_turb: 0                                      # Use turbulence quantities from VOF spray file to initilize cells.
+         nozzle_control:
+            num_parcels_per_nozzle: 4480000                           # Number of parcels injected for each of this injector's nozzles.
+            coord_sys:    CARTESIAN                                   # POLAR, CARTESIAN or POLAR-COPY. Nozzle location/orientation flag: 0=set using a polar coordinate system, 1=set using a Cartesian coordinate system, 2=set using a polar coordinate system, but only specify the first nozzle and the others are copied.
+            polar_cpy_num: 2                                          # 'Polar with copying' only: number of nozzle holes for injector.
+         nozzles:
+            -  nozzle:
+                  nozzle_name: Nozzle_0
+                  geometry:
+                     diameter: 0.000165                               # Nozzle diameter (m).
+                     length: 0.000231                                 # Nozzle length (m).
+                     position: [0, 0, -0.0001]                        # Coordinate of nozzle (used if coord_sys=1).
+                     orientation: [0, 0, -1]                          # Spray orientation unit vector (used if coord_sys=1).
+                     radial_dist: 0                                   # Nozzle radial position (m).
+                     axial_dist: 0.00027                              # Nozzle axial position (m).
+                     theta: 0                                         # Nozzle azimuthal position (deg.).
+                     angle_xy: 0                                      # Nozzle rotation angle in the XY plane (deg.).
+                     angle_xz: 0                                      # Nozzle rotation angle in the XZ plane (deg.).
+                  spray_cone:
+                     inj_radius: 8.25e-05                             # Circular injection radius (m).
+                     angle: 5                                         # Spray cone angle (deg.).
+                     thickness: 1e-20                                 # Spray thickness (deg.). Only used for hollow cone sprays.
+                  smd:    0.000175                                    # Sauter Mean Diameter (m) when a distribution is used (inject_distribution=1, 2 or 3).
+                  amp_distort: 0                                      # Initial drop distortion amplitude for the TAB breakup model.
+boundary_injections:
+   []
+

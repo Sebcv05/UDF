@@ -1,0 +1,99 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+boundary_conditions:
+   -  boundary:
+         id:              1                                           # Boundary ID. Default boundary ID is 0.
+         type:            WALL                                        # Options: WALL, INFLOW, OUTFLOW, PERIODIC, SYMMETRY, TWO_D, GT-SUITE, INTERFACE, FLOW_THROUGH.
+         name:            Liner
+         region:          0                                           # Region ID. Default region ID is -1.
+         motion:          STATIONARY
+         geometry_motion: FIXED
+         roughness:
+            height:       0                                           # Absolute surface roughness in meters.
+            constant:     0.5                                         # A coefficient used in the roughness law of the wall model.
+         velocity:
+            type:         Law_of_wall                                 # Options: Law of wall, Slip, No-slip, Specified Value (DI), Zero normal gradient (NE), Mass flow, Pump, GT-SUITE.
+            value:        [0, 0, 0]                                   # Directional velocity vector components (or USER, AUTO_GENERATE (piston motion), MOTION_CONFIG, profile name).
+         pressure:
+            type:         Neumann                                     # Pressure type: Neumann, Dirichlet, Dirichlet_total (for INFLOW), Transonic (for OUTFLOW).
+         temperature:
+            type:         Law_of_wall                                 # Options: Law of wall, Specified Value (DI), Zero normal gradient (NE).
+            value:        293.15                                      # Temperature value.
+         species:
+            type:         Neumann                                     # Species type: Zero normal gradient (NE), Specified Value (DI).
+         passive:
+            type:         Neumann                                     # Passive type: Zero normal gradient (NE), Specified Value (DI).
+         turbulence:
+            tke:
+               type:      Neumann                                     # Tke type: Zero normal gradient (NE), Specified Value (DI), Intensity.
+               value:     0                                           # Tke value.
+            eps:
+               type:      Law_of_wall                                 # Eps type: Zero normal gradient (NE), Specified Value (DI), Length scale, Wall model.
+         electric:
+            type:         NEUMANN
+            value:        0
+   -  boundary:
+         id:              2                                           # Boundary ID. Default boundary ID is 0.
+         type:            WALL                                        # Options: WALL, INFLOW, OUTFLOW, PERIODIC, SYMMETRY, TWO_D, GT-SUITE, INTERFACE, FLOW_THROUGH.
+         name:            Head
+         region:          0                                           # Region ID. Default region ID is -1.
+         motion:          STATIONARY
+         geometry_motion: FIXED
+         roughness:
+            height:       0                                           # Absolute surface roughness in meters.
+            constant:     0.5                                         # A coefficient used in the roughness law of the wall model.
+         velocity:
+            type:         Law_of_wall                                 # Options: Law of wall, Slip, No-slip, Specified Value (DI), Zero normal gradient (NE), Mass flow, Pump, GT-SUITE.
+            value:        [0, 0, 0]                                   # Directional velocity vector components (or USER, AUTO_GENERATE (piston motion), MOTION_CONFIG, profile name).
+         pressure:
+            type:         Neumann                                     # Pressure type: Neumann, Dirichlet, Dirichlet_total (for INFLOW), Transonic (for OUTFLOW).
+         temperature:
+            type:         Law_of_wall                                 # Options: Law of wall, Specified Value (DI), Zero normal gradient (NE).
+            value:        293.15                                      # Temperature value.
+         species:
+            type:         Neumann                                     # Species type: Zero normal gradient (NE), Specified Value (DI).
+         passive:
+            type:         Neumann                                     # Passive type: Zero normal gradient (NE), Specified Value (DI).
+         turbulence:
+            tke:
+               type:      Neumann                                     # Tke type: Zero normal gradient (NE), Specified Value (DI), Intensity.
+               value:     0                                           # Tke value.
+            eps:
+               type:      Law_of_wall                                 # Eps type: Zero normal gradient (NE), Specified Value (DI), Length scale, Wall model.
+         electric:
+            type:         NEUMANN
+            value:        0
+   -  boundary:
+         id:              3                                           # Boundary ID. Default boundary ID is 0.
+         type:            WALL                                        # Options: WALL, INFLOW, OUTFLOW, PERIODIC, SYMMETRY, TWO_D, GT-SUITE, INTERFACE, FLOW_THROUGH.
+         name:            Piston
+         region:          0                                           # Region ID. Default region ID is -1.
+         motion:          STATIONARY
+         geometry_motion: FIXED
+         roughness:
+            height:       0                                           # Absolute surface roughness in meters.
+            constant:     0.5                                         # A coefficient used in the roughness law of the wall model.
+         velocity:
+            type:         Law_of_wall                                 # Options: Law of wall, Slip, No-slip, Specified Value (DI), Zero normal gradient (NE), Mass flow, Pump, GT-SUITE.
+            value:        [0, 0, 0]                                   # Directional velocity vector components (or USER, AUTO_GENERATE (piston motion), MOTION_CONFIG, profile name).
+         pressure:
+            type:         Neumann                                     # Pressure type: Neumann, Dirichlet, Dirichlet_total (for INFLOW), Transonic (for OUTFLOW).
+         temperature:
+            type:         Law_of_wall                                 # Options: Law of wall, Specified Value (DI), Zero normal gradient (NE).
+            value:        293.15                                      # Temperature value.
+         species:
+            type:         Neumann                                     # Species type: Zero normal gradient (NE), Specified Value (DI).
+         passive:
+            type:         Neumann                                     # Passive type: Zero normal gradient (NE), Specified Value (DI).
+         turbulence:
+            tke:
+               type:      Neumann                                     # Tke type: Zero normal gradient (NE), Specified Value (DI), Intensity.
+               value:     0                                           # Tke value.
+            eps:
+               type:      Law_of_wall                                 # Eps type: Zero normal gradient (NE), Specified Value (DI), Length scale, Wall model.
+         electric:
+            type:         NEUMANN
+            value:        0
+

@@ -1,0 +1,35 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+-  embedding:
+      embed_type:         NOZZLE                                      # Type of embedding. NOZZLE and INJECTOR are disabled if Spray model is not active.
+      injector_name:      Injector_0
+      nozzle_name:        Nozzle_0
+      radius_1:           0.002                                       # Radius of the first end of a nozzle cylinder.
+      radius_2:           0.002                                       # Radius of the second end of a nozzle cylinder.
+      length:             0.005                                       # The length of the cylinder (or cone) shape that is used for creating the embedded volume for the nozzle.
+      embed_scale:        4                                           # Defines the level of refinement for embedding. Represents the value of n in dx_base/2^n.
+      temporal_type:      PERMANENT
+      start_time:         -999999                                     # Time when embedding starts. Not used when temporal_type is PERMANENT.
+      end_time:           -999999                                     # Time when embedding ends. Not used when temporal_type is PERMANENT.
+      description:        Nozzle
+-  embedding:
+      embed_type:         BOUND                                       # Type of embedding. NOZZLE and INJECTOR are disabled if Spray model is not active.
+      boundary_id:        10                                          # Boundary identifier (from boundary.in) that defines the boundary on which embedding is to be added.
+      embed_scale:        4                                           # Defines the level of refinement for embedding. Represents the value of n in dx_base/2^n.
+      num_embed:          3                                           # Number of layers of embedding (at the specified embed_scale) to be added to the boundary.
+      temporal_type:      PERMANENT
+      start_time:         -999999                                     # Time when embedding starts. Not used when temporal_type is PERMANENT.
+      end_time:           -999999                                     # Time when embedding ends. Not used when temporal_type is PERMANENT.
+      description:        Rear
+-  embedding:
+      embed_type:         BOUND                                       # Type of embedding. NOZZLE and INJECTOR are disabled if Spray model is not active.
+      boundary_id:        9                                           # Boundary identifier (from boundary.in) that defines the boundary on which embedding is to be added.
+      embed_scale:        4                                           # Defines the level of refinement for embedding. Represents the value of n in dx_base/2^n.
+      num_embed:          3                                           # Number of layers of embedding (at the specified embed_scale) to be added to the boundary.
+      temporal_type:      PERMANENT
+      start_time:         -999999                                     # Time when embedding starts. Not used when temporal_type is PERMANENT.
+      end_time:           -999999                                     # Time when embedding ends. Not used when temporal_type is PERMANENT.
+      description:        NW
+

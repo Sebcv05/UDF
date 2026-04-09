@@ -1,0 +1,17 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+stream_match_species_settings: 0
+post_file_option:         COMBINED
+stream_list:
+   -  stream:
+         id:              0
+         name:            Stream0
+         solid_flag:      0
+         stream_overwrite: ""
+         region_list:
+            -  region:
+                  id:     0
+                  name:   chamber
+

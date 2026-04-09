@@ -1,0 +1,85 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+collision_file_flag:      0                                           # Flag to specify collision control different from default. OFF: only default collisions, ON: specify collision control in parcel_parcel_interactions.in.
+collision_mesh_embed_level: 2                                         # Embed level used to create the adaptive film mesh.
+liquid_parcels:
+   combine_parcels:
+      active:             0                                           # Activate combine film parcels feature: 0=off, 1=On.
+      start_time:         0                                           # Time (s/deg/cyc) to begin combining film parcels.
+      end_time:           0                                           # Time (s/deg/cyc) to stop combining film parcels.
+      max_parcels_per_node: 20                                        # Maximum number of film parcels allowed per fluid cell. If this number is exceeded, algorithm will combine down to exactly this number of film parcels.
+   sub_cycle:
+      active:             0                                           # Flag to specify spray sub-cycling. OFF or ON.
+      dt:                 10000000000                                 # Delta_t used when spray sub-cycling is turned ON. Note: spray sub-cycling will be turned ON when sub_cycle_dt is smaller than dt.
+   collision_control:
+      collision_mesh_flag: 1                                          # 0=no collision mesh, 1=activate collision mesh.
+      collision_model:    NTC                                         # Collision model flag: 0=no collision model, 1=O'Rourke collision model, 2=NTC collision model.
+      outcome_model:      POST                                        # Collision outcomes flag: 0=O'Rourke outcomes, 1=Post outcomes.
+   wall_interaction_model: REBOUND_SLIDE                              # liquid parcel-wall interaction model: REBOUND_SLIDE, VANISH (drops vanish when they impinge on a solid boundary), FILE (parcel_wall_interaction.in is required).
+   parcel_list:
+      -  parcel:
+            parcel_name:  LiqParcel_0
+            parcel_species:
+               LNH3:      1
+            turb_dispersion_control:
+               dispersion_model: OROURKE                              # NONE, OROURKE or TKE_PRESERVING. Turbulent dispersion flag: 0=no turbulent dispersion model, 1=O'Rourke turbulent dispersion model, 2=tke preserving turbulent dispersion model.
+            porous_media_interaction_control:
+               porous_trap_parcel_model: NONE                         # Control behavior of spray parcel interaction with porous media: NONE, TRAP_ONLY, TRAP_AND_BREAKUP.
+               porous_break_parcel_radius_ratio: 0.1                  # Ratio to break up trapped parcels within porous media. Used for 'Trap and breakup' selection above only.
+            remove_control:
+               tiny_parcel_mass_ratio: 0.001                          # Mass ratio, if a parcel has a mass ratio to mass per parcel less than this value, the parcel will be deleted.
+               tiny_parcel_radius: 1e-20                              # If a parcel's radius is less than this value, the parcel will be deleted.
+            evap_control:
+               evap_model: FROSSLING                                  # NONE, FROSSLING or CHIANG. Evaporation flag: 0=no drop evaporation, 1=Frossling drop evaporation, 2=Chiang drop evaporation.
+               evap_source_flag: 0                                    # Evaporation source flag: 0=only evaporate into the species listed as evap_species, 1=if composites are used, evaporate into composite species (otherwise activate multi-component), 2=if composites are used, evaporate into the base species (otherwise activate multi-component).
+               evap_species: NH3                                      # Name of the single species that will be sourced when evaporation occurs and evap_source_flag=0.
+               boiling:   0                                           # Droplet boiling model: 0=No droplet boiling, 1=use droplet boiling model.
+               evap_flag_flash_boiling: 0                             # Flash boiling model: 0=No flash boiling (default), 1=use flash boiling model.
+               size_flag_flash_boiling: 0                             # Flag for whether spray inject droplet size will be reduced due to flash boiling. 0=Off, 1=On.
+               evap_scale_factor_flash_boiling: 1                     # Scale factor for flash boiling.
+               size_scale_factor_flash_boiling: 1                     # Scale factor for diameter reduction due to flash boiling.
+               d0_diffuse: 2.8e-05                                    # Liquid species mass diffusivity variable (gas state).
+               n_diffuse: 2.75                                        # Liquid species mass diffusivity variable (gas state).
+               scaling:
+                  heat_trans_coeff: 1                                 # Scaling applied to the droplet heat transfer coefficient.
+                  mass_trans_coeff: 1                                 # Scaling applied to the droplet mass transfer coefficient.
+               temp_discretization:
+                  active: 0                                           # Drop temperature discretization.
+                  radius: 1000                                        # Parcel radius used to turn ON/OFF parcel big evap.
+                  layers_per_drop: 15                                 # Number of finite volume cells for the heat equation.
+                  recirculation_flag: 0                               # Abramzon and Sirignano effective thermal conductivity.
+               urea_model: NONE                                       # Urea model. Options: NONE, MOLTEN_SOLID, DETAIL_DECOMPOSITION.
+            drag_control:
+               drag_model: DYNAMIC                                    # NONE, SPHERE or DYNAMIC. Drop drag model flag: 0=no drop drag model, 1=spherical drop drag model, 2=dynamic drop drag model.
+               cfocbck:   0.08333                                     # TAB/dynamic drag model constant.
+               csubd:     10                                          # TAB/dynamic drag model constant.
+               csubk:     8                                           # TAB/dynamic drag model constant.
+            breakup_control:
+               breakup_model: KH-RT                                   # NONE,  KH (Kelvin-Helmholtz), KH-ACT, RT (Rayleigh-Taylor), KH-RT, MOD-KH-RT, TAB, LISA.
+               kh:
+                  new_parcel_flag: 1                                  # 0=do not create new (child) parcels in the KH breakup model, 1=create new parcels in the KH model.
+                  new_parcel_cutoff: 0.05                             # Fraction of injected mass per parcel used for determining when to create a new (child) parcel in the KH breakup model.
+                  no_enlarge_flag: 0                                  # 0=Turn on drop enlargement, 1=Turn off drop enlargement.
+                  shed_factor: 0.25                                   # Fraction of parent parcel mass that goes into child parcels.
+                  vel_const: 0.188                                    # KH breakup model velocity constant.
+                  size_const: 0.61                                    # KH breakup model size constant.
+                  time_const: 5                                       # KH breakup model time constant.
+               khact:
+                  turb_kc: 0.45                                       # KH-ACT model constant KC.
+                  turb_ke: 0.27                                       # KH-ACT model constant KE.
+                  turb_s: 0.01                                        # KH-ACT model constant S.
+                  c_tcav: 10                                          # KH-ACT model constant for turbulence or cavitation induced breakup.
+               rt:
+                  distribution: UNIFORM                               # UNIFORM, CHI-SQUARED or ROSIN-RAMMLER: 0=no drop size distribution with RT breakup, 1=chi-squared distribution with RT breakup, 2=Rosin-Rammler distribution with RT breakup.
+                  time_const: 0.1                                     # RT breakup model time constant.
+                  size_const: 0.2                                     # RT breakup model size constant.
+                  length_const: 10000                                     # RT breakup length constant.
+               tab:
+                  distribution: UNIFORM                               # UNIFORM, CHI-SQUARED or ROSIN-RAMMLER: 0=no drop size distribution with TAB breakup, 1=chi-squared distribution with TAB breakup, 2=Rosin-Rammler distribution with TAB breakup.
+               lisa:
+                  distribution: UNIFORM                               # UNIFORM, CHI-SQUARED or ROSIN-RAMMLER: 0=no drop size distribution with LISA breakup, 1=chi-squared distribution with LISA breakup, 2=Rosin-Rammler distribution with LISA breakup.
+                  length_const: 12                                    # LISA model breakup length constant.
+                  size_const: 0.5                                     # LISA model breakup size constant.
+
