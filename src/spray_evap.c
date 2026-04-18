@@ -677,24 +677,31 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
       }
       parcel_cloud.v_sh[i_pc] = 2.0 + 0.6 * sqrt(parcel_cloud.rey_num[i_pc]) * (CONVERGE_cbrt(sc_num));
    }
-   CONVERGE_precision_t user_rand = CONVERGE_random_precision();
          // ******************************************************************************************************//
          // Print Droplet Data to File (Text Mode with Sampling)
-         // Sampling: 5% of parcels, every 50 cycles to keep file size manageable
-         if(CONVERGE_ncyc() % 5 == 0)
+         // Sampling: 5% of cells, every 5 cycles to keep file size manageable
+         // Uses a random parcel index within [0, num_parcels-1] to avoid always sampling the first parcel.
+         if(CONVERGE_ncyc() % 5 == 0 && num_parcels > 0)
          {
              CONVERGE_precision_t user_rand = CONVERGE_random_precision();
              if(user_rand < 0.05)
              {
                  int rank;
                  CONVERGE_mpi_comm_rank(&rank);
-                 
-                 CONVERGE_precision_t vmag = CONVERGE_sqrt(CONVERGE_square(parcel_cloud.uu[0][0]) + 
-                                                           CONVERGE_square(parcel_cloud.uu[0][1]) + 
-                                                           CONVERGE_square(parcel_cloud.uu[0][2]));
-                 
+
+                 // Pick a random, in-bounds parcel index for this cloud
+                 CONVERGE_precision_t rnd_idx_f = CONVERGE_random_precision();
+                 CONVERGE_index_t samp_idx = (CONVERGE_index_t)(rnd_idx_f * (CONVERGE_precision_t)num_parcels);
+                 if(samp_idx >= num_parcels) samp_idx = num_parcels - 1;  // safety clamp
+                 if(samp_idx < 0)           samp_idx = 0;
+
+                 CONVERGE_precision_t vmag = CONVERGE_sqrt(
+                     CONVERGE_square(parcel_cloud.uu[samp_idx][0]) +
+                     CONVERGE_square(parcel_cloud.uu[samp_idx][1]) +
+                     CONVERGE_square(parcel_cloud.uu[samp_idx][2]));
+
                  CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
-                 
+
                  char filename[64];
                  sprintf(filename, "Temp_Tracker_rank_%d.txt", rank);
 
@@ -703,17 +710,17 @@ void spray_evap_cell(CONVERGE_cloud_t cloud)
                  if (fp1 != NULL)
                  {
                      // Format: cloud_idx parcel_idx temp radius num_drop lifetime vmag is_child sim_time inj_time
-                     fprintf(fp1, "%ld %ld %.6e %.6e %.6e %.6e %.6e %d %.6e %.6e\n", 
-                             parcel_cloud.cloud_index[0], 
-                             parcel_cloud.parcel_index[0], 
-                             parcel_cloud.temp[0], 
-                             parcel_cloud.radius[0], 
-                             parcel_cloud.num_drop[0],
-                             parcel_cloud.lifetime[0], 
-                             vmag, 
-                             (parcel_cloud.breakup_phase[0] >= 5) ? 1 : 0, 
-                             sim_time, 
-                             parcel_cloud.time_of_injection[0]);
+                     fprintf(fp1, "%ld %ld %.6e %.6e %.6e %.6e %.6e %d %.6e %.6e\n",
+                             parcel_cloud.cloud_index[samp_idx],
+                             parcel_cloud.parcel_index[samp_idx],
+                             parcel_cloud.temp[samp_idx],
+                             parcel_cloud.radius[samp_idx],
+                             parcel_cloud.num_drop[samp_idx],
+                             parcel_cloud.lifetime[samp_idx],
+                             vmag,
+                             (parcel_cloud.breakup_phase[samp_idx] >= 5) ? 1 : 0,
+                             sim_time,
+                             parcel_cloud.time_of_injection[samp_idx]);
                      fclose(fp1);
                  }
              }
