@@ -279,7 +279,7 @@ CONVERGE_UDF(parcel_child,
    // R_D_0 - should not be used for child parcels
    parcel_cloud.r_drop_0[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
    parcel_cloud.r_therm[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
-
+   parcel_cloud.time_of_injection[passed_child_parcel_idx] = parcel_cloud.time_of_injection[passed_parent_parcel_idx];
 
 
    
