@@ -1952,8 +1952,8 @@ CONVERGE_precision_t user_radius = 0.0;
             inner_iter_flag = (inner_iter < min_inner_iter) ? (1) : (inner_iter_flag);
             if(fabs(tdrop - sub_temp_tm1) > 10)
             {
-              printf("\nDELTA TEMP > 10 K (sub_iter=%d), cyc=%ld pc=%ld n_sub=%d, radius=%.3e, rey_num=%.3e, tdrop = %e, sub_temp_tm1 = %e\n", 
-                     sub_iter, (long)CONVERGE_ncyc(), (long)i_pc, n_sub, parcel_cloud.radius[i_pc], parcel_cloud.rey_num[i_pc], tdrop, sub_temp_tm1);
+            //   printf("\nDELTA TEMP > 10 K (sub_iter=%d), cyc=%ld pc=%ld n_sub=%d, radius=%.3e, rey_num=%.3e, tdrop = %e, sub_temp_tm1 = %e\n", 
+            //          sub_iter, (long)CONVERGE_ncyc(), (long)i_pc, n_sub, parcel_cloud.radius[i_pc], parcel_cloud.rey_num[i_pc], tdrop, sub_temp_tm1);
             }
             tdrop_starm1 = tdrop;
          }
