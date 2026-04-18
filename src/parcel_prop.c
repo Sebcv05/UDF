@@ -171,6 +171,7 @@ CONVERGE_UDF(parcel_inject,
    parcel_cloud.r_bubble_0[passed_parcel_idx] = 0.0;
 
    parcel_cloud.time_of_injection[passed_parcel_idx] = CONVERGE_simulation_time_sec();
+   printf("\n AT INJECTION SIMTIME = %e\n",parcel_cloud.time_of_injection[passed_parcel_idx]);
    // printf("\n PARCEL_PROP.C L69 r_bubble = %e\n", parcel_cloud.r_bubble[passed_parcel_idx]);
    parcel_cloud.v_bubble[passed_parcel_idx] = 0.0;
 
@@ -280,7 +281,7 @@ CONVERGE_UDF(parcel_child,
    parcel_cloud.r_drop_0[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
    parcel_cloud.r_therm[passed_child_parcel_idx] = parcel_cloud.radius[passed_parent_parcel_idx];
    parcel_cloud.time_of_injection[passed_child_parcel_idx] = parcel_cloud.time_of_injection[passed_parent_parcel_idx];
-
+   printf("\nParent TOI = %e, Parent Lifetime = %e, Simtime = %e",parcel_cloud.time_of_injection[passed_parent_parcel_idx],parcel_cloud.lifetime[passed_parent_parcel_idx],CONVERGE_simulation_time_sec());
 
    
    if (parcel_cloud.breakup_phase[passed_parent_parcel_idx] != 0)  // Parent underwent some form of breakup
