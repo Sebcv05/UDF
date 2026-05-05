@@ -1,0 +1,181 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+ns_solver_scheme:         PISO
+ns_solver_type:           density_based
+piso:
+   tol_scale:             20                                          # Convergence tolerance for PISO iterations.
+   piso_tol:              0.001                                       # Convergence criterion for the PISO algorithm.
+   piso_itmin:            2                                           # Minimum number of PISO iterations.
+   piso_itmax:            44                                          # Maximum number of PISO iterations.
+   omega_presrat:         0.7                                         # Under-relaxation used in solving PISO density (pressure ratio).
+simple:
+   tol_scale:             20                                          # Convergence tolerance for SIMPLE iterations.
+   simple_tol:            0.001                                       # Convergence criterion for the SIMPLE algorithm.
+   simple_itmin:          2                                           # Minimum number of SIMPLE iterations.
+   simple_itmax:          9                                           # Maximum number of SIMPLE iterations.
+   omega_presrat:         0.7                                         # Under-relaxation used in solving numerical density (pressure ratio).
+   omega_simple:          0.5                                         # Under-relaxation factor for momentum update in SIMPLE.
+   couple_turb_flag:      0                                           # Solve turbulence inside SIMPLE.
+steady_state_solver:
+   steady_auto_flag:      0                                           # Automatically update solver settings to improve steady-state convergence.
+   steady_residual_output_flag: 0                                     # Flag to output the steady-state residuals (residuals.out).
+   steady_switch_solver_flag: 1                                       # Flag to automatically switch Pressure Solver Type from SOR to BiCG, or vice versa: 0=Do Not Switch Solver Type, 1=Switch Solver Type Automatically.
+   steady_tol_update_freq: 10                                         # Frequency at which solver settings will be checked and updated.
+   steady_min_num_amr:    20                                          # The minimum number of times AMR will be implemented for the steady-state simulation.
+   steady_piso_tol_init:  0.01                                        # The initial, relaxed value of piso_tol used by the steady-state solver.
+   steady_tol_scale_init: 10                                          # The initial, relaxed value of tol_scale used by the steady-state solver.
+   steady_max_cfl_u_final: 10                                         # The final value of max_cfl_u to be used or NOT_USED.
+numerical_schemes:
+   flux_scheme:
+      mom:                FLUX_BLENDING                               # Convective flux scheme type for momentum.
+      global:             FLUX_BLENDING                               # Convective flux scheme type for finite volume cell.
+      turb:               FLUX_BLENDING                               # Convective flux scheme type for turbulence.
+   fv_upwind_factor:
+      mom:                0.5                                         # Upwinding factor for the momentum finite volume solver: 1.0=first order upwind, 0.5=second order central.
+      global:             0.5                                         # Blending factor for finite volume cells for the original scheme: 1.0=first order upwind, 0.5=second order central.
+      turb:               1                                           # Blending factor for finite volume cells for the original scheme: 1.0=first order upwind, 0.5=second order central.
+   monotone_tolerance:    0.025                                       # Tolerance used in the STEP limiting scheme.
+   upwind_all_dir_flag:   0                                           # Limits the fluxes equally in all directions. Uses the most agressive flux limiting from each direction.
+   muscl_blend_factor:
+      mom:                1                                           # Blending factor for finite volume cells for the MUSCL scheme. 0.0=second order upwind, 1.0=reconstructed central difference.
+      global:             1                                           # Blending factor for finite volume cells for the MUSCL scheme. 0.0=second order upwind, 1.0=reconstructed central difference.
+      turb:               1                                           # Blending factor for finite volume cells for the MUSCL scheme. 0.0=second order upwind, 1.0=reconstructed central difference.
+   flux_limiter:
+      mom:                step                                        # Limiter function for computed fluxes to ensure TVD.
+      global:             step                                        # Limiter function for computed fluxes to ensure TVD.
+      turb:               step                                        # Limiter function for computed fluxes to ensure TVD.
+   implicit_fraction:     1                                           # Fraction of the solver that is implicit.
+   conserve:              1                                           # Fraction of the momentum equation in conservative form.
+   strict_conserve_level: 2                                           # Strict conservation flag: 0=no strict conservation, 1=strict conservation (Jacobi iterations) for all quantities except passives, 2 = strict conservation for all quantities.
+   rc_flag:               LEGACY_RC                                   # Flag for Rhie-Chow model: 0=no Rhie-Chow, 1=Legacy Rhie-Chow, 2=Generalized Rhie-Chow.
+   omega_turb:            1                                           # Under-relaxation factor for segregated turbulence solver.
+transport:
+   mom:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-06                                       # Convergence tolerance for the momentum equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving momentum equation.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   pres:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB/AMGX/CONVERGE_BICGSTAB_GPU.
+      tol:                1e-08                                       # Convergence tolerance for the pressure equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              50000                                       # Maximum number of solver iterations.
+      omega:              1.1                                         # Under/over-relaxation used in solving pressure equation.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   density:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-06                                       # Convergence tolerance for the density transport equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              100                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving density transport equation.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   energy:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-06                                       # Convergence tolerance for the energy equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              100                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving specific internal energy (sie) equation.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   species:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-06                                       # Convergence tolerance for species.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              100                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving species.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   passive:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-05                                       # Convergence tolerance for passives.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving passive.
+      preconditioner:     None                                        # Preconditioner used in solving the equation.
+   scalar:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                1e-05                                       # Convergence tolerance for the scalars ratio equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving scalars.
+      preconditioner:     None
+   radiation:
+      solver_type:        SOR                                         # Linear solver method - SOR/HYPRE_BICGSTAB/CONVERGE_BICGSTAB.
+      tol:                0.0001                                      # Convergence tolerance for the radiation transport equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              2500                                        # Maximum number of solver iterations.
+      omega:              1                                           # Under-relaxation used in solving radiation transport equation.
+      preconditioner:     None
+   wall_dist:
+      solver_type:        CONVERGE_BICGSTAB                           # Linear solver method - SOR/CONVERGE_BICGSTAB/HYBRID.
+      tol:                1e-06                                       # Convergence tolerance for the wall distance equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              500                                         # Maximum number of solver iterations.
+      omega:              1.1                                         # Under-relaxation used in solving wall distance equation.
+      preconditioner:     None
+   tke:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.0001                                      # Convergence tolerance for the turbulent kinetic energy equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving tke.
+      preconditioner:     None
+   sgs_ke:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the sub-grid scale kinetic energy equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              50                                          # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving tke.
+      preconditioner:     None
+   eps:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.0001                                      # Convergence tolerance for the turbulent dissipation equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving eps.
+      preconditioner:     None
+   sgs_eps:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the sub-grid scale turbulent dissipation equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              50                                          # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving eps.
+      preconditioner:     None
+   omega:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the unit turbulent dissipation equation.
+      itmin:              0                                           # Minimum number of solver iterations.
+      itmax:              200                                         # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving omega.
+      preconditioner:     None
+   v2:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the velocity variance scale equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              50                                          # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving v2.
+      preconditioner:     None
+   f:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the elliptic relaxation equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              100                                         # Maximum number of solver iterations.
+      omega:              1.1                                         # Under-relaxation used in solving f.
+      preconditioner:     None
+   zeta:
+      solver_type:        SOR                                         # Linear solver method - SOR.
+      tol:                0.001                                       # Convergence tolerance for the velocity scales ratio equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              50                                          # Maximum number of solver iterations.
+      omega:              0.7                                         # Under-relaxation used in solving zeta.
+      preconditioner:     None
+   electric_potential:
+      solver_type:        NONLINEAR_KRYLOV                            # Linear solver method - BICGSTAB/NONLINEAR KRYLOV.
+      tol:                1e-12                                       # Convergence tolerance for the electric potential ratio equation.
+      itmin:              2                                           # Minimum number of solver iterations.
+      itmax:              500                                         # Maximum number of solver iterations.
+      omega:              1.1                                         # Under-relaxation used in solving electric potential.
+      preconditioner:     None                                        # OFF/Euclid/Multigrid.
+

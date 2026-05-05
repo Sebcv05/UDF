@@ -1,0 +1,135 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+surface_filename:         surface.dat                                 # The name of surface data file.
+mechanism_filename:       mech.dat                                    # The name of mechanism data file.
+thermodynamic_filename:   therm.dat                                   # The name of thermodynamic data file.
+simulation_control:
+   crank_flag:            0                                           # Flag to indicate time units: 0=seconds, 1=crank angle degrees (used for transient engine simulations), 2=crank angle degrees (used for non-engine simulations).
+   start_time:            0                                           # Start time, in sec.  or crank angle degrees.
+   end_time:              0.001                                       # End time, in sec.  or crank angle degrees. If gti_flag is on in boundary.in, keyword GT can be used.
+   restart_flag:          0                                           # Flag to indicate if the simulation is a restart or new run: 0=new run, 1=restart.
+   restart_number:        0                                           # Number added to output files to identify different restarts.
+   map_flag:              OFF                                         # Flag to allow mapping in initial conditions: OFF=do not map, MAP=map (requires map.in and a data file).
+   check_grid_motion_flag: 0                                          # Flag to indicate run type: 0=solve full hydrodynamics (typical), 1=no hydrodynamics--used to check grid, 2=same as 1,but it also checks all triangles at all time steps for intersections at usually a small speed penalty, 3=create the initial grid and check for intersections but from then on it will only move triangles and check for intersections without changing the grid.
+   load_cyc:              100                                         # Number of cycles between load balancing.
+   imbalance_factor:      125                                         # Percentage imbalance (Ratio of Max cell in a rank to Average cells per rank) to trigger load balance at each load_balance check.
+   reread_input:          1                                           # Whether or not to reread input parameters from inputs.in, solver.in, cycle_steady, max_cells, min_cells, turb_stat_start_time, turb_stat_end_time, and turb_stat_tol: 0=Don't reread selected input parameters, 1=Reread selected input parameters each time-step. See the Input and Data Files chapter of the CONVERGE Manual for more information.
+   random_seed:           0                                           # Random seed number.
+output_control:
+   log_level:             3                                           # Screen print level.
+   twrite_post:           2.5e-05                                       # Time interval for writing 3D output (s/crank angle/cycle).
+   twrite_transfer:       10                                          # Time interval for writing heat transfer output data (s/crank angle/cycle).
+   twrite_files:          1e-06                                       # Time interval for writing text data files (s/crank angle/cycle).
+   twrite_restart:        0.0001                                      # Time interval for writing restart output (s/crank angle/cycle).
+   twrite_restart_max_wct: 1                                          # Maximum wall-clock time (in hours) between writing restart files.
+   numerics_output_flag:  1                                           # Flag to output the number of PISO/pstar/Ustar iterations per time-step (numerics.out).
+   custom_time_flag:      0                                           # Flag to set custom time unit: 1=allow custom unit in tabular input files, 2=allow in tables and make ASCII output in custom unit.
+   custom_time_unit:      ""                                          # Name of custom unit.
+   custom_time_conv:      0                                           # Conversion factor from custom unit to seconds.
+   num_restart_files:     3                                           # Number of restart files to be saved.
+   write_map_flag:        0                                           # Flag to write map_*.h5 and spray_map_*.h5 at specified times (needs write_map.in).
+   wall_output_flag:      OFF                                         # Flag to write wall output: OFF=do not generate wall output, BOUND=generate wall output at boundaries, BOUND_AND_STRESS=generate wall output, FILE=custom wall output (requires wall_output.in).
+   transfer_flag:         0                                           # Flag to generate FEA heat transfer data: 0=do not generate FEA data, 1=generate FEA data, or file name.
+   mixing_output_flag:    0                                           # Flag to generate mixing-related output: 0=do not generate output, 1=generate output.
+   species_output_flag:   1                                           # Flag to output of species info: 0=do not output, 1=total mass (if VOF is on, total_volume is written), 2=1+mass fraction, 3=2+standard deviation of mass fraction, 4=3+species mole fraction.
+   region_flow_flag:      0                                           # Flag to generate inter-region flow output: 0=do not generate output, 1=total mass-flux output, 2=mass-flux output for each specified species ('regions_flow.in').
+   dynamic_flag:          0                                           # Dynamic output options.
+   monitor_points_flag:   0                                           # Flag to activate monitor points: 0=do not use monitor points, 1=use (requires monitor_points.in).
+   post_slice_output_flag: 0                                          # Flag to activate post slice output: 0=Off, 1=On (requires post_slice.in).
+   uniformity_index_output_flag: 0                                    # Flag to activate uniformity index output: 0=Off, 1=On (requires uniformity_index.in).
+   smd_pdf_flag:          0                                           # Flag to indicate if output SMD (Sauter Mean Diameter) and drop distribution at a specified plane direction. (0=off, 1=on (requires smd_pdf_input.in), 2=Phase Doppler Particle Analyzer (requires pdpa.in), 3=particle size distribution (requires radius_pdf.in).
+   walltime_output_flag:  0                                           # Specify whether to generate walltime.out.
+   output_multiplier:     1                                           # Scale extrinsic quantities by this value as they are written to .out files.
+   paraview_catalyst_flag: 0                                          # Triggers use of ParaView Catalyst (requires paraview_catalyst.in). 0: Not activated.
+grid_control:
+   base_grid:             [0.002, 0.002, 0.002]                       # Maximum cell size (dx, dy, dz) in x, y, z direction (m).
+   grid_scale:            0                                           # Value of n in dx_base/2^n.
+   amr_flag:              1                                           # Flag to activate AMR: 0=do not use AMR, 1=use AMR (requires amr.in).
+   events_flag:           0                                           # Flag to activate events: 0=do not use events, 1= use (requires events.in).
+   embedded_flag:         1                                           # Flag to activate fixed embedding: 0=do not use fixed embedding, 1=use (requires embedded.in).
+   inlaid_mesh_flag:      0                                           # Flag to indicate the presence of an inlaid mesh. This ensures that the computational cells are constructed correctly when an inlaid mesh is present. 0=inlaid mesh is OFF, 1=inlaid mesh is ON (requires inlaid_mesh.in).
+   min_vol_ratio:         0.3                                         # min_vol_ratio, Recommended range [0.1 - 0.3].
+   seal_tol:              0.0005                                      # Sealing tolerance.
+   auto_reloft_flag:      0                                           # Flag to activate the automatic relofting of WALL boundaries. 0=OFF, 1=ON.
+temporal_control:
+   time_flag:             1                                           # Flag for variable time-step: 0=constant time-step (dt), 1=variable time-step (recommended).
+   dt_start:              1e-10                                       # Time-step (dt) at the start of the simulation (s).
+   dt_max:                0.0001                                      # Maximum time-step (dt).
+   dt_min:                1e-14                                       # Minimum time-step (dt).
+   dt_fixed:              1e-08                                       # Fixed time-step(s)--only used if time_flag=0.
+   mult_dt_parcel:        1.5                                         # Multiplier used in calculating maximum time-step based on parcel.
+   mult_dt_evap:          10000000                                    # Multiplier used in calculating maximum time-step based on evaporation.
+   mult_dt_chem:          0.5                                         # Multiplier used in calculating time-step based on chemical heat release.
+   mult_dt_coll_mesh:     1                                           # Multiplier used in calculating collision mesh time-step.
+   mult_dt_move:          0.5                                         # Multiplier used in calculating boundary motion through cells. File can be used.
+   max_cfl_u:             0.1                                         # Maximum CFL number based on velocity.
+   max_cfl_nu:            5                                           # Maximum CFL number based on viscosity.
+   max_cfl_mach:          50                                          # Maximum CFL number based on speed of sound.
+solver_control:
+   momentum_solver:       1                                           # Flag to solve momentum: 0=do not solve momentum equation, 1=solve momentum equation.
+   energy_solver:         INTERNAL                                    # Flag to solve energy: 0=do not solve energy equation, 1=solve energy equation, 2=solve total energy.
+   species_solver:        1                                           # Flag to solve species: 0=do not solve species equation, 1=solve species equation, 2=solve species equation for VOF simulation.
+   turbulence_solver:     1                                           # Flag to activate turbulence modeling: 0=do not use turbulence modeling, 1=use (requires turbulence.in).
+   steady_solver:         0                                           # Flag to indicate transient or steady-state: 0=Transient solver, 1=Steady-state solver.
+   monitor_steady_state:  0                                           # Flag to activate steady-state monitor: 0=do not use, 1=use (requires monitor_steady_state.in).
+property_control:
+   gas_compressible_flag: 1                                           # Gas compressibility flag: 0=incompressible gas flow, 1=compressible gas flow.
+   liquid_compressible_flag: 0                                        # Liquid compressibility flag: 0=incompressible liquid flow, 1=compressible liquid flow.
+   lhv_flag:              0                                           # Flag to activate lower heating value: 0=do not use, 1=use (requires lhv.in).
+   tabular_fluid_prop_flag: 0                                         # Use tabular fluid properties: 0=do not use, 1=use tabular fluid properties.
+   eos_flag:              redlich_kwong                               # Equation of state: 0=ideal gas, 1=Redlich-Kwong, 2=Redlich-Kwong-Soave, 3=Peng-Robinson.
+   individual_properties_flag: 0                                      # Flag to set gas.dat files for individual species.
+   real_gas_prop_flag:    0                                           # 0=Thermodynamic quantities are only function of T, 1=Thermodynamic quantities are only function of both T and P.
+   max_reduced_pres:      6                                           # The maximum reduced pressure for the departure function tables.
+   crit_temp:             133                                         # Critical temperature used for the real gas equations of state (K).
+   crit_pres:             3770000                                     # Critical pressure used for the real gas equations of state (Pa).
+   acentric_factor:       0.035                                       # Acentric factor of air (used for advanced equations of state).
+   species_diffusion_model: 0                                         # 0=Apply single-species diffusion coefficient, 1=Apply mixture-averaged diffusion coefficient when solving species and energy transport equations, 2=Use schmidt_species.dat.
+   prandtl_turb:          0.9                                         # Turbulent Prandtl number.
+   schmidt_turb:          0.78                                        # Turbulent Schmidt number.
+   min_temp:              10                                          # Minimum temperature allowed in the domain (K).
+   max_temp:              700                                         # Maximum temperature allowed in the domain (K).
+   max_visc:              10                                          # Maximum turbulent dynamic viscosity allowed in the domain (N s/m^2).
+   gravity:               [0, 0, 0]
+feature_control:
+   parcel_mode:
+      liquid_parcel:      1                                           # Flag to activate Liquid parcel simulation.
+      solid_parcel:       0                                           # Flag to activate Solid parcel simulation.
+      gas_parcel:         0                                           # Flag to activate Gas parcel simulation.
+   urea_flag:             0                                           # 0=no urea model, 1=use Multi-component, Molten solid, or Detailed decomposition urea modeling (requires urea.in).
+   combustion_flag:       0                                           # Flag to activate combustion modeling: 0=do not use combustion model, 1= use (requires combust.in).
+   source_flag:           0                                           # Flag to activate user-specified sources: 0=do not use sources, 1=use (requires source.in).
+   aniso_cond_flag:       0                                           # Flag to activate anisotropic heat conduction: 0=Isotropic, 1=anisotropic (requires aniso_cond.in).
+   adjoint_solver_flag:   0
+   composite_flag:        0                                           # Flag to activate composite species: 0=do not use composite species, 1=use (requires a composite.in).
+   wallvalue_flag:        0                                           # Flag to activate wall initial values: 0=do not use, 1=use (requires wall_value.in).
+   udf_flag:              1                                           # Flag to allow user-defined functions: 0=do not use, 1=use (requires udf.in).
+   cht_supercycle_flag:   0                                           # Super-cycle flag: 0=do not use Super-cycle, 1=use Super-cycle.
+   vof_flag:              0                                           # Flag to activate Volume Of Fluid method (VOF): 0=do not use VOF, 1=use (requires vof.in).
+   fixed_flow_flag:       0                                           # Flag to activate the Fixed flow feature: 0=do not use Fixed flow, 1=use Fixed flow (requires fixed_flow.in).
+   fsi_flag:              0                                           # Flag to activate Fluid-Structure Interaction (FSI) method: 0=do not use FSI, 1=use (requires fsi.in).
+   erosion_flag:          0                                           # Flag to activate Erosion Modelling: 0 = Do not use Erosion Modelling, 1 = Use Erosion Modelling (require erosion.in).
+   electric_potential_flag: 0                                         # Off: Do not solve electric potential, On: Solve electric potential in solid streams.
+   radiation_flag:        0                                           # Flag to activate radiation: 0=do not use radiation, 1= use (requires radiation.in).
+   nucleate_boiling_flag: 0                                           # Flag to activate nucleate boiling: 0=do not use nucleate boiling, 1= use (requires nucleate_boiling.in).
+   skip_species_flag:     0                                           # Flag to activate 'Transport species subset': 0=do not use 'Transport species subset', 1= use (requires skip_species.in).
+   mrf_flag:              0                                           # Flag to activate multiple reference frame (MRF): 0=do not use, 1=use MRF with relative formulation (requires mrf.in), 2=use MRF with absolute formulation (requires mrf.in).
+   mixing_plane_flag:     0                                           # Flag to activate mixing planes: 0 = no mixing planes, 1 = has mixing planes (requires mixing_plane.in).
+   prox_check_flag:       0                                           # Flag to check for proximity between boundaries: 0=Off, 1=Flags cells within proximity, 2=Minimum distance computed for every cell (requires proximity_boundaries.in).
+   cosimulation_flag:     0                                           # 0=No co-simulation used, 1=Use co-simulation configuration (requires cosimulation.in).
+   initial_perturbation_flag: 0                                       # Flag to activate velocity perturbations in the initial velocity field: 0=Off, 1=On (requires initial_perturbation_region.in).
+   post_emission_flag:    0                                           # Flag to activate emission post-processing: 0=Off, 1=Solve emissions and species with fixed major fluid quantities from a restart file.
+   motion_sets_flag:      0                                           # 0=No motion sets used, 1=Use motion sets (requires motion_sets.in).
+   acoustics_flag:        0                                           # Flag to activate AeroAcoustic Models: 0=AeroAcoustic Models not active, 1=AeroAcoustic Models active (requires acoustics.in).
+ga_control:
+   ga_flag:               0                                           # Flag to enable genetic algorithm output: 0=do not use GA output, 1=activate GA output.
+   ga_individual:         0                                           # Genetic algorithm individual number.
+   ga_generation:         0                                           # Genetic algorithm generation number.
+mpi_control:
+   shared_memory_flag:    1                                           # Use MPI shared memory feature to reduce memory usage especially for large surface files.
+accelerator_control:
+   use_gpu_flag:          0                                           # Flag to activate GPU acceleration: 0 = Do not use GPU acceleration, 1 = Use GPU acceleration (requires additional file, ex. amgx.json).
+   enable_pin_mem:        0                                           # Flag to activate the pinned memory to enhances the bandwidth of data movement between CPU/GPU. .
+

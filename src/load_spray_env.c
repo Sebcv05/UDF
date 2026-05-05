@@ -9,35 +9,56 @@
 * Convergent Science.                                                          *
 *******************************************************************************/
 #include "lagrangian/env.h"
-
+#include <counter.h>
 #include <CONVERGE/udf.h>
-
+#include <pthread.h>
+#include <globals.h>
+//Global variables to index parcels and clouds - need to initialize here
+ user_parcel_counter = 0; //First index
+ user_cloud_counter = 0; //First index
+ update_cloud_counter_flag = 0;   //Flag to tell program to tick cloud_counter
 /** Load the spray environment
  */
 CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
-{   //printf("\n START OF LOAD_LAG_ENV.C \n");
+{
+   // LK model parameters now read from user_inputs.in
+   // No hardcoding - all flags controlled by input file
+   
    // Register a simple double data parcel field
    CONVERGE_variable_register("user_lag_var", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("v_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("m_bubble", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("v_bubble_tm1", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST); 
    CONVERGE_variable_register("v_drop", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST); 
    CONVERGE_variable_register("r_bubble_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_bubble_tm1",CONVERGE_DOUBLE,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("r_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("temp_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("r_therm", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("omega", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("omega_tm1", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("int_omega", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("m0",        CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("child_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    CONVERGE_variable_register("eta_drop", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
-    CONVERGE_variable_register("thermal_breakup_flag", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("eta_drop_0", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("thermal_breakup_flag", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   
+   // Collapse recovery fields
+   CONVERGE_variable_register("recovery_time", CONVERGE_DOUBLE, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("recovery_count", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
 
    // Register a simple int data parcel field
    CONVERGE_variable_register("user_lag_var_i", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("dgre_cycle_count", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("parcel_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
+   CONVERGE_variable_register("cloud_index", CONVERGE_INT, DEFAULT_PARCEL_VARIABLE_SETTINGS, END_ARG_LIST);
    CONVERGE_variable_register("tbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
+   CONVERGE_variable_register("is_child",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
+   CONVERGE_variable_register("breakup_phase",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
+   CONVERGE_variable_register("time_of_injection",CONVERGE_DOUBLE,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
    CONVERGE_variable_register("pbt",CONVERGE_INT,DEFAULT_PARCEL_VARIABLE_SETTINGS,END_ARG_LIST);
 
    // User defined component names, overrides automatic nameing for CONVERGE_VEC3
@@ -63,31 +84,58 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
       "dimension",
       3,
       END_ARG_LIST);
+      CONVERGE_variable_register(
+         "child_uu",
+         // CONVERGE_VEC3 will automattically append _1/_2/_3 to the end of the variable name
+         CONVERGE_VEC3,
+         DEFAULT_PARCEL_VARIABLE_SETTINGS,
+         // The purpose of specifying the dimension manually here is to demonstrate it is permitted to mix dimension with any CONVERGE_APIType
+         "dimension",
+         3,
+         END_ARG_LIST);
    // Get dynamic IDs to Lagrangian Cloud fields
    USER_LAG_VAR    = CONVERGE_lagrangian_field_id("user_lag_var");
+   USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
+   USER_LAG_VARv3  = CONVERGE_lagrangian_field_id("user_lag_var_v3");
+   CHILD_UU = CONVERGE_lagrangian_field_id("child_uu");
+   USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    R_BUBBLE = CONVERGE_lagrangian_field_id("r_bubble");
    V_BUBBLE = CONVERGE_lagrangian_field_id("v_bubble");
+   M_BUBBLE = CONVERGE_lagrangian_field_id("m_bubble");
    V_B_TM1  = CONVERGE_lagrangian_field_id("v_bubble_tm1");
    V_DROP =    CONVERGE_lagrangian_field_id("v_drop");
    R_B_0    = CONVERGE_lagrangian_field_id("r_bubble_0");
    R_D_0    = CONVERGE_lagrangian_field_id("r_drop_0");
+   T_0      = CONVERGE_lagrangian_field_id("temp_drop_0");
    R_B_TM1 = CONVERGE_lagrangian_field_id("r_bubble_tm1");
    R_THERM = CONVERGE_lagrangian_field_id("r_therm");
    OMEGA    = CONVERGE_lagrangian_field_id("omega");
    OMEGA_TM1    = CONVERGE_lagrangian_field_id("omega_tm1");
    INT_OMEGA    = CONVERGE_lagrangian_field_id("int_omega");
    ETA      = CONVERGE_lagrangian_field_id("eta_drop");   
+   ETA_0    = CONVERGE_lagrangian_field_id("eta_drop_0");
    USER_LAG_VARi   = CONVERGE_lagrangian_field_id("user_lag_var_i");
    THERMAL_BREAKUP_FLAG = CONVERGE_lagrangian_field_id("thermal_breakup_flag");
    TBT      = CONVERGE_lagrangian_field_id("tbt");
+   IS_CHILD = CONVERGE_lagrangian_field_id("is_child");
+   BREAKUP_PHASE = CONVERGE_lagrangian_field_id("breakup_phase");
+   TIME_OF_INJECTION = CONVERGE_lagrangian_field_id("time_of_injection");
+   CHILD_INDEX = CONVERGE_lagrangian_field_id("child_index");
    PBT      = CONVERGE_lagrangian_field_id("pbt");
    DGRE_COUNT = CONVERGE_lagrangian_field_id("dgre_cycle_count");
+   CLOUD_INDEX = CONVERGE_lagrangian_field_id("cloud_index");
+   PARCEL_INDEX = CONVERGE_lagrangian_field_id("parcel_index");
    USER_LAG_VARv3  = CONVERGE_lagrangian_field_id("user_lag_var_v3");
    USER_LAG_VARv3b = CONVERGE_lagrangian_field_id("user_lag_var_v3b");
    M0 = CONVERGE_lagrangian_field_id("m0");
+   
+   // Collapse recovery field IDs
+   RECOVERY_TIME = CONVERGE_lagrangian_field_id("recovery_time");
+   RECOVERY_COUNT = CONVERGE_lagrangian_field_id("recovery_count");
 
 
    LAGRANGIAN_FROM_INJECTOR = CONVERGE_lagrangian_field_id("LAGRANGIAN_FROM_INJECTOR");
+   LAGRANGIAN_FROM_INJECTOR_TYPE = CONVERGE_lagrangian_field_id("LAGRANGIAN_FROM_INJECTOR_TYPE");
    LAGRANGIAN_ON_TRIANGLE   = CONVERGE_lagrangian_field_id("LAGRANGIAN_ON_TRIANGLE");
    LAGRANGIAN_FROM_NOZZLE   = CONVERGE_lagrangian_field_id("LAGRANGIAN_FROM_NOZZLE");
    LAGRANGIAN_FILM_FLAG     = CONVERGE_lagrangian_field_id("LAGRANGIAN_FILM_FLAG");
@@ -101,6 +149,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    LAGRANGIAN_UU      = CONVERGE_lagrangian_field_id("LAGRANGIAN_UU");
    LAGRANGIAN_UU_TM1  = CONVERGE_lagrangian_field_id("LAGRANGIAN_UU_TM1");
    LAGRANGIAN_XX      = CONVERGE_lagrangian_field_id("LAGRANGIAN_XX");
+   LAGRANGIAN_XX_TM1  = CONVERGE_lagrangian_field_id("LAGRANGIAN_XX_TM1");
 
    LAGRANGIAN_V_NU               = CONVERGE_lagrangian_field_id("LAGRANGIAN_V_NU");
    LAGRANGIAN_V_SH               = CONVERGE_lagrangian_field_id("LAGRANGIAN_V_SH");
@@ -147,9 +196,6 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    LAGRANGIAN_TKE0               = CONVERGE_lagrangian_field_id("LAGRANGIAN_TKE0");
    LAGRANGIAN_EPS0               = CONVERGE_lagrangian_field_id("LAGRANGIAN_EPS0");
    LAGRANGIAN_LIFETIME           = CONVERGE_lagrangian_field_id("LAGRANGIAN_LIFETIME");
-   LAGRANGIAN_FORCE_COEFFICIENT  = CONVERGE_lagrangian_field_id("LAGRANGIAN_FORCE_COEFFICIENT");
-   LAGRANGIAN_DROP_GAS_SRC       = CONVERGE_lagrangian_field_id("LAGRANGIAN_DROP_GAS_SRC");
-
 
    LAGRANGIAN_FILM_THICKNESS_TM1 = CONVERGE_lagrangian_field_id("LAGRANGIAN_FILM_THICKNESS_TM1");
    LAGRANGIAN_AREA_IN_FILM       = CONVERGE_lagrangian_field_id("LAGRANGIAN_AREA_IN_FILM");
@@ -157,7 +203,52 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    LAGRANGIAN_FILM_ACCUM_BIT_FLAG = CONVERGE_lagrangian_field_id("LAGRANGIAN_FILM_ACCUM_BIT_FLAG");
    LAGRANGIAN_FILM_ACCUM_PLUS_BIT_FLAG = CONVERGE_lagrangian_field_id("LAGRANGIAN_FILM_ACCUM_PLUS_BIT_FLAG");
 
+   //Get dynamic IDs for solid parcel cloud
+   SOLID_PARCEL_FROM_INJECTOR = CONVERGE_solid_parcel_field_id("LAGRANGIAN_FROM_INJECTOR");
+   SOLID_PARCEL_FROM_INJECTOR_TYPE = CONVERGE_solid_parcel_field_id("LAGRANGIAN_FROM_INJECTOR_TYPE");
+   SOLID_PARCEL_ON_TRIANGLE   = CONVERGE_solid_parcel_field_id("LAGRANGIAN_ON_TRIANGLE");
+   SOLID_PARCEL_FROM_NOZZLE   = CONVERGE_solid_parcel_field_id("LAGRANGIAN_FROM_NOZZLE");
+   SOLID_PARCEL_FILM_FLAG     = CONVERGE_solid_parcel_field_id("LAGRANGIAN_FILM_FLAG");
+
+   SOLID_PARCEL_JUST_HIT        = CONVERGE_solid_parcel_field_id("LAGRANGIAN_JUST_HIT");
+
+   SOLID_PARCEL_REL_VEL = CONVERGE_solid_parcel_field_id("LAGRANGIAN_REL_VEL");
+   SOLID_PARCEL_UPRIME  = CONVERGE_solid_parcel_field_id("LAGRANGIAN_UPRIME");
+   SOLID_PARCEL_UU      = CONVERGE_solid_parcel_field_id("LAGRANGIAN_UU");
+   SOLID_PARCEL_UU_TM1  = CONVERGE_solid_parcel_field_id("LAGRANGIAN_UU_TM1");
+   SOLID_PARCEL_XX      = CONVERGE_solid_parcel_field_id("LAGRANGIAN_XX");
+   SOLID_PARCEL_XX_TM1  = CONVERGE_solid_parcel_field_id("LAGRANGIAN_XX_TM1");
+
+   SOLID_PARCEL_V_NU               = CONVERGE_solid_parcel_field_id("LAGRANGIAN_V_NU");
+   SOLID_PARCEL_TEMP               = CONVERGE_solid_parcel_field_id("LAGRANGIAN_TEMP");
+   SOLID_PARCEL_TEMP_TM1           = CONVERGE_solid_parcel_field_id("LAGRANGIAN_TEMP_TM1");
+   SOLID_PARCEL_TEMP_STARM1        = CONVERGE_solid_parcel_field_id("LAGRANGIAN_TEMP_STARM1");
+   SOLID_PARCEL_REY_NUM            = CONVERGE_solid_parcel_field_id("LAGRANGIAN_REY_NUM");
+   SOLID_PARCEL_REL_VEL_MAG        = CONVERGE_solid_parcel_field_id("LAGRANGIAN_REL_VEL_MAG");
+   SOLID_PARCEL_RADIUS             = CONVERGE_solid_parcel_field_id("LAGRANGIAN_RADIUS");
+   SOLID_PARCEL_RADIUS_TM1         = CONVERGE_solid_parcel_field_id("LAGRANGIAN_RADIUS_TM1");
+   SOLID_PARCEL_DENSITY            = CONVERGE_solid_parcel_field_id("LAGRANGIAN_DENSITY");
+   SOLID_PARCEL_DENSITY_TM1        = CONVERGE_solid_parcel_field_id("LAGRANGIAN_DENSITY_TM1");
+   SOLID_PARCEL_MFRAC              = CONVERGE_solid_parcel_field_id("LAGRANGIAN_MFRAC");
+   SOLID_PARCEL_MFRAC_TM1          = CONVERGE_solid_parcel_field_id("LAGRANGIAN_MFRAC_TM1");
+   SOLID_PARCEL_NUM_DROP           = CONVERGE_solid_parcel_field_id("LAGRANGIAN_NUM_DROP");
+   SOLID_PARCEL_SURF_TEMP          = CONVERGE_solid_parcel_field_id("LAGRANGIAN_SURF_TEMP");
+   SOLID_PARCEL_VISCOSITY          = CONVERGE_solid_parcel_field_id("LAGRANGIAN_VISCOSITY");
+   SOLID_PARCEL_DISTORT            = CONVERGE_solid_parcel_field_id("LAGRANGIAN_DISTORT");
+   SOLID_PARCEL_SURF_TEMP_TM1      = CONVERGE_solid_parcel_field_id("LAGRANGIAN_SURF_TEMP_TM1");
+   SOLID_PARCEL_NUM_DROP_TM1       = CONVERGE_solid_parcel_field_id("LAGRANGIAN_NUM_DROP_TM1");
+   SOLID_PARCEL_T_TURB             = CONVERGE_solid_parcel_field_id("LAGRANGIAN_T_TURB");
+   SOLID_PARCEL_T_TURB_ACCUM       = CONVERGE_solid_parcel_field_id("LAGRANGIAN_T_TURB_ACCUM");
+
    // Get Dynamic IDs for Injectors parameters
+   INJECTOR_INJECTED_PARCEL_INDEX        = CONVERGE_get_parameter_id("injector.injected_parcel_index");
+   INJECTOR_INJECTED_PARCEL_TYPE         = CONVERGE_get_parameter_id("injector.injected_parcel_type");
+   INJECTOR_INJECTED_NUM_PARCEL_SPECIES  = CONVERGE_get_parameter_id("injector.injected_num_parcel_species");
+   INJECTOR_CONE_DISTRIBUTION_FLAG       = CONVERGE_get_parameter_id("injector.cone_distribution_flag");
+   INJECTOR_DYNAMIC_SPRAY_CONE_ANGLE_FLAG= CONVERGE_get_parameter_id("injector.dynamic_spray_cone_angle_flag");
+   INJECTOR_PENET_FRAC                   = CONVERGE_get_parameter_id("injector.penet_frac");
+   INJECTOR_VAPOR_PENET_FRAC             = CONVERGE_get_parameter_id("injector.vapor_penet_frac");
+   INJECTOR_PENET_BIN_SIZE               = CONVERGE_get_parameter_id("injector.penet_bin_size");
    INJECTOR_MFRAC                        = CONVERGE_get_parameter_id("injector.mfrac");
    INJECTOR_START_INJECT_IS_FILE         = CONVERGE_get_parameter_id("injector.start_inject_is_file");
    INJECTOR_DUR_INJECT_IS_FILE           = CONVERGE_get_parameter_id("injector.dur_inject_is_file");
@@ -169,7 +260,6 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    INJECTOR_TKE_FLAG                     = CONVERGE_get_parameter_id("injector.tke_flag");
    INJECTOR_EPS_FLAG                     = CONVERGE_get_parameter_id("injector.eps_flag");
    INJECTOR_INIT_CELL_TURB_FLAG          = CONVERGE_get_parameter_id("injector.init_cell_turb_flag");
-   INJECTOR_KH_FLAG                      = CONVERGE_get_parameter_id("injector.kh_flag");
    INJECTOR_KHACT_NOZZLE_FLOW_FLAG       = CONVERGE_get_parameter_id("injector.khact_nozzle_flow_flag");
    INJECTOR_KH_NEW_PARCEL_FLAG           = CONVERGE_get_parameter_id("injector.kh_new_parcel_flag");
    INJECTOR_KH_NO_ENLARGE_FLAG           = CONVERGE_get_parameter_id("injector.kh_no_enlarge_flag");
@@ -191,12 +281,9 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    INJECTOR_CONE_FLAG                    = CONVERGE_get_parameter_id("injector.cone_flag");
    INJECTOR_TEMPORAL_TYPE                = CONVERGE_get_parameter_id("injector.temporal_type");
    INJECTOR_VELOCITY_COEFF_INPUT_FLAG    = CONVERGE_get_parameter_id("injector.velocity_coeff_input_flag");
-   INJECTOR_BREAKUP_FLAG                 = CONVERGE_get_parameter_id("injector.breakup_flag");
    INJECTOR_POLAR_CPY_NUM                = CONVERGE_get_parameter_id("injector.polar_cpy_num");
    INJECTOR_Q_RR                         = CONVERGE_get_parameter_id("injector.q_rr");
    INJECTOR_GAMMA_RR_X_DIST              = CONVERGE_get_parameter_id("injector.gamma_rr_x_dist");
-   INJECTOR_LISA_LENGTH_CONST            = CONVERGE_get_parameter_id("injector.lisa_length_const");
-   INJECTOR_LISA_SIZE_CONST              = CONVERGE_get_parameter_id("injector.lisa_size_const");
    INJECTOR_LISA_INJECTION_PRES          = CONVERGE_get_parameter_id("injector.lisa_injection_pressure");
    INJECTOR_LISA_KV                      = CONVERGE_get_parameter_id("injector.lisa_kv");
    INJECTOR_CYCLIC_PERIOD                = CONVERGE_get_parameter_id("injector.cyclic_period");
@@ -231,7 +318,7 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    INJECTOR_RATE_SHAPE                   = CONVERGE_get_parameter_id("injector.rate_shape");
    INJECTOR_ANGLE_XY_INJ                 = CONVERGE_get_parameter_id("injector.angle_xy_inj");
    INJECTOR_ANGLE_XZ_INJ                 = CONVERGE_get_parameter_id("injector.angle_xz_inj");
-   INJECTOR_RHO_LIQUID                   = CONVERGE_get_parameter_id("injector.rho_liquid");
+   INJECTOR_ANGLE_CLOCK_INJ              = CONVERGE_get_parameter_id("injector.angle_clock_inj");
    INJECTOR_SWIRL_FRAC                   = CONVERGE_get_parameter_id("injector.swirl_frac");
    INJECTOR_TOT_INJECTED_MASS            = CONVERGE_get_parameter_id("injector.tot_inj_mass");
    INJECTOR_TOT_INJECTED_MASS_TM         = CONVERGE_get_parameter_id("injector.tot_inj_mass_tm");
@@ -286,9 +373,71 @@ CONVERGE_ONLOAD(spray_env, IN(CONVERGE_VOID))
    NOZZLE_CONE_INPUT_FLAG          = CONVERGE_get_parameter_id("nozzle.cone_noz_input_flag");
    NOZZLE_DIAMETER_INPUT_FLAG      = CONVERGE_get_parameter_id("nozzle.noz_diameter_input_flag");
    NOZZLE_RADIUS_INJECT_INPUT_FLAG = CONVERGE_get_parameter_id("nozzle.radius_inject_input_flag");
-   NOZZLE_NOZ_THETA                = CONVERGE_get_parameter_id("nozzle.noz_theta");
+   NOZZLE_NOZ_THETA                    = CONVERGE_get_parameter_id("nozzle.noz_theta");
    NOZZLE_NOZ_ANGLE_XY             = CONVERGE_get_parameter_id("nozzle.noz_angle_xy");
    NOZZLE_NOZ_ANGLE_XZ             = CONVERGE_get_parameter_id("nozzle.noz_angle_xz");
+   
+   // Get Dynamic IDs for boundary injector parameters
+   BOUNDARY_INJECTOR_CYCLIC_PERIOD = CONVERGE_get_parameter_id("boundary_injector.cyclic_period");
+   BOUNDARY_INJECTOR_END_INJECT = CONVERGE_get_parameter_id("boundary_injector.end_inject");
+   BOUNDARY_INJECTOR_INJECT_START_TIME = CONVERGE_get_parameter_id("boundary_injector.inject_start_time");
+   BOUNDARY_INJECTOR_INJECT_DURATION = CONVERGE_get_parameter_id("boundary_injector.inject_duration");
+   BOUNDARY_INJECTOR_VELOCITY = CONVERGE_get_parameter_id("boundary_injector.velocity");
+   BOUNDARY_INJECTOR_VELOCITY_TM1 = CONVERGE_get_parameter_id("boundary_injector.velocity_tm1");
+   BOUNDARY_INJECTOR_TOT_INJ_MASS = CONVERGE_get_parameter_id("boundary_injector.tot_inj_mass");
+   BOUNDARY_INJECTOR_TOT_INJ_MASS_TM = CONVERGE_get_parameter_id("boundary_injector.tot_inj_mass_tm");
+   BOUNDARY_INJECTOR_INJECT_TEMP = CONVERGE_get_parameter_id("boundary_injector.inject_temp");
+   BOUNDARY_INJECTOR_Q_RR = CONVERGE_get_parameter_id("boundary_injector.q_rr");
+   BOUNDARY_INJECTOR_RATE_SHAPE = CONVERGE_get_parameter_id("boundary_injector.rate_shape");
+   BOUNDARY_INJECTOR_SMD = CONVERGE_get_parameter_id("boundary_injector.smd");
+   BOUNDARY_INJECTOR_TOT_AREA = CONVERGE_get_parameter_id("boundary_injector.tot_area");
+   BOUNDARY_INJECTOR_MASS_PER_PARCEL = CONVERGE_get_parameter_id("boundary_injector.mass_per_parcel");
+   BOUNDARY_INJECTOR_MASS_TM1 = CONVERGE_get_parameter_id("boundary_injector.mass_tm1");
+   BOUNDARY_INJECTOR_MASS_TM2 = CONVERGE_get_parameter_id("boundary_injector.mass_tm2");
+   BOUNDARY_INJECTOR_INJECT_MASS = CONVERGE_get_parameter_id("boundary_injector.inject_mass");
+   BOUNDARY_INJECTOR_VELOCITY_OLD_OUT = CONVERGE_get_parameter_id("boundary_injector.velocity_out_old");
+   BOUNDARY_INJECTOR_VELOCITY_OLD_NEW = CONVERGE_get_parameter_id("boundary_injector.velocity_out_new");
+   BOUNDARY_INJECTOR_PARCEL_RADIUS = CONVERGE_get_parameter_id("boundary_injector.parcel_radius");
+   BOUNDARY_INJECTOR_AMP_DISTORT = CONVERGE_get_parameter_id("boundary_injector.amp_distort");
+   BOUNDARY_INJECTOR_GAMMA_RR_X_DIST = CONVERGE_get_parameter_id("boundary_injector.gamma_rr_x_dist");
+   BOUNDARY_INJECTOR_INJECT_RATIO_VALUE = CONVERGE_get_parameter_id("boundary_injector.inject_ratio_value");
+   BOUNDARY_INJECTOR_MFRAC = CONVERGE_get_parameter_id("boundary_injector.mfrac");
+
+   // Get Dynamic IDs for parcel setups
+   PARCEL_IN_BREAKUP_FLAG          = CONVERGE_get_parameter_id("parcels_in.breakup_flag");
+   PARCEL_IN_KH_FLAG               = CONVERGE_get_parameter_id("parcels_in.kh_flag");
+   PARCEL_IN_KH_NEW_PARCEL_FLAG    = CONVERGE_get_parameter_id("parcels_in.kh_new_parcel_flag");
+   PARCEL_IN_KH_NO_ENLARGE_FLAG    = CONVERGE_get_parameter_id("parcels_in.kh_no_enlarge_flag");
+   PARCEL_IN_KH_NEW_PARCEL_CUTOFF  = CONVERGE_get_parameter_id("parcels_in.kh_new_parcel_cutoff");
+   PARCEL_IN_KH_SHED_FACTOR        = CONVERGE_get_parameter_id("parcels_in.kh_shed_factor");
+   PARCEL_IN_KH_VEL_CONST          = CONVERGE_get_parameter_id("parcels_in.kh_vel_const");
+   PARCEL_IN_KH_SIZE_CONST         = CONVERGE_get_parameter_id("parcels_in.kh_size_const");
+   PARCEL_IN_KH_TIME_CONST         = CONVERGE_get_parameter_id("parcels_in.kh_time_const");
+   PARCEL_IN_KHACT_TURB_KC         = CONVERGE_get_parameter_id("parcels_in.khact_turb_kc");
+   PARCEL_IN_KHACT_TURB_KE         = CONVERGE_get_parameter_id("parcels_in.khact_turb_ke");
+   PARCEL_IN_KHACT_TURB_S          = CONVERGE_get_parameter_id("parcels_in.khact_turb_s");
+   PARCEL_IN_KHACT_C_TCAV          = CONVERGE_get_parameter_id("parcels_in.khact_c_tcav");
+   PARCEL_IN_RT_FLAG               = CONVERGE_get_parameter_id("parcels_in.rt_flag");
+   PARCEL_IN_RT_DISTRIBUTION_FLAG  = CONVERGE_get_parameter_id("parcels_in.rt_distribution_flag");
+   PARCEL_IN_RT_TIME_CONST         = CONVERGE_get_parameter_id("parcels_in.rt_time_const");
+   PARCEL_IN_RT_SIZE_CONST         = CONVERGE_get_parameter_id("parcels_in.rt_size_const");
+   PARCEL_IN_RT_LENGTH_CONST       = CONVERGE_get_parameter_id("parcels_in.rt_length_const");
+   PARCEL_IN_TAB_FLAG              = CONVERGE_get_parameter_id("parcels_in.tab_flag");
+   PARCEL_IN_TAB_DISTRIBUTION_FLAG = CONVERGE_get_parameter_id("parcels_in.tab_distribution_flag");
+   PARCEL_IN_TAB_CSUBD             = CONVERGE_get_parameter_id("parcels_in.tab_csubd");
+   PARCEL_IN_TAB_CSUBK             = CONVERGE_get_parameter_id("parcels_in.tab_csubk");
+   PARCEL_IN_LISA_FLAG             = CONVERGE_get_parameter_id("parcels_in.lisa_flag");
+   PARCEL_IN_LISA_DISTRIBUTION_FLAG= CONVERGE_get_parameter_id("parcels_in.lisa_distribution_flag");
+   PARCEL_IN_LISA_LENGTH_CONST     = CONVERGE_get_parameter_id("parcels_in.lisa_length_const");
+   PARCEL_IN_LISA_SIZE_CONST       = CONVERGE_get_parameter_id("parcels_in.lisa_size_const");
+
+   // Get Dynamic IDs for solid parcel setups
+   PARCELS_IN_SOLID_PARCELS_DRAG_MODEL = CONVERGE_get_parameter_id("parcels_in.solid_parcel_drag_flag");
+   PARCELS_IN_SOLID_PARCELS_WALL_INTERACTION_FLAG = CONVERGE_get_parameter_id("parcels_in.solid_parcel_wall_interaction_flag");
+   PARCELS_IN_SOLID_PARCELS_COEFF_OF_RESTITUTION_TYPE = CONVERGE_get_parameter_id("parcels_in.solid_parcel_coeff_of_restitution_type");
+   PARCELS_IN_SOLID_PARCELS_COEFF_OF_RESTITUTION_NORMAL_DIR = CONVERGE_get_parameter_id("parcels_in.solid_parcel_coeff_of_restitution_normal_dir");
+   PARCELS_IN_SOLID_PARCELS_COEFF_OF_RESTITUTION_TANG_DIR = CONVERGE_get_parameter_id("parcels_in.solid_parcel_coeff_of_restitution_tang_dir");
+   PARCELS_IN_SOLID_PARCELS_STICK_RATE = CONVERGE_get_parameter_id("parcels_in.solid_parcel_stick_rate");
 }
 
 /** Load all of the cloud data from a CONVERGE_cloud_t to a wrapper structure
@@ -299,11 +448,13 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->user_temp_starm1 = (double *)CONVERGE_cloud_get_field_data(c, USER_LAG_VAR);
    parcel_cloud_loc->r_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_BUBBLE);
    parcel_cloud_loc->v_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, V_BUBBLE);
+   parcel_cloud_loc->m_bubble = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, M_BUBBLE);
    parcel_cloud_loc->v_drop = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,V_DROP);
    parcel_cloud_loc->r_bubble_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_B_0);
    parcel_cloud_loc->r_bubble_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_B_TM1);
    parcel_cloud_loc->v_bubble_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, V_B_TM1);
    parcel_cloud_loc->r_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_D_0);
+   parcel_cloud_loc->temp_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, T_0);
    parcel_cloud_loc->r_therm = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, R_THERM);
    parcel_cloud_loc->omega = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, OMEGA);
    parcel_cloud_loc->omega_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, OMEGA_TM1);
@@ -311,16 +462,33 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->m0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,M0);
 
    parcel_cloud_loc->eta_drop  = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, ETA);
+   parcel_cloud_loc->eta_drop_0 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, ETA_0);
 
    parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
    parcel_cloud_loc->tbt              = (int *)CONVERGE_cloud_get_field_data(c,TBT);
+   parcel_cloud_loc->is_child = (int *)CONVERGE_cloud_get_field_data(c,IS_CHILD);
+   parcel_cloud_loc->breakup_phase = (int *)CONVERGE_cloud_get_field_data(c,BREAKUP_PHASE);
+   parcel_cloud_loc->time_of_injection = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c,TIME_OF_INJECTION);
    parcel_cloud_loc->pbt              = (int *)CONVERGE_cloud_get_field_data(c,PBT);
+   parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
    parcel_cloud_loc->thermal_breakup_flag = (int *)CONVERGE_cloud_get_field_data(c, THERMAL_BREAKUP_FLAG);
    parcel_cloud_loc->dgre_cycle_count = (int *)CONVERGE_cloud_get_field_data(c, DGRE_COUNT);
+   parcel_cloud_loc->parcel_index = (int *)CONVERGE_cloud_get_field_data(c, PARCEL_INDEX);
+   parcel_cloud_loc->cloud_index = (int *)CONVERGE_cloud_get_field_data(c, CLOUD_INDEX);
+   parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
+   parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
+   
+   // Collapse recovery fields
+   parcel_cloud_loc->recovery_time = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, RECOVERY_TIME);
+   parcel_cloud_loc->recovery_count = (CONVERGE_int_t *)CONVERGE_cloud_get_field_data(c, RECOVERY_COUNT);
+
+   parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
+   parcel_cloud_loc->child_uu = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, CHILD_UU);
    parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
    parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
 
    parcel_cloud_loc->from_injector = (int *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FROM_INJECTOR);
+   parcel_cloud_loc->from_injector_type = (int *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FROM_INJECTOR_TYPE);
    parcel_cloud_loc->on_triangle   = (int *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_ON_TRIANGLE);
    parcel_cloud_loc->from_nozzle   = (int *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FROM_NOZZLE);
    parcel_cloud_loc->film_flag     = (int *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FILM_FLAG);
@@ -334,7 +502,7 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->uu           = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_UU);
    parcel_cloud_loc->uu_tm1       = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_UU_TM1);
    parcel_cloud_loc->xx           = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_XX);
-   parcel_cloud_loc->drop_gas_src = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_DROP_GAS_SRC);
+   parcel_cloud_loc->xx_tm1       = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_XX_TM1);
 
    parcel_cloud_loc->v_nu          = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_V_NU);
    parcel_cloud_loc->v_sh          = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_V_SH);
@@ -384,11 +552,9 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    parcel_cloud_loc->tke0     = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_TKE0);
    parcel_cloud_loc->eps0     = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_EPS0);
    parcel_cloud_loc->lifetime = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_LIFETIME);
-   parcel_cloud_loc->force_coefficient = 
-      (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FORCE_COEFFICIENT);
-   parcel_cloud_loc->film_accum_bit_flag = 
+   parcel_cloud_loc->film_accum_bit_flag =
       (unsigned long long*)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FILM_ACCUM_BIT_FLAG);
-   parcel_cloud_loc->film_accum_plus_bit_flag = 
+   parcel_cloud_loc->film_accum_plus_bit_flag =
       (unsigned int*)CONVERGE_cloud_get_field_data(c, LAGRANGIAN_FILM_ACCUM_PLUS_BIT_FLAG);
 
    if(CONVERGE_cloud_type(c) == LAGRANGIAN_FILM)
@@ -405,52 +571,49 @@ void load_user_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
    }
 }
 
-/* load urea information*/
-
-void load_urea_parameters(struct UreaInfo *urea_info)
+void load_user_solid_parcel_cloud(struct ParcelCloud *parcel_cloud_loc, CONVERGE_cloud_t c)
 {
-   urea_info->isp_nh3_urea             = CONVERGE_get_int("urea_in.isp_nh3_urea");
-   urea_info->isp_hnco_urea            = CONVERGE_get_int("urea_in.isp_hnco_urea");
-   urea_info->isp_co2_urea             = CONVERGE_get_int("urea_in.isp_co2_urea");
-   urea_info->isp_cn_urea              = CONVERGE_get_int("urea_in.isp_cn_urea");
-   urea_info->isp_nh2_urea             = CONVERGE_get_int("urea_in.isp_nh2_urea");
-   urea_info->isp_water_parcel         = CONVERGE_get_int("urea_in.isp_water_parcel");
-   urea_info->isp_urea_parcel          = CONVERGE_get_int("urea_in.isp_urea_parcel");
-   urea_info->isp_urea_parcel_sl       = CONVERGE_get_int("urea_in.isp_urea_parcel_sl");
-   urea_info->urea_a                   = CONVERGE_get_double("urea_in.urea_a");
-   urea_info->urea_ea                  = CONVERGE_get_double("urea_in.urea_ea");
-   urea_info->gamma_scr                = CONVERGE_get_double("urea_in.gamma_scr");
-   urea_info->urea_hdcmp               = CONVERGE_get_double("urea_in.urea_hdcmp");
-}
+   // Load user defined field data
+   parcel_cloud_loc->user_temp_starm1 = (double *)CONVERGE_cloud_get_field_data(c, USER_LAG_VAR);
+   parcel_cloud_loc->user_lag_var_i   = (int *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARi);
+   parcel_cloud_loc->user_lag_var_v3  = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3);
+   parcel_cloud_loc->user_lag_var_v3b = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, USER_LAG_VARv3b);
+   parcel_cloud_loc->child_uu =        (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, CHILD_UU);
+   parcel_cloud_loc->child_index = (int *)CONVERGE_cloud_get_field_data(c,CHILD_INDEX);
 
-void load_urea_dd_parameters(struct UreaInfo *urea_info)
-{
-   urea_info->num_react_parcel_species = CONVERGE_get_int("urea_in.num_react_parcel_species");
-   urea_info->num_react_gas_species    = CONVERGE_get_int("urea_in.num_react_gas_species");
-   urea_info->num_reactions            = CONVERGE_get_int("urea_in.num_reactions");
-   urea_info->isp_nh3                  = CONVERGE_get_int("urea_in.isp_nh3");//gas
-   urea_info->isp_hnco                 = CONVERGE_get_int("urea_in.isp_hnco");//gas
-   urea_info->isp_h2o_aq               = CONVERGE_get_int("urea_in.isp_h2o_aq");//aqueous
-   urea_info->isp_urea_aq              = CONVERGE_get_int("urea_in.isp_urea_aq");//aqueous
-   urea_info->isp_urea_sl              = CONVERGE_get_int("urea_in.isp_urea_sl");//solid
-   urea_info->scaling_factor_a         = CONVERGE_get_double("urea_in.scaling_factor_a");
-   urea_info->scaling_factor_e         = CONVERGE_get_double("urea_in.scaling_factor_e");
-   urea_info->mw_h2o                   = CONVERGE_get_double("urea_in.mw_h2o");
-   urea_info->mw_urea                  = CONVERGE_get_double("urea_in.mw_urea");
+   parcel_cloud_loc->from_injector = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FROM_INJECTOR);
+   parcel_cloud_loc->from_injector_type = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FROM_INJECTOR_TYPE);
+   parcel_cloud_loc->on_triangle   = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_ON_TRIANGLE);
+   parcel_cloud_loc->from_nozzle   = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FROM_NOZZLE);
+   parcel_cloud_loc->film_flag     = (int *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_FILM_FLAG);
 
-   CONVERGE_urea_get_isp_lists(&(urea_info->isp_parcel_species_list),
-                              &(urea_info->isp_gas_species_list),
-                              &(urea_info->isp_react_species_list));
+   parcel_cloud_loc->just_hit        = (short *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_JUST_HIT);
 
-   CONVERGE_urea_get_double_lists(&(urea_info->mass_dot_gases),
-                                 &(urea_info->mass_parcel_reac_sp),
-                                 &(urea_info->mass_dot_parcel_reac_sp),
-                                 &(urea_info->c_isp),
-                                 &(urea_info->k_cr),
-                                 &(urea_info->mw),
-                                 &(urea_info->a_react),
-                                 &(urea_info->e_react));
-   //printf("\n END OF LOAD_LAG_ENV.C \n");
-        
+   parcel_cloud_loc->rel_vel      = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_REL_VEL);
+   parcel_cloud_loc->uprime       = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_UPRIME);
+   parcel_cloud_loc->uu           = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_UU);
+   parcel_cloud_loc->uu_tm1       = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_UU_TM1);
+   parcel_cloud_loc->xx           = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_XX);
+   parcel_cloud_loc->xx_tm1       = (CONVERGE_vec3_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_XX_TM1);
 
+   parcel_cloud_loc->v_nu          = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_V_NU);
+   parcel_cloud_loc->temp          = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_TEMP);
+   parcel_cloud_loc->temp_tm1      = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_TEMP_TM1);
+   parcel_cloud_loc->temp_starm1   = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_TEMP_STARM1);
+   parcel_cloud_loc->rey_num       = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_REY_NUM);
+   parcel_cloud_loc->rel_vel_mag   = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_REL_VEL_MAG);
+   parcel_cloud_loc->radius        = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_RADIUS);
+   parcel_cloud_loc->radius_tm1    = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_RADIUS_TM1);
+   parcel_cloud_loc->density       = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_DENSITY);
+   parcel_cloud_loc->density_tm1   = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_DENSITY_TM1);
+   parcel_cloud_loc->mfrac         = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_MFRAC);
+   parcel_cloud_loc->mfrac_tm1     = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_MFRAC_TM1);
+   parcel_cloud_loc->num_drop      = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_NUM_DROP);
+   parcel_cloud_loc->surf_temp     = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_SURF_TEMP);
+   parcel_cloud_loc->viscosity     = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_VISCOSITY);
+   parcel_cloud_loc->distort       = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_DISTORT);
+   parcel_cloud_loc->surf_temp_tm1 = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_SURF_TEMP_TM1);
+   parcel_cloud_loc->num_drop_tm1  = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_NUM_DROP_TM1);
+   parcel_cloud_loc->t_turb        = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_T_TURB);
+   parcel_cloud_loc->t_turb_accum  = (CONVERGE_precision_t *)CONVERGE_cloud_get_field_data(c, SOLID_PARCEL_T_TURB_ACCUM);
 }

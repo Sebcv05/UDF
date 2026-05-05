@@ -1,0 +1,27 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+amr_settings:
+   cycle_steady:          100                                         # Number of cycles between AMR calculations.
+   max_cells:             10000000                                    # Maximum number of cells in the entire domain.
+   min_cells:             1                                           # Minimum number of cells in the entire domain.
+   embed_frequency:       1                                           # Specify number of cycles/iterations between embed events.
+   release_frequency:     25                                          # Specify number of cycles/iterations between release events.
+amr_groups:
+   -  amr_group:
+         amr_regions:     0                                           # Active AMR region.
+         amr_velocity:
+            active:       1                                           # Enable AMR based on velocity conditions.
+            embed_scale:  3                                           # Maximum embedding level for velocity.
+            sgs_embed:    0.1                                         # Minimum velocity sub-grid value above which a cell will be embedded.
+            temporal_type: PERMANENT                                  # Timing control type.
+            parcel_embed: 50                                          # Maximum number of parcels in a cell before CONVERGE embeds a cell using AMR.
+            amr_type:     sgs
+amr_bounds:
+   []
+amr_yplus_restrict:
+   []
+amr_proximity:
+   []
+

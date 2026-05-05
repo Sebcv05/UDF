@@ -1,0 +1,15 @@
+version: 3.1
+##!Exported by CONVERGE Studio v3.1 Jan 31 2022 17:37:18
+---
+
+cells:
+   geometry:              [grid_level, rank, idreg, xcen]
+   general:               [density, mass, vol_frac, pressure, temperature, velocity, volume]
+   turbulence:            [eps, tke, turb_viscosity, yplus]
+   species_massfrac:      [NH3, O2, N2]
+   species_molefrac:      [NH3, O2, N2]
+parcels:
+   liquid_parcels:
+      physical:           [from_injector, from_nozzle, num_drop, radius, temp, velocity]
+      model:              [tbreak_kh, tbreak_rt]
+

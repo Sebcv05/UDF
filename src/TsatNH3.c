@@ -24,9 +24,9 @@ CONVERGE_precision_t T_satNH3(CONVERGE_precision_t P)
       tsatA1 = 4.86886;
       tsatB1 = 1113.928;
       tsatC1 = -10.409;
-      tsatA1 = 3.18757;
-      tsatB1 = 506.713;
-      tsatC1 = -80.78;
+      tsatA2 = 3.18757;
+      tsatB2 = 506.713;
+      tsatC2 = -80.78;
       P_bar = P / 1e5;
       if(P_bar> 0.9933080)
       {

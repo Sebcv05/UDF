@@ -23,16 +23,6 @@ static CONVERGE_precision_t *global_src_rif_fuel_evap_ex;
 static CONVERGE_precision_t *global_ecfm_temp_evap_ex;
 static const short *global_region_index;
 
-// static void init_tables(CONVERGE_species_t species);
-// static void destroy_tables(CONVERGE_species_t species);
-static CONVERGE_table_t *pvap_table = NULL;
-static CONVERGE_table_t *visc_table = NULL;
-static CONVERGE_table_t *cond_table = NULL;
-static CONVERGE_table_t *cp_table   = NULL;
-static CONVERGE_table_t *rho_table  = NULL;
-static CONVERGE_table_t *h_table    = NULL;
-static CONVERGE_table_t *evap_species_h_table;
-static CONVERGE_table_t *evap_species_sensible_h_table;
 
 static CONVERGE_species_t sp;
 static CONVERGE_index_t num_gas_species;

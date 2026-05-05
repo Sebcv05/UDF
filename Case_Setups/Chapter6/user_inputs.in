@@ -1,0 +1,21 @@
+# User-defined UDF parameters (copy to each case directory before running)
+# Format: <value> <keyword>  (comments start with # or %)
+
+1.0  breakup_velocity_scale   # Legacy aa value
+1.0 breakup_radius_scale     # B scaling factor (child radius scaling)
+1.0  kb_threshold             # Breakup criterion threshold
+3.2 n_RR                     # Rosin-Rammler shape parameter (2.5-4.0 typical)
+12  num_children             # Number of child parcels per breakup event (2-50)
+
+# ============================================================================
+# Langmuir-Knudsen Evaporation Model
+# ============================================================================
+1     lk_correction_flag     # 0=classical model, 1=LK correction enabled
+0     lk_diagnostic_flag     # 0=no diagnostics, 1=print LK quantities (WARNING: verbose!)
+0.0   lk_chi_neq_min        # Minimum non-equilibrium mole fraction clip
+0.9999 lk_chi_neq_max       # Maximum non-equilibrium mole fraction clip
+
+# ============================================================================
+# RPE Model Selection
+# ============================================================================
+0     use_song_rpe           # 0=thermal RPE (default), 1=Song isothermal RPE

@@ -49,7 +49,7 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             CONVERGE_precision_t dgre_alpha, dgre_beta, dgre_gamma, dgre_delta, dgre_epsilon;
             dgre_alpha = Delta - Delta_sq - psi_o * Delta;
             dgre_beta = CONVERGE_sqrt(We_o) * ((Delta_sq*Delta_sq) + psi_o - 1.0);
-            dgre_gamma = 2.0 * inv_Delta*inv_Delta;
+            dgre_gamma = 2.0 * (inv_Delta*inv_Delta + Delta_sq);
             Delta_over_Ma_i = Delta/Ma_i;
             dgre_delta = 3.0 * psi_i * We_i * Delta_over_Ma_i * Delta_over_Ma_i;
             dgre_epsilon = 3.0 * CONVERGE_sqrt(We_i);
@@ -99,14 +99,37 @@ void DGRE_NH3(struct ParcelCloud* old_parcel_cloud,CONVERGE_index_t p_idx,CONVER
             }
             */
            
-            if (fabs(creal(r1.x0)) > 1.0e10)
-            {
-               r1.x0 = 0;
+            // Select root with largest real part (maximum disturbance growth rate)
+            CONVERGE_precision_t root_values[3];
+            root_values[0] = creal(r1.x0);
+            root_values[1] = creal(r1.x1);
+            root_values[2] = creal(r1.x2);
+            
+            // Diagnostic: Print all roots for first few calls
+            static int root_diag_count = 0;
+            if (root_diag_count < 5) {
+               printf("[ROOT_DIAG] roots: x0=%.3e, x1=%.3e, x2=%.3e\n", 
+                      root_values[0], root_values[1], root_values[2]);
+               root_diag_count++;
             }
-            if (creal(r1.x0) < 0.0)
+            
+            // Find root with maximum real part
+            CONVERGE_precision_t max_real = root_values[0];
+            if (root_values[1] > max_real) max_real = root_values[1];
+            if (root_values[2] > max_real) max_real = root_values[2];
+            
+            // Check for unreasonably large values
+            if (fabs(max_real) > 1.0e10)
             {
-               // printf("\nroot is negative");
-               old_parcel_cloud->omega[p_idx] = 0.0;
+               max_real = 0.0;
             }
-             old_parcel_cloud->omega[p_idx] = creal(r1.x0)/c_omega;
+            
+            // If negative, use absolute value (modulus)
+            if (max_real < 0.0)
+            {
+               max_real = fabs(max_real);
+            }
+            
+            // Convert from non-dimensional to dimensional omega
+            old_parcel_cloud->omega[p_idx] = max_real / c_omega;
 }

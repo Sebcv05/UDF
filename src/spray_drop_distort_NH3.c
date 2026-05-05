@@ -8,6 +8,33 @@
  * is strictly forbidden unless prior written permission is obtained from       *
  * Convergent Science.                                                          *
  *******************************************************************************/
+
+/*
+ * breakup_phase states:
+ *   0 = DISABLED  (parent, not eligible - subcooled, too small, etc.)
+ *   1 = ELIGIBLE  (parent, superheated, ready to enter thermal breakup)
+ *   2 = ACTIVE    (parent, growing bubble in sub-timestep loop)
+ *   3 = RECOVERY  (parent, bubble collapsed, attempting recovery)
+ *   4 = READY     (parent, bubble at threshold, ready to fragment)
+ *   5 = COMPLETE  (child - result of actual breakup)
+ *   
+ *   DIAGNOSTIC STATES (bypassed breakup):
+ *   6  = Temperature too high (spray_drop_distort line 378)
+ *   7  = Pre-check: P_sat < P_amb (spray_drop_distort line 411)
+ *   8  = Not superheated (spray_drop_distort line 435)
+ *   9  = Stuck: disabled and not superheated (spray_drop_distort line 463)
+ *   10 = Song: v_bubble too small (epsilon < 0.4) (spray_drop_distort line 633)
+ *   11 = Post-RPE: v_bubble too small (spray_drop_distort line 661)
+ *   12 = Droplet too small (RPE_euler line 258)
+ *   13 = P_sat < P_amb subcooled (RPE_euler line 339)
+ *   14 = Recovered parcel in RPE (RPE_euler line 375)
+ *   15 = Bubble collapse Rdot < 0 (RPE_euler line 393)
+ *   16 = Subcooled T < T_sat (RPE_euler line 426)
+ *   17 = Rdot too small (RPE_euler line 460)
+ *   18 = Geometry: negative dRd (Geometry line 59)
+ *   19 = Vb calc: P_sat < P_amb (Vb line 22)
+ */
+
 #include "lagrangian/env.h"
 #include <spray_break.h>
 #include <CONVERGE/udf.h>
@@ -28,9 +55,15 @@
 #include <TsatNH3.h>
 #include <DGRE_NH3.h>
 #include <Geometry.h>
+#include <parcel_reset.h>
 //#include <mpi.h>
 //#include <DestroyTables.h>
 #include <Vb.h>
+#include <RPE_euler.h>
+#include <RPE_song.h>
+#include <Breakup_Song.h>
+#include <globals.h>
+
 
 /// @brief UDF Thermal Breakup Model with all thermal properties for ammonia
 /// @param mesh 
@@ -43,8 +76,224 @@
 /// @param parcel_counter 
 /// @param sp 
 static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index, const CONVERGE_precision_t *global_density, const CONVERGE_precision_t *global_viscosity, CONVERGE_index_t parcel_counter,CONVERGE_species_t sp);
+static void sync_child_velocity(CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index);
 static void init_tables(CONVERGE_species_t species);
 static void destroy_tables(CONVERGE_species_t species);
+static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx);
+static int check_superheat_eligibility(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb);
+static int handle_stuck_parcels(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb);
+static void set_breakup_phase(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, int phase);
+
+// static void init_tables(CONVERGE_species_t species);
+// static void destroy_tables(CONVERGE_species_t species);
+static CONVERGE_table_t *pvap_table = NULL;
+static CONVERGE_table_t *visc_table = NULL;
+static CONVERGE_table_t *cond_table = NULL;
+static CONVERGE_table_t *cp_table   = NULL;
+static CONVERGE_table_t *rho_table  = NULL;
+static CONVERGE_table_t *h_table    = NULL;
+static CONVERGE_table_t *evap_species_h_table;
+static CONVERGE_table_t *evap_species_sensible_h_table;
+
+// Profiling accumulators
+static double prof_geom=0.0, prof_dgre=0.0, prof_bc=0.0, prof_break=0.0, prof_bubble=0.0;
+static int last_cycle = -1;
+static int spray_params_logged = 0;
+
+// Recovery period constant
+#define RECOVERY_PERIOD 20.0e-6  // 20 μs recovery wait
+
+/// @brief Set breakup phase and mirror to film_flag
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @param phase Phase value to set (0-19)
+static void set_breakup_phase(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, int phase)
+{
+   parcel_cloud->breakup_phase[p_idx] = phase;
+   parcel_cloud->film_flag[p_idx] = phase;
+}
+
+/// @brief Structure to hold commonly used parcel variables
+struct ParcelLoopVars {
+   // Parcel properties
+   CONVERGE_precision_t sigma;      // Surface tension
+   CONVERGE_precision_t Td;         // Droplet temperature
+   CONVERGE_precision_t Rb;         // Bubble radius
+   CONVERGE_precision_t Rb_0;       // Previous bubble radius
+   CONVERGE_precision_t t_parcel;   // Parcel lifetime
+   
+   // Mesh/ambient properties
+   CONVERGE_precision_t P_amb;      // Ambient pressure
+   CONVERGE_precision_t T_amb;      // Ambient temperature
+   CONVERGE_precision_t rho_v;      // Gas density
+   CONVERGE_precision_t mu_v;       // Gas viscosity
+};
+
+/// @brief Initialize commonly used parcel loop variables
+/// @param vars Pointer to variables structure to populate
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @param node_index Cell/node index
+/// @param global_pressure Global pressure field
+/// @param global_temperature Global temperature field
+/// @param global_density Global density field
+/// @param global_mol_viscosity Global molecular viscosity field
+static void init_parcel_loop_vars(struct ParcelLoopVars *vars,
+                                   struct ParcelCloud *parcel_cloud,
+                                   CONVERGE_index_t p_idx,
+                                   CONVERGE_index_t node_index,
+                                   const CONVERGE_precision_t *global_pressure,
+                                   const CONVERGE_precision_t *global_temperature,
+                                   const CONVERGE_precision_t *global_density,
+                                   const CONVERGE_precision_t *global_mol_viscosity)
+{
+   // Parcel properties
+   vars->sigma = parcel_cloud->surf_ten[p_idx];
+   vars->Td = parcel_cloud->temp[p_idx];
+   vars->Rb = parcel_cloud->r_bubble[p_idx];
+   vars->Rb_0 = parcel_cloud->r_bubble_0[p_idx];
+   vars->t_parcel = parcel_cloud->lifetime[p_idx];
+   
+   // Mesh/ambient properties
+   vars->P_amb = global_pressure[node_index];
+   vars->T_amb = global_temperature[node_index];
+   vars->rho_v = global_density[node_index];
+   vars->mu_v = global_mol_viscosity[node_index] * vars->rho_v;
+}
+
+/// @brief Handle recovery state (phase 3) - check if recovery period has elapsed
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @return 0 = continue normal processing, 1 = skip this parcel (still waiting)
+static int handle_recovery_state(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx)
+{
+   if (parcel_cloud->breakup_phase[p_idx] != 3) {
+      return 0;  // Not in recovery, continue normal processing
+   }
+   
+   CONVERGE_precision_t recovery_time = parcel_cloud->recovery_time[p_idx];
+   CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
+   CONVERGE_precision_t time_since_recovery = current_time - recovery_time;
+   
+   if (time_since_recovery < RECOVERY_PERIOD) {
+      // Still in recovery wait period - skip this timestep
+      static int recovery_wait_count = 0;
+      if (recovery_wait_count < 10) {
+         printf("[RECOVERY_WAIT] p_idx=%li, waiting %.3e/%.3e s (%.1f%% complete)\n",
+               p_idx, time_since_recovery, RECOVERY_PERIOD, 
+               100.0 * time_since_recovery / RECOVERY_PERIOD);
+         recovery_wait_count++;
+      }
+      return 1;  // Skip this parcel
+   }
+   
+   // Recovery period complete - reset to ELIGIBLE for re-evaluation
+   static int recovery_complete_count = 0;
+   if (recovery_complete_count < 10) {
+      printf("[RECOVERY_COMPLETE] p_idx=%li, recovery period elapsed, resetting to ELIGIBLE\n", p_idx);
+      printf("                    Time since recovery: %.3e s, will re-check superheat\n",
+            time_since_recovery);
+      recovery_complete_count++;
+   }
+   set_breakup_phase(parcel_cloud, p_idx, 1);  // Back to ELIGIBLE
+   
+   return 0;  // Continue to superheat check
+}
+
+/// @brief Handle stuck DISABLED (phase 0) parcels - re-enable if superheated or permanently disable
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @param P_sat Saturation pressure at droplet temperature (Pa)
+/// @param P_amb Ambient pressure (Pa)
+/// @return 0 = parcel re-enabled or not stuck, 1 = skip parcel (permanently disabled)
+static int handle_stuck_parcels(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, 
+                                 CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb)
+{
+   // Only handle DISABLED (phase 0) parcels
+   if (parcel_cloud->breakup_phase[p_idx] != 0) {
+      return 0;  // Not stuck, continue normal processing
+   }
+   
+   if (P_sat >= P_amb) {
+      // Parcel IS superheated but was disabled - re-enable
+      static int reenable_count = 0;
+      if (reenable_count < 10) {
+         printf("[STUCK_REENABLE] p_idx=%li, superheated but disabled - re-enabling\n", p_idx);
+         printf("                 P_sat=%.3e > P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+               P_sat, P_amb, parcel_cloud->temp[p_idx], parcel_cloud->radius[p_idx]);
+         reenable_count++;
+      }
+      set_breakup_phase(parcel_cloud, p_idx, 1);  // Set to ELIGIBLE
+      return 0;  // Continue processing, now eligible
+   } else {
+      // Parcel is NOT superheated and disabled - force to bypass state
+      static int forced_child_count = 0;
+      if (forced_child_count < 20) {
+         printf("[STUCK_FORCE_CHILD] p_idx=%li, not superheated and disabled - forcing to child\n", p_idx);
+         printf("                    P_sat=%.3e < P_amb=%.3e Pa, T_drop=%.2f K, R=%.3e m\n",
+               P_sat, P_amb, parcel_cloud->temp[p_idx], parcel_cloud->radius[p_idx]);
+         forced_child_count++;
+      }
+      set_breakup_phase(parcel_cloud, p_idx, 9);  // Stuck: disabled and not superheated
+      parcel_cloud->r_drop_0[p_idx] = parcel_cloud->radius[p_idx];
+      parcel_cloud->r_bubble[p_idx] = 0.0;
+      parcel_cloud->v_bubble[p_idx] = 0.0;
+      return 1;  // Skip this parcel
+   }
+}
+
+/// @brief Check if parcel is superheated and eligible for thermal breakup
+/// @param parcel_cloud Pointer to parcel cloud structure
+/// @param p_idx Parcel index
+/// @param P_sat Saturation pressure at droplet temperature (Pa)
+/// @param P_amb Ambient pressure (Pa)
+/// @return 0 = eligible (superheated), 1 = skip parcel (not superheated or stuck)
+static int check_superheat_eligibility(struct ParcelCloud *parcel_cloud, CONVERGE_index_t p_idx, 
+                                       CONVERGE_precision_t P_sat, CONVERGE_precision_t P_amb)
+{
+   // Skip children and diagnostic bypass states (5+)
+   if (parcel_cloud->breakup_phase[p_idx] >= 5) {
+      return 1;  // Skip this parcel
+   }
+   
+   // Check if parcel is NOT superheated
+   if (P_sat < P_amb) {
+      // Calculate velocity magnitude for diagnostics
+      CONVERGE_precision_t vel_x = parcel_cloud->uu[p_idx][0];
+      CONVERGE_precision_t vel_y = parcel_cloud->uu[p_idx][1];
+      CONVERGE_precision_t vel_z = parcel_cloud->uu[p_idx][2];
+      CONVERGE_precision_t vel_mag = sqrt(vel_x*vel_x + vel_y*vel_y + vel_z*vel_z);
+      
+      static int not_superheated_count = 0;
+      if (not_superheated_count < 20) {
+         printf("[STATE_8] phase=%d  time=%.3e  lifetime=%.3e  R=%.3e  r_bub=%.3e  T=%.3f  T_tm1 =%0.3f  Vel=%.3e\n",
+               parcel_cloud->breakup_phase[p_idx],
+               parcel_cloud->lifetime[p_idx],
+               parcel_cloud->lifetime[p_idx],
+               parcel_cloud->radius[p_idx],
+               parcel_cloud->r_bubble[p_idx],
+               parcel_cloud->temp[p_idx],
+               parcel_cloud->temp_tm1[p_idx],
+               vel_mag);
+         not_superheated_count++;
+      }
+      
+      // Disable thermal breakup - not superheated
+      set_breakup_phase(parcel_cloud, p_idx, 8);
+      parcel_cloud->r_drop_0[p_idx] = parcel_cloud->radius[p_idx];
+      parcel_cloud->r_bubble[p_idx] = 0.0;
+      parcel_cloud->v_bubble[p_idx] = 0.0;
+      return 1;  // Skip this parcel
+   }
+   
+   // Handle stuck DISABLED (phase 0) parcels
+   if (handle_stuck_parcels(parcel_cloud, p_idx, P_sat, P_amb)) {
+      return 1;  // Parcel permanently disabled, skip it
+   }
+   
+   return 0;  // Parcel is eligible for thermal breakup
+}
+
 /**********************************************************************/
 /*                                                                    */
 /* Name: user_drop_distort, user_drop_distort_cell                    */
@@ -60,19 +309,18 @@ static void destroy_tables(CONVERGE_species_t species);
 /*                                                                    */
 /* Variables passed back: none                                        */
 /*                                                                    */
-/* Subroutines called: TABDistort.c, BubbleDensity.c, Psat.c, Tsat.c  */
+/* Subroutines called: BubbleDensity.c, Psat.c, Tsat.c  */
 /*     Geometry.c, DGRE.c, BreakupCriterion.c, Breakaup.c             */
 /**********************************************************************/
 static CONVERGE_table_t *hvap_table = NULL;
 
 
 
-
 CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONVERGE_mesh_t, mesh), FIELD(CONVERGE_precision_t *, pressure), FIELD(CONVERGE_precision_t *, temperature), FIELD(CONVERGE_precision_t *, gas_mol_viscosity)), OUT(CONVERGE_VOID))
 {
 
-   time_t cl_start,cl_end;
-     time(&cl_start);
+   CONVERGE_precision_t distort_start = CONVERGE_mpi_wtime();
+
    CONVERGE_index_t parcel_counter = 0;
    const CONVERGE_cloud_list_t spray_cloud_list = CONVERGE_mesh_get_spray_cloud_list(mesh);
    global_pressure = pressure;
@@ -83,461 +331,908 @@ CONVERGE_UDF(drop_distort, IN(FIELD(CONVERGE_precision_t *, density), VALUE(CONV
    CONVERGE_iterator_t cl_it;
    CONVERGE_species_t sp = CONVERGE_mesh_species(mesh);
    CONVERGE_cloud_list_iterator_create(spray_cloud_list, &cl_it);
-
+   init_tables(sp);
    for (CONVERGE_index_t i_pc = CONVERGE_iterator_first(cl_it); i_pc != -1; i_pc = CONVERGE_iterator_next(cl_it))
    {
       cloud = CONVERGE_cloud_list_get_cloud_at(spray_cloud_list, i_pc);
       const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
-      // printf("\ninitializing tables");
-      init_tables(sp);
-      // printf("\n spray_distort_cell...");
-    
-   
-      //Timing 
       
       spray_distort_cell_NH3(mesh, cloud, spray_cloud_list, i_pc, node_index, density, gas_mol_viscosity, parcel_counter,sp);
-     
-     // printf("\ndiff = %es",sdc_diff);
-    //  printf("\n destroying tables...");
-      destroy_tables(sp);
+
 
    }
+   destroy_tables(sp);
   
-  
-   //Get rank 
-   // CONVERGE_int_t rank;
-   //  CONVERGE_mpi_comm_rank(&rank);
-   // if(rank==0)
-   // {
-   // printf("cloud loop time = %f\n",cl_diff);
-   // }
+
    CONVERGE_iterator_destroy(&cl_it);
+
 }
 
 
 
 static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud, CONVERGE_cloud_list_t spray_cloud_list, CONVERGE_index_t i_pc, CONVERGE_index_t node_index, const CONVERGE_precision_t *global_density, const CONVERGE_precision_t *global_viscosity, CONVERGE_index_t parcel_counter,CONVERGE_species_t sp)
 {
-   /*  fprintf(stderr,"mesh size = %i\n",sizeof(mesh));
-            fprintf(stderr,"cloud size = %i\n",sizeof(cloud));
-                  fprintf(stderr,"mesh size = %i\n",sizeof(spray_cloud_list));
-*/
+
+
+
+
    //MB chck
    CONVERGE_precision_t mass_before, mass_after;
+   mass_before = 0.0;
+   mass_after = 0.0;
+
+   // Breakup event counter
+   static int total_breakups = 0;
+   static int last_reported_cycle = -1;
+   int breakups_this_call = 0;
+   
+   // Single parcel tracking for detailed diagnostics
+   static FILE* parcel_track_file = NULL;
+   static int tracking_initialized = 0;
+   static int tracked_parcel_id = -1;  // Will be set to first parent parcel we encounter
 
 
-
-   // printf("\n0");
+   // Load the parcel cloud structure 
    CONVERGE_size_t num_parcels_in_cloud = CONVERGE_cloud_size(cloud);
    struct ParcelCloud old_parcel_cloud, new_parcel_cloud;
-
    load_user_cloud(&old_parcel_cloud, cloud);
 
-   CONVERGE_precision_t pre_pl = CONVERGE_mpi_wtime();
+   //Profiling Variables
    CONVERGE_precision_t pre_TAB,post_TAB,pre_DGRE,post_DGRE,pre_Geom,post_Geom,pre_break,post_break,pre_bc,post_bc,pre_pbr,post_pbr,sopl,eopl;
-   // printf("\n 0.1");
-   // printf("starting loop over parcels in cloud\n");
-   mass_before = 0;
-   mass_after = 0;
+
+      //Distort Parameters
+      CONVERGE_precision_t spray_tab_csubd   = CONVERGE_get_double("lagrangian.tab_csubd");
+      CONVERGE_precision_t spray_tab_csubk   = CONVERGE_get_double("lagrangian.tab_csubk");
+      CONVERGE_precision_t spray_tab_cfocbck = CONVERGE_get_double("lagrangian.tab_cfocbck");
+
+         // Get high-level API containers
+      CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(sp);       
+      const CONVERGE_precision_t dt = CONVERGE_simulation_dt();
+      num_gas_species = CONVERGE_species_num_gas(sp);
+            //  Local variables
+         CONVERGE_precision_t mu;       // Liquid Viscosity
+         CONVERGE_precision_t sigma;    // Surface Tension
+         CONVERGE_precision_t Td;       // Droplet Temperature
+         CONVERGE_precision_t Rb;       // Bubble Radius
+         CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
+         CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
+         CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
+         CONVERGE_precision_t rho_l;    // Droplet Density
+         CONVERGE_precision_t k;        // Suface Viscosity
+         CONVERGE_precision_t H;        // Enthalpy of Vaporisation
+         CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
+         CONVERGE_precision_t t_parcel; // Parcel Lifetime
+         CONVERGE_precision_t csubp_l;  // Liquid specific heat
+         CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
+         CONVERGE_precision_t tau;      // Non-dimensional Time
+         CONVERGE_precision_t NDR;      // Non dimensional Radius
+         CONVERGE_precision_t rho_b;    // Bubble density
+         CONVERGE_precision_t tab_om;
+
+   
+
+
    for (int p_idx = 0; p_idx < num_parcels_in_cloud; p_idx++)
    {
-      //Timing 
+
+         
+
+      // //===================================================================== START OF DISTORT ROUTINE =====================================================================//
+      // //  if(tab_flag || lisa_flag)
+      // // {
+      // //    continue;
+      // // }
+
+      // const CONVERGE_precision_t dt     = CONVERGE_simulation_dt();
+      // const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
+
+      // // calculate weber number
+      // CONVERGE_precision_t weber = global_density[node_index] * old_parcel_cloud.rel_vel_mag[p_idx] *
+      //                              old_parcel_cloud.rel_vel_mag[p_idx] * old_parcel_cloud.radius[p_idx] /
+      //                              old_parcel_cloud.surf_ten[p_idx];
+
+      // // tab_rtd is 1/t_d in TAB paper referenced in header
+      // CONVERGE_precision_t tab_rtd =
+      //    0.5 * spray_tab_csubd * global_viscosity[node_index] /
+      //    (global_density[node_index] * old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]);
+
+      // // tab_omsq is omega^2 in TAB paper referenced in header
+      // CONVERGE_precision_t tab_omsq = spray_tab_csubk * old_parcel_cloud.surf_ten[p_idx] /
+      //                                    (global_density[node_index] * old_parcel_cloud.radius[p_idx] *
+      //                                     old_parcel_cloud.radius[p_idx] * old_parcel_cloud.radius[p_idx]) -
+      //                                 tab_rtd * tab_rtd;
+
+      // if(tab_omsq <= 0.0)
+      // {
+      //    old_parcel_cloud.distort[p_idx]     = 0.0;
+      //    old_parcel_cloud.distort_dot[p_idx] = 0.0;
+      // }
+      // else
+      // {
+      //    CONVERGE_precision_t tab_om = sqrt(tab_omsq);
+      //    CONVERGE_precision_t term1  = old_parcel_cloud.distort[p_idx] - spray_tab_cfocbck * weber;
+      //    CONVERGE_precision_t term2  = (1.0 / tab_om) * (old_parcel_cloud.distort_dot[p_idx] + term1 * tab_rtd);
+
+      //    // following is Eq. 4 in TAB paper referenced in header
+      //    old_parcel_cloud.distort[p_idx] =
+      //       spray_tab_cfocbck * weber + exp(-dt * tab_rtd) * (term1 * cos(tab_om * dt) + term2 * sin(tab_om * dt));
+
+      //    old_parcel_cloud.distort_dot[p_idx] =
+      //       (spray_tab_cfocbck * weber - old_parcel_cloud.distort[p_idx]) * tab_rtd +
+      //       exp(-dt * tab_rtd) * tab_om * (term2 * cos(tab_om * dt) - term1 * sin(tab_om * dt));
+
+      //    // make sure that distort is between 0 and 1
+      //    if(old_parcel_cloud.distort[p_idx] >= 1.0)
+      //    {
+      //       old_parcel_cloud.distort[p_idx] = 1.0;
+      //    }
+      //    if(old_parcel_cloud.distort[p_idx] <= 0.0)
+      //    {
+      //       old_parcel_cloud.distort[p_idx] = 0.0;
+      //    }
+      // }
+      // //===================================================================== END OF DISTORT ROUTINE =====================================================================//
+
+
+         // Skip parcels that are too small (avoid numerical issues in breakup routines)
+         if (old_parcel_cloud.radius[p_idx] < 1.0e-6) {
+            static int skip_count = 0;
+            if (skip_count < 10) {
+               printf("[DISTORT_SKIP] Parcel too small: p_idx=%d, radius=%.3e m < 1e-6 m (skipping)\n",
+                     p_idx, old_parcel_cloud.radius[p_idx]);
+               skip_count++;
+            }
+            continue;  // Skip this parcel
+         }
+            
+         //initialise profiling vars
          pre_TAB = 0.0; post_TAB = 0.0; pre_DGRE=0.0;post_DGRE=0.0;pre_Geom=0.0;post_Geom=0.0;pre_break=0.0;post_break=0.0;pre_bc=0.0;pre_bc=0.0;pre_pbr=0.0;post_bc=0.0;
          sopl = CONVERGE_mpi_wtime();
 
+
+         // 4/3 Nd pi R^3 is used throughout to track mass (even when there is a bubble)  
          mass_before= mass_before + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));
          old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
-        // printf("\n before num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
-
-      CONVERGE_precision_t time_start = CONVERGE_simulation_time_sec();
-// printf("\n0.2");
-   CONVERGE_size_t num_parcels_before = CONVERGE_cloud_list_num_parcels(spray_cloud_list);
-   if (num_parcels_before <= 0)
-   {
-      // printf("OUT: \n");
-      return;
-   }
-
-   // printf("\n0.3");
-   CONVERGE_size_t num_parcel_species = CONVERGE_species_num_parcel(&sp);
-
-//   printf("\n1"); 
-
-   CONVERGE_index_t new_pc_idx, new_p_idx;
-   // printf("user cloud loaded\n");
-   
-   // printf("loaded global variables\n");
-   // printf("rho_v = %e\n",rho_v);
-   // printf("mu_v = %e \n",mu_v);
-   //  Simulation Metadata
-   // printf("mesh variables loaded\n");
-   CONVERGE_precision_t dt = CONVERGE_simulation_dt();
-   // Get high-level API containers
-   num_gas_species = CONVERGE_species_num_gas(sp);
-   num_parcel_species = CONVERGE_species_num_parcel(sp);
-
-   // Old table lookup vars
-   CONVERGE_precision_t average_hvap = 0.0;
-   CONVERGE_precision_t hvap;
-
-   // Initialize variables and tables.
-   
 
 
-      CONVERGE_int_t theskyisblue = 1;          // it is 
-   CONVERGE_int_t theskyisgreen = 0;         //it isn't, except for in Skinner's Kitchen
-   /*--------------------------------------------------------------*/
-
-
-   // printf("iterator created\n");
-   //  Local variables
-   CONVERGE_precision_t mu;       // Liquid Viscosity
-   CONVERGE_precision_t sigma;    // Surface Tension
-   CONVERGE_precision_t Td;       // Droplet Temperature
-   CONVERGE_precision_t Rb;       // Bubble Radius
-   CONVERGE_precision_t Rb_0;     // Previous Bubble Radius
-   CONVERGE_precision_t Rb_temp;  // Temporary holder for Rb
-   CONVERGE_precision_t Vb_tm1;   // Previous Bubble Velocity
-   CONVERGE_precision_t rho_l;    // Droplet Density
-   CONVERGE_precision_t k;        // Suface Viscosity
-   CONVERGE_precision_t H;        // Enthalpy of Vaporisation
-   CONVERGE_precision_t A;        // Constant for growth = sqrt(2dP/3)i
-   CONVERGE_precision_t t_parcel; // Parcel Lifetime
-   CONVERGE_precision_t csubp_l;  // Liquid specific heat
-   CONVERGE_precision_t alpha_l;  // Constant from Plesset & Zwick
-   CONVERGE_precision_t tau;      // Non-dimensional Time
-   CONVERGE_precision_t NDR;      // Non dimensional Radius
-   CONVERGE_precision_t rho_b;    // Bubble density
-   CONVERGE_precision_t tab_om;
-   // printf("initiated local variables\n");
-   //  Mesh Vars
-
-   CONVERGE_precision_t P_amb = global_pressure[node_index];
-   CONVERGE_precision_t T_amb = global_temperature[node_index];
-   CONVERGE_precision_t csubp = global_csubp[node_index];
-   CONVERGE_precision_t rho_v = global_density[node_index];
-      CONVERGE_precision_t mu_v = global_mol_viscosity[node_index] * rho_v;
-
-      // old_parcel_cloud.tbreak_rt[p_idx] = old_parcel_cloud.temp[p_idx];
-      parcel_counter++;
-      // Store thermal breakup flag in from_nozzle so it can be exported in .h5s
-      //
-      // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
-      // printf("p_idx = %i\n",p_idx);
-      //   Populate local variables
-
-      sigma = old_parcel_cloud.surf_ten[p_idx];
-      Td = old_parcel_cloud.temp[p_idx];
-      Rb = old_parcel_cloud.r_bubble[p_idx];
-      Rb_0 = old_parcel_cloud.r_bubble_0[p_idx];
-      Vb_tm1 = old_parcel_cloud.v_bubble_tm1[p_idx];
-      k = 0; // Initial Assumption
-      t_parcel = old_parcel_cloud.lifetime[p_idx];
-      const CONVERGE_index_t node_index = CONVERGE_cloud_get_node_index(cloud);
-      CONVERGE_precision_t g_den = global_density[node_index];
-      CONVERGE_precision_t g_pressure = global_pressure[node_index];
-      // Calculate Saturation Pressure from Antoine's Equation
-      CONVERGE_precision_t P_sat;
-      Saturation_PressureNH3(Td, &P_sat);
-      // Unit tests for saturation pressure function
-      CONVERGE_precision_t Psattest1, Psattest2, Psattest3, Ttest1, Ttest2, Ttest3;
-      Ttest1 = 300.274;
-
-    Saturation_PressureNH3(Ttest1, &Psattest1);
-      if (round(Psattest1) != 1061549)
-      {
-         printf("\nP_sat function failed unit test, aborting...");
-         printf("\n %f != 77188", floor(Psattest1 * 1e5) / 1e5);
-         CONVERGE_mpi_abort();
-      }
-      // Unit tests 2 & 3 -- only uncomment to check program aborts when T outside of range
-      //    Ttest2=280;
-      //    Ttest3=400;
-      //   // Saturation_PressureNH3(Ttest2,&Psattest2);
-      //    Saturation_PressureNH3(Ttest3,&Psattest3);
-
-      if (P_sat < 1)
-      {
-         printf("\nParcel Temperature outside of range for P_sat Correlation, continuing...");
-         continue;
-      }
-      rho_b = bubble_densityNH3(P_sat, Td); // Not sure about using this to estimate rho_b
-    
-      // CONVERGE_precision_t TABDistort(&old_parcel_cloud,p_idx,dt,g_den,mu_v,rho_b);
-       pre_TAB = CONVERGE_mpi_wtime();
-      //TABDistort(&old_parcel_cloud, p_idx, dt, g_den, mu_v, rho_b);
-       //After TAB breakup reset bubble radius (assumes bubble condenses during TAB breakup)
-      if( old_parcel_cloud.distort[p_idx] >0.99)     
-      {
-         CONVERGE_precision_t P_sat_new;
-         Saturation_PressureNH3(old_parcel_cloud.temp[p_idx],&P_sat_new);
-         old_parcel_cloud.r_bubble[p_idx]= 2.0 * old_parcel_cloud.surf_ten[p_idx] / (P_sat_new - global_pressure[node_index]);
-         if(old_parcel_cloud.r_bubble[p_idx]<0.0)     //not superhearted anymore, deactivate thermal model for this parcel
+         CONVERGE_size_t num_parcels_before = CONVERGE_cloud_list_num_parcels(spray_cloud_list);
+         if (num_parcels_before <= 0)
          {
-            old_parcel_cloud.r_bubble[p_idx]=0.0;
-            old_parcel_cloud.thermal_breakup_flag[p_idx]=999;
-            old_parcel_cloud.pbt[p_idx]=0;
-         
+            return;
          }
+         
+    
+         // Old table lookup vars
+         CONVERGE_precision_t average_hvap = 0.0;
+         CONVERGE_precision_t hvap;
 
-         old_parcel_cloud.v_bubble[p_idx] =0.0;
-         old_parcel_cloud.omega[p_idx] = 0.0;
-         old_parcel_cloud.eta_drop[p_idx] = 0.0;
-         old_parcel_cloud.int_omega[p_idx] =0.0;
-         old_parcel_cloud.int_omega[p_idx] = 0.0;
-         old_parcel_cloud.m0[p_idx] = (1.33333 * PI * CONVERGE_cube(old_parcel_cloud.radius[p_idx])*old_parcel_cloud.num_drop[p_idx]);
-         old_parcel_cloud.dgre_cycle_count[p_idx] = 0;
-         old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
-         old_parcel_cloud.r_therm[p_idx] = old_parcel_cloud.radius[p_idx];
-      }
 
-       post_TAB = CONVERGE_mpi_wtime();
-      theskyisblue = 1;    //it is 
-      theskyisgreen = 0;   // it is not
-      if (theskyisblue)
-      {
+         
 
-         // Pre-breakup routine
-         pre_pbr = CONVERGE_mpi_wtime();
 
-         //printf("\ntbf before start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
-         if(old_parcel_cloud.thermal_breakup_flag[p_idx]==4){
-       //  printf("\n breakup loop running with tbf = 4!!!!, tbf = %i, continuing",old_parcel_cloud.thermal_breakup_flag[p_idx]);
-               // CONVERGE_mpi_abort();
-               
-               continue;
-            }
-         if (old_parcel_cloud.thermal_breakup_flag[p_idx] <0 && old_parcel_cloud.pbt[p_idx]==1)
-         {
-            if(old_parcel_cloud.thermal_breakup_flag[p_idx]>0)
-            {
-                           printf("\n tbf at start of loop is %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
+         CONVERGE_int_t theskyisblue = 1;          // it is 
+         CONVERGE_int_t theskyisgreen = 0;         //it isn't, other than in Skinner's Kitchen
 
-            }
-       
 
-            //Calculate Species dependent properites
-            CONVERGE_precision_t average_hvap = 0.0;
-            csubp_l = 0.0;
-            for (CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
-            {
-               average_hvap += old_parcel_cloud.mfrac[p_idx * num_parcel_species + isp] *  (CONVERGE_table_lookup(hvap_table[isp], Td) + 1.0e-3);
-              csubp_l +=old_parcel_cloud.mfrac[p_idx * num_parcel_species + isp] * CONVERGE_table_lookup(cp_table[isp], Td);
-            }
-            // NaN avoider
-            if ((1 + csubp_l * (T_amb - Td) / average_hvap) <= 0.0)
-            {
-            }
-            H = average_hvap;
-
-            /*    Use to estimate Ja number
-            CONVERGE_precision_t T_saturation = T_sat(global_pressure[node_index]);
-            CONVERGE_precision_t dT = old_parcel_cloud.temp[p_idx] - T_saturation;
-            CONVERGE_precision_t Ja = dT * csubp_l/H; 
-            //printf("\nH = %e cp = %e cp/H = %e dT = %e Ja = %f",H,csubp_l,csubp_l/H,dT,Ja);
-            // printf("\n H = %e	T = %e	csubp_l = %e",average_hvap,Td,csubp_l);
-               */
-      
-                  //VB function 
-                  CONVERGE_precision_t rad_before= old_parcel_cloud.radius[p_idx];
-                  Bubble_Velocity(&old_parcel_cloud,p_idx,P_sat,P_amb);
-                  if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
-                  {//printf("\n v_bubble  = %e, P_sat - P_amb = %e ",old_parcel_cloud.v_bubble[p_idx],P_sat-P_amb);
-                  old_parcel_cloud.pbt[p_idx] = 0;
-                  old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
-                  continue;
-                  }
-                  if(old_parcel_cloud.v_bubble[p_idx]==0.0)
-                  {
-                   //  printf("\nVb = 0 after bubble_velocity update");
-                  }
-            CONVERGE_precision_t dR = old_parcel_cloud.v_bubble[p_idx] * dt;
-            if (dR > old_parcel_cloud.radius[p_idx])
-            {
-               printf("\ndR> droplet radius, Vb = %e  dt= %e dR = %e rb = %e rad_before = %e", old_parcel_cloud.v_bubble[p_idx], dt,dR, old_parcel_cloud.r_bubble[p_idx]+dR,rad_before);
-               printf("Setting TBT and r_bubble = 0.95 * r_drop");
-               old_parcel_cloud.r_bubble[p_idx] = 0.95* old_parcel_cloud.radius[p_idx];
-               old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.thermal_breakup_flag[p_idx]=3;
-               continue;
-            }
-            if (dR > 0)
-            {
-               Rb_temp = dR + Rb;
-            }
-            else
-            {
-               printf("dR negative");
-            }
-            // printf("\n Rb = %e	tau = %e		B = %e		A = %e",Rb_temp,tau,B,A);
-            //	printf("\n el  %el		e %e	f %f	fl %fl",Rb_temp,Rb_temp,Rb_temp,Rb_temp);
-            if (isnan(Rb_temp))
-            {
-               // CONVERGE_logger_verbose("Rb = NaN, B = %e, A = %e", A, B);
-               printf("\nRb_temp is NaN\n");
-            }
-            // printf("Vb = %e   Rb = %e  Rd = %e\n",Vb,Rb,old_parcel_cloud.radius[p_idx]);
-
-            // Update Variables in the Parcel Cloud
-            //--------------------------------------------------------------------------------------------------------------------------------------------------------------
-            // UPDATE BUBBLE AND PARCEL RADII
-            if (Rb_temp > 0.0)
-            {
-               Rb = Rb_temp;
-               old_parcel_cloud.r_bubble[p_idx] = Rb;
-            }
-            else
-            {
-               Rb = 0;
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 999;
-               old_parcel_cloud.r_bubble[p_idx] = Rb;
-               printf("aborting on L378 because Rb is negative\n");
-               printf("Vb %e", old_parcel_cloud.v_bubble[p_idx]);
-               CONVERGE_mpi_abort();
-            }
-            // commenting this out to see what happnes if we let bubble ad droplet radii grow nnnnn
-            /*if (Rb > old_parcel_cloud.radius[p_idx])
-             {
-               // printf("\nrb_big");
-                  FILE *fp1 = fopen("rb.txt", "a");
-                   char *filename = "rb.txt";
-                   if (fp1 == NULL)
-                   {
-                      printf("Error opening the file %s", filename);
-                   }
-                   fprintf(fp1,"\nBreakup");
-                   fclose(fp1);
-               // printf("\nBubble Radius > Droplet Radius\n");
-                old_parcel_cloud.thermal_breakup_flag[p_idx] = 5.0;
-                old_parcel_cloud.tbt[p_idx]=1;
-                 old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
-                 old_parcel_cloud.v_bubble[p_idx] = Vb;
-              //  printf("Rb>Rd flag = %d\n", old_parcel_cloud.thermal_breakup_flag[p_idx]);
-                //printf("\n radius = %e r_bubble = %e",old_parcel_cloud.radius[p_idx],old_parcel_cloud.r_bubble[p_idx]);
-                FILE *fp2 = fopen("breakup_tracker.txt", "a");
-                char *filename2 = "breakup_tracker.txt";
-                if (fp2 == NULL)
-                {
-                   printf("Error opening the file %s", filename2);
-                }
-                fprintf(fp2, "\n%e,%d", old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.thermal_breakup_flag[p_idx]);
-                fclose(fp2);
-               // printf("L402 RB = %e",old_parcel_cloud.r_bubble[p_idx]);
-                // continue;
-             }
-             else
-             {*/
-
-            old_parcel_cloud.v_bubble_tm1[p_idx] = Vb_tm1;
-            // Update droplet radius
-            pre_Geom = CONVERGE_mpi_wtime();
-            Geometry(&old_parcel_cloud, p_idx, dt);
-            post_Geom = CONVERGE_mpi_wtime();
-            pre_DGRE = CONVERGE_mpi_wtime();
-            CONVERGE_precision_t g_den = global_density[node_index];
-      
-
-            DGRE_NH3(&old_parcel_cloud, p_idx, g_den);
-            post_DGRE = CONVERGE_mpi_wtime();
-            // Update Breakup Criteria
-            //  printf("calling BreakupCriterion\n");
-            pre_bc = CONVERGE_mpi_wtime();
-            CONVERGE_precision_t kb = BreakupCriterion(&old_parcel_cloud, p_idx, dt);
-            post_bc = CONVERGE_mpi_wtime();
-        
-            CONVERGE_precision_t eta, eta_0, eta_tm1, int_omega, omega_tm1;
-            if (kb > 1)
-            {
-             
-               old_parcel_cloud.thermal_breakup_flag[p_idx] = 5;
-               old_parcel_cloud.tbt[p_idx] = 1;
-               old_parcel_cloud.r_bubble[p_idx] = Rb;
-               CONVERGE_int_t rank;
-               CONVERGE_mpi_comm_rank(&rank);
-
-               // if (old_parcel_cloud.v_bubble[p_idx]== 0.0)
-               // {
-               //    printf("\n\nVb 0 at breakup!!!!\n\n");
-               // }
+         // Initialize commonly used variables via struct
+         struct ParcelLoopVars vars;
+         init_parcel_loop_vars(&vars, &old_parcel_cloud, p_idx, node_index,
+                              global_pressure, global_temperature, global_density, global_mol_viscosity);
+         
+         // Extract frequently used variables
+         sigma = vars.sigma;
+         Td = vars.Td;
+         Rb = vars.Rb;
+         Rb_0 = vars.Rb_0;
+         t_parcel = vars.t_parcel;
+         CONVERGE_precision_t P_amb = vars.P_amb;
+         CONVERGE_precision_t T_amb = vars.T_amb;
+         CONVERGE_precision_t rho_v = vars.rho_v;
+         CONVERGE_precision_t mu_v = vars.mu_v;
+         
+         // Other mesh/local variables
+         CONVERGE_precision_t csubp = global_csubp[node_index];
+         Vb_tm1 = old_parcel_cloud.v_bubble_tm1[p_idx];
+         k = 0; // Initial Assumption
+         CONVERGE_precision_t g_den = rho_v;
+         CONVERGE_precision_t g_pressure = P_amb;
+         
+         parcel_counter++;
+         
+         // DIAGNOSTIC: Check radius at very start of loop
+         static int radius_diag_count = 0;
+         if (radius_diag_count < 5 && old_parcel_cloud.breakup_phase[p_idx] < 5) {  // Is a parent
+            printf("[DISTORT_START] p_idx=%d, radius=%.6e m, lifetime=%.6e s, Td=%.2f K, breakup_phase=%d\n",
+                  p_idx, old_parcel_cloud.radius[p_idx], old_parcel_cloud.lifetime[p_idx], 
+                  Td, old_parcel_cloud.breakup_phase[p_idx]);
+            radius_diag_count++;
+         }
+         
+         // ROGUE PARCEL LOGGER: Check for parcels > 80 μm and > 10 mm downstream of injector
+         CONVERGE_precision_t x = old_parcel_cloud.xx[p_idx][0];
+         CONVERGE_precision_t y = old_parcel_cloud.xx[p_idx][1];
+         CONVERGE_precision_t z = old_parcel_cloud.xx[p_idx][2];
+         CONVERGE_precision_t dist = sqrt(x*x + y*y + z*z);
+         CONVERGE_precision_t r = old_parcel_cloud.radius[p_idx];
+         
+         if (r > 80.0e-6 && dist > 0.010) {
+            CONVERGE_precision_t time_since_injection = CONVERGE_simulation_time_sec() - old_parcel_cloud.time_of_injection[p_idx];
+            CONVERGE_precision_t lifetime = old_parcel_cloud.lifetime[p_idx];
+            int phase = old_parcel_cloud.breakup_phase[p_idx];
             
-               old_parcel_cloud.eta_drop[p_idx] = 0;
-            }
-
-            // Store eta
-            old_parcel_cloud.eta_drop[p_idx] += eta; // Update eta
-
-            //} // Delimiter for if(r_bubble>r_drop)
-
-         } // Delimiter for if thermal_breakup_flag=0
-         //********************** BREAKUP ROUTINE ***************************************//
-         // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
-         post_pbr = CONVERGE_mpi_wtime();
-         if (old_parcel_cloud.tbt[p_idx] && old_parcel_cloud.thermal_breakup_flag[p_idx]!=4)
-         {
-               old_parcel_cloud.r_bubble[p_idx] = Rb;
-              // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
-               
-               pre_break = CONVERGE_mpi_wtime();
-     
-               Breakup(&old_parcel_cloud, p_idx);
-               post_break = CONVERGE_mpi_wtime();
+            printf("ROGUE_PARCEL:  phase=%d  t_inj=%.3e  lifetime=%.3e  R=%.3e  T=%.3e\n",
+                  phase, time_since_injection, lifetime, r, Td);
          }
-  
-        
-  
-      } // End of if(theskyisblue)
-             
-            eopl = CONVERGE_mpi_wtime();
-
-          CONVERGE_precision_t post_pl = CONVERGE_mpi_wtime();
-         CONVERGE_precision_t pl_diff = eopl - sopl;
-         CONVERGE_precision_t tab_diff = post_TAB - pre_TAB;
-         CONVERGE_precision_t tab_frac = 100.00* tab_diff / pl_diff;
-         CONVERGE_precision_t geom_diff = post_Geom - pre_Geom;
-         CONVERGE_precision_t dgre_diff = post_DGRE - pre_DGRE;
-         CONVERGE_precision_t geom_frac, dgre_frac,break_diff,break_frac,bc_diff,bc_frac,pbr_diff,pbr_frac,init_diff,init_frac,bub_diff,bub_frac;
-         break_diff = post_break - pre_break;
-         if(break_diff<0.0)
-         {
-            break_diff = 0.0;
-         }
-         break_frac = 100.00 * break_diff/ pl_diff;
-
-         bc_diff = post_bc - pre_bc;
          
-         pbr_diff = post_pbr - pre_pbr;
-         pbr_frac = 100.00 * pbr_diff / pl_diff; 
-         init_diff = pre_TAB - sopl;
-         init_frac = 100.00 * init_diff /pl_diff;
-         bub_diff = pre_Geom - pre_pbr;
-         bub_frac = 100.00 * bub_diff / pbr_diff;
-         bc_frac = 100.00 * bc_diff / pbr_diff; 
-         geom_frac = 100.00 * geom_diff / pbr_diff;
-         dgre_frac = 100.00 * dgre_diff / pbr_diff;
-      //  if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
-      //  {
-      //    printf("\npl_time = %f",pl_diff);
-      //    printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
-      //    printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
-      //   // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
-      //    {
-      //    printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
-      //    printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
-      //    printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
-      //    printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
-      //    printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
-      //    }
-      //    printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
-      //  }
-    mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
-     // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
+         // Initialize single parcel tracking
+         if (!tracking_initialized && 
+            old_parcel_cloud.breakup_phase[p_idx] >= 1 && 
+            old_parcel_cloud.breakup_phase[p_idx] < 5) {
+            tracked_parcel_id = p_idx;
+            tracking_initialized = 1;
+            // parcel_track_file = fopen("tracked_parcel.csv", "w");
+            if (parcel_track_file) {
+               // fprintf(parcel_track_file, "time,lifetime,p_idx,R_drop,R_bubble,Rdot,T_drop,Pb,P_amb,thermal_breakup_flag,kb\n");
+            }
+         }
+         
+         // Log tracked parcel data at every CFD timestep (before thermal breakup loop)
+         if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+            CONVERGE_precision_t sim_time = CONVERGE_simulation_time_sec();
+            CONVERGE_precision_t Pb_track;
+            Saturation_PressureNH3(Td, &Pb_track);
+            // kb not yet calculated, so set to -1
+            fprintf(parcel_track_file, "%.12e,%.12e,%d,%.12e,%.12e,%.12e,%.6f,%.6e,%.6e,%d,%.6e\n",
+                  sim_time,
+                  t_parcel,
+                  p_idx,
+                  old_parcel_cloud.radius[p_idx],
+                  Rb,
+                  old_parcel_cloud.v_bubble[p_idx],
+                  Td,
+                  Pb_track,
+                  P_amb,
+                  old_parcel_cloud.breakup_phase[p_idx],
+                  -1.0);  // kb not yet calculated
+            fflush(parcel_track_file);
+         }
+         
+               // Calculate Saturation Pressure from Antoine's Equation
+               CONVERGE_precision_t P_sat;
+               if(Td > old_parcel_cloud.temp_drop_0[p_idx] + 2.0){
+                  // FIX: Added diagnostic output and ensured parcel is properly disabled
+                  static int td_high_count = 0;
+                  if (td_high_count < 10) {
+                     printf("[THERMAL_ABORT] p_idx=%li, Td=%.2f K > temp_drop_0+2K=%.2f K, removing parcel (lifetime=%.3e s, radius=%.3e m)\n",
+                           p_idx, Td, old_parcel_cloud.temp_drop_0[p_idx] + 2.0, old_parcel_cloud.lifetime[p_idx], old_parcel_cloud.radius[p_idx]);
+                     td_high_count++;
+                  }
+                  set_breakup_phase(&old_parcel_cloud, p_idx, 6);  // Temperature too high
+                  old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                  old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                  old_parcel_cloud.v_bubble[p_idx] = 0.0;
+                  // Also zero out the parcel for complete removal - energy balance has been violated
+                  old_parcel_cloud.num_drop[p_idx] = 0.0;
+                  old_parcel_cloud.radius[p_idx] = 0.0;
+                  continue;
+               }
+               Saturation_PressureNH3(Td, &P_sat);
+               // Unit tests for saturation pressure function
+               CONVERGE_precision_t Psattest1, Ttest1;
+               //Unit Test Psat 
+               Ttest1 = 300.274;
+               Saturation_PressureNH3(Ttest1, &Psattest1);
+               if (round(Psattest1) != 1061549)
+               {
+                  printf("\nP_sat function failed unit test, aborting...");
+                  printf("\n %f != 77188", floor(Psattest1 * 1e5) / 1e5);
+                  CONVERGE_mpi_abort();
+               }
+     
 
+               //Check to prevent negative P_sat
+               if (P_sat < 1)
+               {
+                  printf("\n\n=======================================\nABORTING: P_SAT < 1 CALCULATED\n=======================================\n\n");
+                  CONVERGE_mpi_abort();
+               }
+
+
+               rho_b = bubble_densityNH3(P_sat, Td); //Ideal gas estimate of rho_b
+            
+
+               
+               CONVERGE_precision_t P_sat_new;
+               Saturation_PressureNH3(old_parcel_cloud.temp[p_idx], &P_sat_new);
+               
+               // Handle RECOVERY state (3) - check if recovery period has elapsed
+               if (handle_recovery_state(&old_parcel_cloud, p_idx)) {
+                  continue;  // Skip this parcel, still in recovery wait
+               }
+               
+               // Check superheat eligibility and handle stuck parcels
+               if (check_superheat_eligibility(&old_parcel_cloud, p_idx, P_sat_new, P_amb)) {
+                  continue;  // Skip this parcel, not eligible for thermal breakup
+               }
+
+
+            
+
+
+               theskyisblue = 1;    //it is 
+               theskyisgreen = 0;   // it is not
+               if (theskyisblue)
+               {
+
+                  // Pre-breakup routine
+                  pre_pbr = CONVERGE_mpi_wtime();
+
+                  // DIAGNOSTIC: Check if a child parcel is trying to enter thermal breakup
+                  if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {  // Is a child (state 5 or any diagnostic state >= 6)
+                     static int child_reentry_count = 0;
+                     if (child_reentry_count < 10) {
+                        printf("[CHILD_REENTRY_BLOCKED] p_idx=%li, breakup_phase=%d (child)\n",
+                              p_idx, old_parcel_cloud.breakup_phase[p_idx]);
+                        printf("                         R=%.3e m, num_drop=%.3e, lifetime=%.3e s\n",
+                              old_parcel_cloud.radius[p_idx], old_parcel_cloud.num_drop[p_idx],
+                              old_parcel_cloud.lifetime[p_idx]);
+                        child_reentry_count++;
+                     }
+                  }
+               
+
+                  // Entry condition for thermal breakup: must be parent in eligible states (1-4)
+                  if (old_parcel_cloud.breakup_phase[p_idx] >= 1 &&
+                     old_parcel_cloud.breakup_phase[p_idx] <= 4)
+                  {
+                     static int thermal_entry_count = 0;
+                     thermal_entry_count++;
+                     if (thermal_entry_count <= 20) {
+                        printf("[THERMAL_ENTRY #%d] p_idx=%li entering thermal breakup loop, breakup_phase=%d\n", 
+                              thermal_entry_count, p_idx, old_parcel_cloud.breakup_phase[p_idx]);
+                        printf("                    T_drop=%.2f K, lifetime=%.3e s, R=%.3e m\n",
+                              old_parcel_cloud.temp[p_idx], old_parcel_cloud.lifetime[p_idx], 
+                              old_parcel_cloud.radius[p_idx]);
+                     }
+                     
+                     // Continue with thermal breakup processing
+                     // Note: 2x expansion check is inside sub-timestep loop after Geometry() call
+
+                     //Calculate Species dependent properites
+                     CONVERGE_precision_t average_hvap = 0.0;
+                     csubp_l = 0.0;
+                     for (CONVERGE_index_t isp = 0; isp < num_parcel_species; isp++)
+                     {
+                        average_hvap += old_parcel_cloud.mfrac[p_idx * num_parcel_species + isp] *  (CONVERGE_table_lookup(hvap_table[isp], Td) + 1.0e-3);
+                     csubp_l +=old_parcel_cloud.mfrac[p_idx * num_parcel_species + isp] * CONVERGE_table_lookup(cp_table[isp], Td);
+                     }
+                     // NaN avoider
+                     if ((1 + csubp_l * (T_amb - Td) / average_hvap) <= 0.0)
+                     {
+                     }
+                     H = average_hvap;
+
+                     /*    Use to estimate Ja number
+                     CONVERGE_precision_t T_saturation = T_sat(global_pressure[node_index]);
+                     CONVERGE_precision_t dT = old_parcel_cloud.temp[p_idx] - T_saturation;
+                     CONVERGE_precision_t Ja = dT * csubp_l/H; 
+                     //printf("\nH = %e cp = %e cp/H = %e dT = %e Ja = %f",H,csubp_l,csubp_l/H,dT,Ja);
+                     // printf("\n H = %e	T = %e	csubp_l = %e",average_hvap,Td,csubp_l);
+                        */
+
+                     // --- Synchronize bubble and droplet size in case of KH-RT or other breakup shrinkage ---
+                     if (old_parcel_cloud.r_bubble[p_idx] > old_parcel_cloud.radius[p_idx]) {
+                        CONVERGE_precision_t ratio = old_parcel_cloud.r_bubble_0[p_idx] / old_parcel_cloud.r_drop_0[p_idx];
+                        old_parcel_cloud.r_bubble[p_idx] = ratio * old_parcel_cloud.radius[p_idx];
+                  
+                        old_parcel_cloud.r_bubble_0[p_idx] = old_parcel_cloud.r_bubble[p_idx];
+                        //  printf("\n[Bubble sync] KH-RT or secondary breakup reduced r_drop; rescaled r_bubble to maintain ratio.\n");
+                     }
+                     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+                     // Start of sub cycle loop
+                     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+                     // target physical substep size (s)
+                     // Reduced from 1e-10 to 1e-12 during debugging - now safe_divide bug is fixed, can restore
+                        
+                        const CONVERGE_precision_t dt_sub_target = 1.0e-10;
+
+                        // current CFD timestep
+                        CONVERGE_precision_t dt_global = CONVERGE_simulation_dt();
+
+                        // compute how many substeps are needed
+                        int n_sub = (int)ceil(dt_global / dt_sub_target);
+                        if (n_sub < 1) n_sub = 1;
+
+                        // recompute actual substep (in case dt_global not exact multiple)
+                        CONVERGE_precision_t dt_sub = dt_global / (CONVERGE_precision_t)n_sub;
+                        for (int sub = 0; sub < n_sub; ++sub) {
+
+                        //RPE Euler solver - updates v_bubble, r_bubble, temp
+                        CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
+                        
+                        // Model selection based on use_song_rpe flag
+                        if (use_song_rpe) {
+                           // Song isothermal model
+                           RPE_song_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
+                                          hvap_table, cp_table, num_parcel_species);
+                        } else {
+                           // Thermal model (default)
+                           RPE_euler_solver(&old_parcel_cloud, p_idx, P_amb, dt_sub, 
+                                          hvap_table, cp_table, num_parcel_species);
+                        }
+                        
+                        prof_bubble += CONVERGE_mpi_wtime() - t0;
+                        
+                        // ============================================================================
+                        // SONG MODEL: Check void fraction and trigger breakup directly
+                        // ============================================================================
+                        if (use_song_rpe) {
+                           // Calculate void fraction: ε = R_bubble³ / R_drop³
+                           // Note: Song model uses initial droplet radius (no Geometry update needed)
+                           CONVERGE_precision_t R_bubble = old_parcel_cloud.r_bubble[p_idx];
+                           CONVERGE_precision_t R_drop = old_parcel_cloud.radius[p_idx];
+                           CONVERGE_precision_t epsilon = (R_bubble*R_bubble*R_bubble) / (R_drop*R_drop*R_drop);
+                           
+                           // DIAGNOSTIC: Check if we're stuck at edge without breaking up
+                           static int edge_check_count = 0;
+                           if (R_bubble > 0.99 * R_drop && edge_check_count < 10) {
+                              printf("[SONG_EDGE_DEBUG] p_idx=%li, R_bubble=%.6e, R_drop=%.6e, epsilon=%.6f\n",
+                                    p_idx, R_bubble, R_drop, epsilon);
+                              printf("                   v_bubble=%.3e, R_drop_0=%.6e, breakup_phase=%d\n",
+                                    old_parcel_cloud.v_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
+                                    old_parcel_cloud.breakup_phase[p_idx]);
+                              edge_check_count++;
+                           }
+                           
+                           // Check for void fraction breakup criterion
+                           if (epsilon >= 0.55) {
+                              static int song_breakup_count = 0;
+                              if (song_breakup_count < 10) {
+                                 printf("[SONG_BREAKUP] p_idx=%li, void=%.4f >= 0.55, triggering breakup\n", 
+                                       p_idx, epsilon);
+                                 printf("               R_bubble=%.3e m, R_drop=%.3e m, R_drop_0=%.3e m\n",
+                                       R_bubble, R_drop, old_parcel_cloud.r_drop_0[p_idx]);
+                                 song_breakup_count++;
+                              }
+                              
+                              // Set breakup phase to READY (4)
+                              set_breakup_phase(&old_parcel_cloud, p_idx, 4);
+                              
+                              // Exit sub-timestep loop - breakup will happen after loop
+                              break;
+                           }
+                           
+                           // Check if bubble growth stopped ONLY if bubble is still small
+                           // If epsilon > 0.4, we're close to breakup, so allow v_bubble = 0
+                           if(old_parcel_cloud.v_bubble[p_idx] < 1.0e-10 && epsilon < 0.4) {
+                              static int song_abort_count = 0;
+                              if (song_abort_count < 10) {
+                                 printf("[SONG_ABORT] v_bubble too small with small bubble: v=%.3e, epsilon=%.4f\n",
+                                       old_parcel_cloud.v_bubble[p_idx], epsilon);
+                                 printf("              p_idx=%li, R_bubble=%.3e, R_drop=%.3e, lifetime=%.3e s\n",
+                                       p_idx, old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.radius[p_idx],
+                                       old_parcel_cloud.lifetime[p_idx]);
+                                 printf("              T_drop=%.2f K, P_amb=%.3e Pa\n",
+                                       old_parcel_cloud.temp[p_idx], P_amb);
+                                 song_abort_count++;
+                              }
+                              set_breakup_phase(&old_parcel_cloud, p_idx, 10);  // Song: v_bubble too small (epsilon < 0.4)
+                              old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                              old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                              old_parcel_cloud.v_bubble[p_idx] = 0.0;
+                              break;
+                           }
+                           
+                           // DIAGNOSTIC: Track parcels that are stuck with medium epsilon
+                           static int stuck_parcel_count = 0;
+                           if (epsilon > 0.3 && epsilon < 0.5 && old_parcel_cloud.v_bubble[p_idx] < 1.0e-8 && 
+                              stuck_parcel_count < 10) {
+                              printf("[SONG_STUCK] Parcel stuck at epsilon=%.4f, v_bubble=%.3e\n", 
+                                    epsilon, old_parcel_cloud.v_bubble[p_idx]);
+                              printf("             p_idx=%li, R_bubble=%.3e, R_drop=%.3e, lifetime=%.3e s\n",
+                                    p_idx, old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.radius[p_idx],
+                                    old_parcel_cloud.lifetime[p_idx]);
+                              stuck_parcel_count++;
+                           }
+                           
+                           // Skip DGRE/kb logic for Song model (Geometry already called above)
+                           // Continue to next sub-timestep
+                           continue;
+                        }
+                        
+                        // ============================================================================
+                        // THERMAL MODEL: Continue with existing logic (Geometry/DGRE/kb)
+                        // ============================================================================
+                        
+                        // FIRST: Check if parcel just entered recovery state (phase=3) during this sub-timestep
+                        // This MUST be checked before v_bubble check to prevent overwriting state 3
+                        if(old_parcel_cloud.breakup_phase[p_idx] == 3)
+                        {
+                           // Just entered recovery in this sub-timestep - exit loop immediately
+                           // Recovery wait period check happens at top of next main timestep
+                           static int recovery_substep_exit_count = 0;
+                           if (recovery_substep_exit_count < 5) {
+                              printf("[RECOVERY_SUBSTEP_EXIT] p_idx=%li entered recovery (phase=3), exiting sub-timestep loop\n", p_idx);
+                              printf("                         v_bubble=%.3e, will wait for recovery period\n",
+                                    old_parcel_cloud.v_bubble[p_idx]);
+                              recovery_substep_exit_count++;
+                           }
+                           break;
+                        }
+                        
+                        // If parcel is in diagnostic/bypass state (≥5), exit sub-timestep loop
+                        if (old_parcel_cloud.breakup_phase[p_idx] >= 5) {
+                           break;  // Exit sub-timestep loop, preserve diagnostic state
+                        }
+                        
+                        // Check if bubble growth stopped (only for active thermal breakup states 1,2,4)
+                        // Guard: Skip if parcel is in RECOVERY (3) or diagnostic/bypass state (≥5)
+                        // This prevents overwriting recovery or other diagnostic states
+                        if(old_parcel_cloud.v_bubble[p_idx]<1.0e-10)
+                        {
+                           printf("\n\n\n\n=========================================\nSTATE 11 : phase %d, Pa %e\n=========================================\n\n\n\n", old_parcel_cloud.breakup_phase[p_idx], P_amb);
+                           set_breakup_phase(&old_parcel_cloud, p_idx, 11);  // Post-RPE: v_bubble too small
+                           old_parcel_cloud.r_drop_0[p_idx] = old_parcel_cloud.radius[p_idx];
+                           old_parcel_cloud.r_bubble[p_idx] = 0.0;
+                           old_parcel_cloud.v_bubble[p_idx] = 0.0;
+                           break;
+                        }
+
+                        //Load Rb
+                        Rb = old_parcel_cloud.r_bubble[p_idx];
+                        Rb_temp = Rb;
+
+                     // RPE_euler already updated r_bubble, just do safety checks
+                     Rb = old_parcel_cloud.r_bubble[p_idx];
+                     
+                     if (isnan(Rb))
+                     {
+                        printf("\nRb is NaN after RPE solver\n");
+                        CONVERGE_mpi_abort();
+                     }
+                     
+                     if (Rb < 0.0)
+                     {
+                        Rb = 0.0;
+                        set_breakup_phase(&old_parcel_cloud, p_idx, 6);  // Error: mark as bypassed before abort
+                        old_parcel_cloud.r_bubble[p_idx] = Rb;
+                        printf("Rb negative after RPE solver\n");
+                        CONVERGE_mpi_abort();
+                     }
+                     
+                     if (Rb > old_parcel_cloud.radius[p_idx])
+                        {
+                           set_breakup_phase(&old_parcel_cloud, p_idx, 4);  // Bubble exceeded droplet - READY to break
+                           old_parcel_cloud.r_bubble[p_idx] = 0.8 * old_parcel_cloud.radius[p_idx];
+                           break;
+                        }
+                        else
+                        {
+                           //Save Rb 
+                           CONVERGE_precision_t Rb_old_save = old_parcel_cloud.r_bubble[p_idx];
+                           old_parcel_cloud.r_bubble[p_idx] = Rb;
+                           
+                           // DIAGNOSTIC: Log bubble changes with FULL details
+                           if (fabs(Rb - Rb_old_save) > 1e-9) {
+                              static FILE* bubble_log = NULL;
+                              if (!bubble_log) {
+                                 // bubble_log = fopen("bubble_changes.csv", "w");
+                                 if (bubble_log) {
+                                       // fprintf(bubble_log, "time,ncyc,p_idx,event,R_drop,R_bubble_old,R_bubble_new,delta_R_bubble,");
+                                       // fprintf(bubble_log, "T_drop,P_amb,P_bubble,superheat,v_bubble,");
+                                       // fprintf(bubble_log, "rho_liquid,sigma,film_flag,pbt,thermal_flag\n");
+                                 }
+                              }
+                              
+                              if (bubble_log && Rb < Rb_old_save) {  // SHRINK event
+                                 // Calculate bubble pressure
+                                 CONVERGE_precision_t P_bubble;
+                                 Saturation_PressureNH3(Td, &P_bubble);
+                                 
+                                 // Get ambient pressure
+                                 CONVERGE_precision_t P_amb = global_pressure[node_index];
+                                 
+                                 // Calculate superheat using T_satNH3 function
+                                 CONVERGE_precision_t T_sat_amb = T_satNH3(P_amb);
+                                 CONVERGE_precision_t superheat = Td - T_sat_amb;
+                                 
+                                 char* event_type = "SHRINK";
+                                 fprintf(bubble_log, "%.6e,%ld,%d,%s,%.6e,%.6e,%.6e,%.6e,",
+                                          CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), (int)p_idx, event_type,
+                                          old_parcel_cloud.radius[p_idx], Rb_old_save, Rb, Rb - Rb_old_save);
+                                 fprintf(bubble_log, "%.6f,%.6e,%.6e,%.6f,%.6e,",
+                                          Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
+                                 fprintf(bubble_log, "%.6e,%.6e,%d\n",
+                                          old_parcel_cloud.density[p_idx], sigma,
+                                          old_parcel_cloud.breakup_phase[p_idx]);
+                                 fflush(bubble_log);
+                                 
+                                 printf("BUBBLE_SHRINK: t=%.6e, p_idx=%d, R_drop=%.2f um, R_bubble: %.2f -> %.2f um\n",
+                                          CONVERGE_simulation_time_sec(), (int)p_idx, 
+                                          old_parcel_cloud.radius[p_idx]*1e6, Rb_old_save*1e6, Rb*1e6);
+                                 printf("  T_drop=%.2f K, P_amb=%.2e Pa, P_bubble=%.2e Pa, superheat=%.2f K, v_bubble=%.2e m/s\n",
+                                          Td, P_amb, P_bubble, superheat, old_parcel_cloud.v_bubble[p_idx]);
+                              }
+                           }
+
+
+                     // Update droplet radius
+                     t0 = CONVERGE_mpi_wtime();
+                     CONVERGE_precision_t rdrop_before_geometry = old_parcel_cloud.radius[p_idx];
+
+                     Geometry(&old_parcel_cloud, p_idx, dt_sub);
+                     prof_geom += CONVERGE_mpi_wtime() - t0;
+                     CONVERGE_precision_t rdrop_after_geometry = old_parcel_cloud.radius[p_idx];
+                     
+                           // DIAGNOSTIC: Log radius increase for large parcels
+                           if (rdrop_after_geometry > 80.0e-6 && fabs(rdrop_after_geometry - rdrop_before_geometry) > 1e-9) {
+                              static FILE* radius_log = NULL;
+                              if (!radius_log) {
+                                 // radius_log = fopen("radius_changes.csv", "w");
+                                 if (radius_log) {
+                                       // fprintf(radius_log, "time,ncyc,p_idx,R_drop_before,R_drop_after,delta_R,R_bubble,R_drop_0,expansion_ratio,film_flag\n");
+                                 }
+                              }
+                              
+                              if (radius_log) {
+                                 CONVERGE_precision_t expansion = rdrop_after_geometry / old_parcel_cloud.r_drop_0[p_idx];
+                                 fprintf(radius_log, "%.6e,%ld,%d,%.6e,%.6e,%.6e,%.6e,%.6e,%.4f,%d\n",
+                                          CONVERGE_simulation_time_sec(), CONVERGE_ncyc(), (int)p_idx,
+                                          rdrop_before_geometry, rdrop_after_geometry, 
+                                          rdrop_after_geometry - rdrop_before_geometry,
+                                          old_parcel_cloud.r_bubble[p_idx], old_parcel_cloud.r_drop_0[p_idx],
+                                          expansion, old_parcel_cloud.film_flag[p_idx]);
+                                 fflush(radius_log);
+                                 
+                                 // DISABLED: Too much output
+                                 /*
+                                 if (rdrop_after_geometry > old_parcel_cloud.r_drop_0[p_idx] * 1.5) {
+                                       printf("RADIUS_LARGE_EXPANSION: t=%.6e, p_idx=%d, R_drop: %.2f -> %.2f um (%.1fx injection)\n",
+                                             CONVERGE_simulation_time_sec(), (int)p_idx,
+                                             rdrop_before_geometry*1e6, rdrop_after_geometry*1e6, expansion);
+                                 }
+                                 */
+                              }
+                           }
+                     
+                           if(rdrop_after_geometry< rdrop_before_geometry){
+
+                              printf("\nGeometry has shrunk parcel, rdrop_before_geometry = %e, rdrop_after_geometry = %e\n", rdrop_before_geometry, rdrop_after_geometry);
+                              printf("\nAborting...");
+                              CONVERGE_mpi_abort();
+                           }
+
+               
+
+
+                     CONVERGE_precision_t g_den = global_density[node_index];
+               
+            
+                     t0 = CONVERGE_mpi_wtime();
+                     if(old_parcel_cloud.r_bubble[p_idx] > 0.02 * old_parcel_cloud.radius[p_idx]){
+                     DGRE_NH3(&old_parcel_cloud, p_idx, g_den);
+                     }
+                     prof_dgre += CONVERGE_mpi_wtime() - t0;
+                     // Update Breakup Criteria
+                     //  printf("calling BreakupCriterion\n");
+                     t0 = CONVERGE_mpi_wtime();
+                     CONVERGE_precision_t kb = BreakupCriterion(&old_parcel_cloud, p_idx, dt_sub);
+                     if(!spray_params_logged)
+                     {
+                        spray_params_logged = 1;
+                     }
+                     prof_bc += CONVERGE_mpi_wtime() - t0;
+                     
+                     // kb calculated - note: parcel data already logged at start of timestep
+                  
+
+            
+            
+                     if (kb > kb_threshold)
+                     {
+                        // printf("\n Breakup happening due to kb > 1.0, kb = %e, rb = %e, r_drop = %e, vb = %e\n",kb,Rb,old_parcel_cloud.radius[p_idx],old_parcel_cloud.v_bubble[p_idx]);
+                        set_breakup_phase(&old_parcel_cloud, p_idx, 4);  // Breakup criterion met - READY
+                        old_parcel_cloud.r_bubble[p_idx] = Rb;
+                        old_parcel_cloud.eta_drop[p_idx] = kb;  // Store final kb value for diagnostic
+                        break;
+                     }
+            
+                     // Store eta
+                     // old_parcel_cloud.eta_drop[p_idx] += eta; // Update eta
+            
+                        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+                        // End of sub cycle loop
+                        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+            
+            
+                  
+                  
+
+                     } // Delimiter for if(r_bubble>r_drop)
+                  } // Delimiter for sub cycle loop
+
+
+                  } // Delimiter for entry condition
+                  //********************** BREAKUP ROUTINE ***************************************//
+                  // old_parcel_cloud.from_nozzle[p_idx] = old_parcel_cloud.thermal_breakup_flag[p_idx];
+                  post_pbr = CONVERGE_mpi_wtime();
+                  if (old_parcel_cloud.breakup_phase[p_idx] == 4)  // READY to break
+                  {
+                     breakups_this_call++;  // Count breakup event
+                     
+                     // Calculate bubble pressure at breakup
+                     CONVERGE_precision_t R_final = old_parcel_cloud.r_bubble[p_idx];
+                     CONVERGE_precision_t R_drop_final = old_parcel_cloud.radius[p_idx];
+                     CONVERGE_precision_t T_final = old_parcel_cloud.temp[p_idx];
+                     CONVERGE_precision_t Vb_final = (4.0/3.0) * PI * R_final * R_final * R_final;
+                     
+                     // Get bubble pressure from saturation at droplet temperature (equilibrium)
+                     CONVERGE_precision_t Pb_final;
+                     Saturation_PressureNH3(T_final, &Pb_final);
+                     
+                     // Get actual bubble pressure from stored mass
+                     CONVERGE_precision_t m_b_final = old_parcel_cloud.m_bubble[p_idx];
+                     CONVERGE_precision_t rho_v_final = (Vb_final > 1e-30) ? (m_b_final / Vb_final) : 0.0;
+                     CONVERGE_precision_t Pb_actual = (rho_v_final > 1e-6) ? (rho_v_final * 488.2 * T_final) : 0.0;
+                     
+                     // Get final kb value (stored in eta_drop if triggered by kb threshold)
+                     // If eta_drop is 0, recalculate kb for diagnostic
+                     CONVERGE_precision_t kb_final = old_parcel_cloud.eta_drop[p_idx];
+                     if (kb_final < 1e-10) {
+                           // Recalculate kb if not already stored
+                           kb_final = BreakupCriterion(&old_parcel_cloud, p_idx, dt);
+                     }
+                     CONVERGE_int_t breakup_flag = old_parcel_cloud.breakup_phase[p_idx];
+                     
+                     // printf("[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3\n",
+                     //        p_idx,
+                     //        old_parcel_cloud.lifetime[p_idx],
+                     //        old_parcel_cloud.v_bubble[p_idx],
+                     //        T_final,
+                     //        Pb_final,
+                     //        Pb_actual,
+                     //        R_final,
+                     //        R_drop_final,
+                     //        kb_final,
+                     //        breakup_flag,
+                     //        m_b_final,
+                     //        rho_v_final);
+                     
+                     // If this is the tracked parcel, close the tracking file
+                     if (tracking_initialized && p_idx == tracked_parcel_id && parcel_track_file) {
+                           fprintf(parcel_track_file, "# BREAKUP OCCURRED AT THIS TIMESTEP\n");
+                           fclose(parcel_track_file);
+                           parcel_track_file = NULL;
+                     }
+                     
+                     // printf("\n breakup tbf = %i",old_parcel_cloud.thermal_breakup_flag[p_idx]);
+                        
+                        pre_break = CONVERGE_mpi_wtime();
+                        // Check cloud size before breakup
+                        CONVERGE_index_t cloud_size_before_break = CONVERGE_cloud_size(cloud);
+                        // printf("\nBreakup.cloud_size_before_break = %i", cloud_size_before_break);
+                     CONVERGE_precision_t t0 = CONVERGE_mpi_wtime();
+                        
+                        // Use Song breakup model if Song RPE solver is active
+                        if (use_song_rpe) {
+                           if(old_parcel_cloud.radius[p_idx]>5.0e-5){
+                           Breakup_Song(&old_parcel_cloud, p_idx, P_amb);
+                           }
+                           else{
+                              //Set as child (too small to break up) as per communicaiton with authors
+                              printf("\nSONG_AVERT : PREVENTING SMALL PARCEL FROM BREAKING UP");
+                              set_breakup_phase(&old_parcel_cloud, p_idx, 5);
+                           }
+                        } else {
+                           Breakup(&old_parcel_cloud, p_idx, cloud);
+                           printf("\n[BREAKUP] Parcel %d: lifetime=%.6e s, Rdot=%.6e m/s, T=%.2f K, Pb_eq=%.3e Pa, Pb_actual=%.3e Pa, R_bubble=%.6e m, R_drop=%.6e m, kb=%.6e, flag=%d, m_b=%.3e kg, rho_v=%.3e kg/m3, breakup_phase=%d\n",
+                                  p_idx,
+                                  old_parcel_cloud.lifetime[p_idx],
+                                  old_parcel_cloud.v_bubble[p_idx],
+                                  T_final,
+                                  Pb_final,
+                                  Pb_actual,
+                                  R_final,
+                                  R_drop_final,
+                                  kb_final,
+                                  breakup_flag,
+                                  m_b_final,
+                                  rho_v_final,
+                                 old_parcel_cloud.breakup_phase[p_idx]);
+                        }
+                        
+                        prof_break += CONVERGE_mpi_wtime() - t0;
+                        // printf("\nBreakup.cloud_size_after_break = %i\n\n\n\n", CONVERGE_cloud_size(cloud));
+                        post_break = CONVERGE_mpi_wtime();
+                  }
+         
+               
+         
+               } // End of if(theskyisblue)
+                     
+                     eopl = CONVERGE_mpi_wtime();
+
+                  CONVERGE_precision_t post_pl = CONVERGE_mpi_wtime();
+                  CONVERGE_precision_t pl_diff = eopl - sopl;
+                  CONVERGE_precision_t tab_diff = post_TAB - pre_TAB;
+                  CONVERGE_precision_t tab_frac = 100.00* tab_diff / pl_diff;
+                  CONVERGE_precision_t geom_diff = post_Geom - pre_Geom;
+                  CONVERGE_precision_t dgre_diff = post_DGRE - pre_DGRE;
+                  CONVERGE_precision_t geom_frac, dgre_frac,break_diff,break_frac,bc_diff,bc_frac,pbr_diff,pbr_frac,init_diff,init_frac,bub_diff,bub_frac;
+                  break_diff = post_break - pre_break;
+                  if(break_diff<0.0)
+                  {
+                     break_diff = 0.0;
+                  }
+                  break_frac = 100.00 * break_diff/ pl_diff;
+
+                  bc_diff = post_bc - pre_bc;
+                  
+                  pbr_diff = post_pbr - pre_pbr;
+                  pbr_frac = 100.00 * pbr_diff / pl_diff; 
+                  init_diff = pre_TAB - sopl;
+                  init_frac = 100.00 * init_diff /pl_diff;
+                  bub_diff = pre_Geom - pre_pbr;
+                  bub_frac = 100.00 * bub_diff / pbr_diff;
+                  bc_frac = 100.00 * bc_diff / pbr_diff; 
+                  geom_frac = 100.00 * geom_diff / pbr_diff;
+                  dgre_frac = 100.00 * dgre_diff / pbr_diff;
+               //  if(old_parcel_cloud.thermal_breakup_flag[p_idx] ==4 && old_parcel_cloud.tbt[p_idx]==0)
+               //  {
+               //    printf("\npl_time = %f",pl_diff);
+               //    printf("\n     dt_init    = %e  frac = %f\%",init_diff,init_frac);
+               //    printf("\n     dt_TAB     = %e  frac= %f\%",tab_diff,tab_frac);
+               //   // if(old_parcel_cloud.thermal_breakup_flag[p_idx]<0)
+               //    {
+               //    printf("\n     dt_pbr     = %e frac= %f\%",pbr_diff,pbr_frac);
+               //    printf("\n           dt_bubble  = %e frac= %f\%",bub_diff,bub_frac);
+               //    printf("\n           dt_geom    = %e frac= %f\%",geom_diff,geom_frac);
+               //    printf("\n           dt_dgre    = %e frac= %f\%",dgre_diff,dgre_frac);
+               //    printf("\n           dt_bc      = %e frac= %f\%",bc_diff,bc_frac);
+               //    }
+               //    printf("\n     dt_breakup = %e frac= %f\%",break_diff,break_frac);
+               //  }
+            mass_after= mass_after + (1.33333 * PI * old_parcel_cloud.num_drop[p_idx]*CONVERGE_cube(old_parcel_cloud.radius[p_idx]));       
+            // printf("\n after num_drop = %e rad = %e",old_parcel_cloud.num_drop[p_idx],old_parcel_cloud.radius[p_idx]);
+               // } //time limieter >0.1ms 
    }    // End of parcel loop
+   
+   // Report breakup events
+   int ncyc = CONVERGE_ncyc();
+   total_breakups += breakups_this_call;
+   
+   if (ncyc != last_reported_cycle && breakups_this_call > 0) {
+      int rank;
+      CONVERGE_mpi_comm_rank(&rank);
+      CONVERGE_precision_t sim_time = CONVERGE_simulation_time();
+      printf("[BREAKUP] Cycle %d, Rank %d, Time %.6e s: %d breakups this cloud (Total: %d)\n",
+             ncyc, rank, sim_time, breakups_this_call, total_breakups);
+      last_reported_cycle = ncyc;
+   }
+   
+   if (ncyc != last_cycle) {
+    int rank;
+    CONVERGE_mpi_comm_rank(&rank);
+  
+
+
+    // reset accumulators
+    prof_geom = prof_dgre = prof_bc = prof_break = prof_bubble = 0.0;
+    last_cycle = ncyc;
+}
     
+
+    CONVERGE_precision_t end_time = CONVERGE_mpi_wtime();
+   //  CONVERGE_precision_t total_time = end_time - start_time;
+   //  printf("\nTotal time: %f\n",total_time);
+   
    // int rank;
    // CONVERGE_mpi_comm_rank(&rank);
 
    // printf("end of spray break cell\n");
+
+
+
 
    if(mass_after>mass_before)
    {
@@ -550,6 +1245,7 @@ static void spray_distort_cell_NH3(CONVERGE_mesh_t mesh, CONVERGE_cloud_t cloud,
 
    }
 }
+
 
 void init_tables(CONVERGE_species_t species)
 {
@@ -601,4 +1297,34 @@ static void destroy_tables(CONVERGE_species_t species)
 
    CONVERGE_iterator_destroy(&parcel_species_it);
    CONVERGE_iterator_destroy(&gas_species_it);
+}
+
+
+
+CONVERGE_BEFORE_TRANSPORT(sync_child_velocity,
+    IN(VALUE(CONVERGE_mesh_t, mesh)),
+    OUT(CONVERGE_VOID))
+{
+    CONVERGE_int_t rank;
+    CONVERGE_mpi_comm_rank(&rank);
+
+    // For safety: only rank 0 keeps its computed values,
+    // all other ranks clear them before broadcast.
+    if (rank != 0) {
+        user_child_velocity_x = 0.0;
+        user_child_velocity_y = 0.0;
+        user_child_velocity_z = 0.0;
+    }
+
+    // Broadcast from rank 0 to all other ranks
+    CONVERGE_mpi_bcast(&user_child_velocity_x, 1, CONVERGE_PRECISION, 0);
+    CONVERGE_mpi_bcast(&user_child_velocity_y, 1, CONVERGE_PRECISION, 0);
+    CONVERGE_mpi_bcast(&user_child_velocity_z, 1, CONVERGE_PRECISION, 0);
+
+    if (rank == 0) {
+      //   printf("BEFORE_TRANSPORT: broadcasted child velocity = %e %e %e\n",
+               user_child_velocity_x,
+               user_child_velocity_y,
+               user_child_velocity_z;
+    }
 }

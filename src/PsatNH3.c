@@ -27,11 +27,11 @@ void Saturation_PressureNH3(CONVERGE_precision_t Td, CONVERGE_precision_t *P_sat
   psatA2 = 4.86886;
   psatB2 = 1113.928;
   psatC2 = -10.409;
-  if ((Td > Lim2) & (Td < Lim3))
+  if ((Td > Lim2) && (Td < Lim3))
   {
     *P_sat = pow(10, (psatA2 - (psatB2 / (psatC2 + Td)))) * 1e5; // P_sat in Pa	from NIST Webbook for iso-octane
   }
-  else if ((Td < Lim2) & (Td > Lim1))
+  else if ((Td < Lim2) && (Td > Lim1))
   {
      *P_sat = pow(10, (psatA1 - (psatB1 / (psatC1 + Td)))) * 1e5; // P_sat in Pa	from NIST Webbook for iso-octane
   }

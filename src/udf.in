@@ -41,7 +41,7 @@ user_heat_trans_coeff_film_flag: 0                                    # Flag to 
 user_heat_trans_coeff_spray_flag: 0                                   # Flag to activate user_heat_trans_coeff_spray.
 user_heat_transfer_flag:  0                                           # User-specified subroutine for heat transfer.
 user_initialize_flag:     0                                           # User-specified subroutine for the initialization of flow variables.
-user_input_flag:          0                                           # User-specified subroutine for input, with customized parameters in "user.in".
+user_input_flag:          1                                           # User-specified subroutine for input, with customized parameters in "user_inputs.in".
 user_laminar_flamespeed_flag: 0                                       # User-specified subroutine for laminar flamespeed.
 user_load_balance_flag:   0                                           # User-specified subroutine to define custom weights for each parallel block for load balancing.
 user_mass_trans_coeff_film_flag: 0                                    # Flag to activate user_mass_trans_coeff_film.
@@ -91,4 +91,3 @@ user_vof_cav_condensation_flag: 0
 user_wallvalue_flag:      0                                           # User-specified subroutine for custom wall values.
 dynamic_post_variables:   []
 events:                   []
-
