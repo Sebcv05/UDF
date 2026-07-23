@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <counter.h>
-#include <PsatCH3OH.h>
+#include <PsatNH3.h>
 #include <user_header.h>
 #include <globals.h>
 #include "Breakup.h"
@@ -157,7 +157,7 @@ CONVERGE_UDF(parcel_inject,
    // Calculate Saturation Pressure from Antoine's Equation
    CONVERGE_precision_t P_sat,Td;
    Td = parcel_cloud.temp[passed_parcel_idx];
-   Saturation_PressureCH3OH(Td, &P_sat);
+   Saturation_PressureNH3(Td, &P_sat);
 
    // printf("PARCEL_PROP.C L70 P_sat = %f\n",P_sat);
    // printf("PARCEL_PROP.C L67\n");

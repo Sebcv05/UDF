@@ -21,9 +21,9 @@
 
 #include "lagrangian/env.h"
 #include <RPE_euler.h>
-#include <PsatCH3OH.h>
-#include <TsatCH3OH.h>
-#include <BubbleDensityCH3OH.h>
+#include <PsatNH3.h>
+#include <TsatNH3.h>
+#include <BubbleDensityNH3.h>
 #include <parcel_reset.h>
 #include <CONVERGE/udf.h>
 #include <math.h>
@@ -31,7 +31,7 @@
 
 // Physical constants
 #define PI 3.14159265358979323846
-#define R_SPEC_CH3OH 259.49  // J/(kg·K) - Specific gas constant for methanol
+#define R_SPEC_NH3 488.2  // J/(kg·K) - Specific gas constant for ammonia
 
 // Debug logging configuration
 #define RPE_DEBUG_LOGGING 1        // Set to 0 to disable
@@ -67,7 +67,7 @@ void compute_thermal_mass_transfer(
     CONVERGE_precision_t Pb = rho_v * params->R_spec * T_drop_safe;
     
     // Interface temperature from bubble pressure
-    CONVERGE_precision_t T_int = T_satCH3OH(Pb);
+    CONVERGE_precision_t T_int = T_satNH3(Pb);
     
     // Temperature difference for heat transfer
     CONVERGE_precision_t dT = T_drop - T_int;
@@ -310,7 +310,7 @@ void RPE_euler_solver(
         
         // Check if conditions are favorable for re-growth
         CONVERGE_precision_t P_sat_check;
-        Saturation_PressureCH3OH(Td, &P_sat_check);
+        Saturation_PressureNH3(Td, &P_sat_check);
         
         if (P_sat_check > P_amb) {
             // Conditions favorable - initialize new bubble from critical radius
@@ -335,7 +335,7 @@ void RPE_euler_solver(
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             
             // Initialize bubble mass from saturation properties
-            CONVERGE_precision_t rho_b = bubble_densityCH3OH(P_sat_check, Td);
+            CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat_check, Td);
             CONVERGE_precision_t Vb = (4.0/3.0) * PI * R_init * R_init * R_init;
             old_parcel_cloud->m_bubble[p_idx] = rho_b * Vb;
             
@@ -371,7 +371,7 @@ void RPE_euler_solver(
         
         // First call to thermal RPE for this parcel - initialize with actual P_amb
         CONVERGE_precision_t P_sat_init;
-        Saturation_PressureCH3OH(Td, &P_sat_init);
+        Saturation_PressureNH3(Td, &P_sat_init);
         
         if (P_sat_init > P_amb) {
             // Calculate critical radius with actual local P_amb
@@ -385,7 +385,7 @@ void RPE_euler_solver(
             old_parcel_cloud->v_bubble[p_idx] = 0.0;
             
             // Initialize bubble mass
-            CONVERGE_precision_t rho_b = bubble_densityCH3OH(P_sat_init, Td);
+            CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat_init, Td);
             CONVERGE_precision_t Vb = (4.0/3.0) * PI * R_init * R_init * R_init;
             old_parcel_cloud->m_bubble[p_idx] = rho_b * Vb;
             
@@ -420,9 +420,9 @@ void RPE_euler_solver(
     params.L_v = L_v_avg;
     params.cp_l = cp_l_avg;
     
-    // Methanol-specific properties (TODO: make these configurable)
-    params.R_spec = R_SPEC_CH3OH;  // J/(kg·K)
-    params.k_l = 0.188;  // Approximate thermal conductivity W/(m·K)
+    // Ammonia-specific properties (TODO: make these configurable)
+    params.R_spec = R_SPEC_NH3;
+    params.k_l = 0.5;  // Approximate thermal conductivity W/(m·K)
     params.max_Nu = 1000.0;  // Maximum Nusselt number
     
     // Initialize bubble state from parcel
@@ -435,8 +435,8 @@ void RPE_euler_solver(
     // If m_bubble is zero or very small, initialize from equilibrium
     if (old_parcel_cloud->m_bubble[p_idx] < 1e-20) {
         CONVERGE_precision_t P_sat;
-        Saturation_PressureCH3OH(Td, &P_sat);
-        CONVERGE_precision_t rho_b = bubble_densityCH3OH(P_sat, Td);
+        Saturation_PressureNH3(Td, &P_sat);
+        CONVERGE_precision_t rho_b = bubble_densityNH3(P_sat, Td);
         CONVERGE_precision_t Vb = (4.0/3.0) * PI * state.R * state.R * state.R;
         state.m_b = rho_b * Vb;
         old_parcel_cloud->m_bubble[p_idx] = state.m_b;  // Store initial value
@@ -459,9 +459,9 @@ void RPE_euler_solver(
     
     // Report every 100 cycles
     if (current_cycle > 0 && current_cycle % 100 == 0 && current_cycle != last_diagnostic_cycle) {
-        CONVERGE_precision_t T_sat_at_P_amb = T_satCH3OH(P_amb);
+        CONVERGE_precision_t T_sat_at_P_amb = T_satNH3(P_amb);
         CONVERGE_precision_t P_sat_at_Td;
-        Saturation_PressureCH3OH(Td, &P_sat_at_Td);
+        Saturation_PressureNH3(Td, &P_sat_at_Td);
         printf("[RPE_STATUS] Cycle %d, Time %.6e s: %d RPE calls, Max R=%.3e µm, Max Rdot=%.3f m/s, T_drop=%.2f K, T_sat=%.2f K, P_sat=%.2e Pa\n",
                current_cycle, sim_time, rpe_call_count, max_R_seen*1e6, max_Rdot_seen, Td, T_sat_at_P_amb, P_sat_at_Td);
         last_diagnostic_cycle = current_cycle;
@@ -472,7 +472,7 @@ void RPE_euler_solver(
     
     // Check for negative pressure difference
     CONVERGE_precision_t P_sat;
-    Saturation_PressureCH3OH(Td, &P_sat);
+    Saturation_PressureNH3(Td, &P_sat);
     if ((P_sat - P_amb) < 0.0) {
         if (old_parcel_cloud->recovery_time[p_idx] > 0.0) {
             printf("[RPE_KILL_IN_RECOVERY] p_idx=%li, Reason: Negative P_sat-P_amb (%.3e Pa), recovery_time=%.3e s, recovery_count=%d\n",
@@ -504,8 +504,8 @@ void RPE_euler_solver(
     if (state.Rdot < 0.0) {
         // Calculate saturation pressure
         CONVERGE_precision_t P_sat_calc;
-        Saturation_PressureCH3OH(state.T_drop, &P_sat_calc);
-        CONVERGE_precision_t T_sat_calc = T_satCH3OH(params.P_amb);
+        Saturation_PressureNH3(state.T_drop, &P_sat_calc);
+        CONVERGE_precision_t T_sat_calc = T_satNH3(params.P_amb);
         
         // Get current simulation time
         CONVERGE_precision_t current_time = CONVERGE_simulation_time_sec();
@@ -572,7 +572,7 @@ void RPE_euler_solver(
     }
     
     // Check if droplet has cooled below saturation temperature (but skip if in recovery mode)
-    CONVERGE_precision_t T_sat_check = T_satCH3OH(P_amb);
+    CONVERGE_precision_t T_sat_check = T_satNH3(P_amb);
     if (state.T_drop < T_sat_check && old_parcel_cloud->recovery_time[p_idx] == 0.0) {
         // Droplet subcooled - stop bubble growth
         static int subcool_count = 0;

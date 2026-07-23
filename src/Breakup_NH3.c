@@ -22,7 +22,7 @@
 #include <complex.h>
 #include <Breakup.h>
 #include <spray_break.h>
-#include <PsatCH3OH.h>
+#include <PsatNH3.h>
 #include <globals.h>
 #include <Vb.h>
 
@@ -677,7 +677,7 @@ CONVERGE_precision_t calculated_radius = 1.0 / radius_denominator;
         printf("\n DGRE cycle count = %i",old_parcel_cloud->dgre_cycle_count[p_idx]);
         CONVERGE_precision_t P_sat;
         CONVERGE_precision_t Td = old_parcel_cloud->temp[p_idx];
-        Saturation_PressureCH3OH(Td,&P_sat);
+        Saturation_PressureNH3(Td,&P_sat);
         printf("\n P_sat = %e,Td = %f",P_sat,Td);
          printf("\n recalculating v_bubble...");
          CONVERGE_precision_t P_amb = 1.5e6; 
