@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <complex.h>
 
+printf("hello world\n");
 
 /// @brief Calculates Saturaiton Temperatue of Ammonia given ambient Pressure (NIST Webbook, Stull 1947)
 /// @param P - Ambient Pressure
