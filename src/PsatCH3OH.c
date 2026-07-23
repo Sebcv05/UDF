@@ -1,4 +1,4 @@
-// PsatNH3.c
+// PsatCH3OH.c
 
 #include "lagrangian/env.h"
 #include <math.h>
