@@ -7,7 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <complex.h>
-#include <PsatNH3.h>
+#include <PsatCH3OH.h>
 
 /// @brief Calculates Saturaiton Pressure for Methanol based on Temperature, based on Data from NIST webbook (Stull 1947)
 /// @param Td - Temperatuer of droplet
